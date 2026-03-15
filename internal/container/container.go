@@ -41,8 +41,12 @@ func RunArgs(opts RunOpts) ([]string, error) {
 	containerName := containerName(opts.ProjectDir)
 	hostname := "asylum-" + filepath.Base(opts.ProjectDir)
 
-	if err := ensureAgentConfig(home, opts.Agent); err != nil {
+	seeded, err := ensureAgentConfig(home, opts.Agent)
+	if err != nil {
 		return nil, err
+	}
+	if seeded {
+		opts.NewSession = true
 	}
 
 	args := []string{
@@ -187,21 +191,22 @@ func containerCommand(opts RunOpts) []string {
 	}
 }
 
-func ensureAgentConfig(home string, a agent.Agent) error {
+// ensureAgentConfig returns true if the config was freshly created (first run).
+func ensureAgentConfig(home string, a agent.Agent) (bool, error) {
 	agentDir := expandTilde(a.AsylumConfigDir(), home)
 
 	if dirExists(agentDir) {
-		return nil
+		return false, nil
 	}
 
 	nativeDir := expandTilde(a.NativeConfigDir(), home)
 	if dirExists(nativeDir) {
 		log.Info("seeding %s config from %s", a.Name(), nativeDir)
-		return copyDir(nativeDir, agentDir)
+		return true, copyDir(nativeDir, agentDir)
 	}
 
 	log.Info("creating %s config directory", a.Name())
-	return os.MkdirAll(agentDir, 0755)
+	return true, os.MkdirAll(agentDir, 0755)
 }
 
 func copyDir(src, dst string) error {
