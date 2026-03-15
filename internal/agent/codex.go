@@ -34,7 +34,6 @@ func (Codex) HasSession(projectPath string) bool {
 }
 
 func (Codex) Command(resume bool, extraArgs []string) []string {
-	// Codex: extra args skip resume (user providing explicit prompt)
 	if resume && len(extraArgs) == 0 {
 		return wrapZsh("codex resume --last --yolo")
 	}

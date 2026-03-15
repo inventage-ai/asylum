@@ -75,13 +75,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	_, err = image.EnsureBase(version, flags.Rebuild)
+	baseRebuilt, err := image.EnsureBase(version, flags.Rebuild)
 	if err != nil {
 		log.Error("%v", err)
 		os.Exit(1)
 	}
 
-	imageTag, err := image.EnsureProject(cfg.Packages, version)
+	imageTag, err := image.EnsureProject(cfg.Packages, version, baseRebuilt)
 	if err != nil {
 		log.Error("%v", err)
 		os.Exit(1)
@@ -151,7 +151,6 @@ func parseArgs(args []string) (cliFlags, []string, []string) {
 	var flags cliFlags
 	var positional []string
 	var passthrough []string
-	passthroughMode := false
 
 	i := 0
 	for i < len(args) {
@@ -160,13 +159,6 @@ func parseArgs(args []string) (cliFlags, []string, []string) {
 		if arg == "--" {
 			passthrough = append(passthrough, args[i+1:]...)
 			break
-		}
-
-		// Once we hit a non-flag or unknown flag after positional args, everything is passthrough
-		if passthroughMode {
-			passthrough = append(passthrough, arg)
-			i++
-			continue
 		}
 
 		switch {
@@ -214,12 +206,10 @@ func parseArgs(args []string) (cliFlags, []string, []string) {
 			flags.Help = true
 			i++
 		case strings.HasPrefix(arg, "-"):
-			// Unknown flag — start passthrough
 			passthrough = append(passthrough, args[i:]...)
 			i = len(args)
 		default:
 			positional = append(positional, arg)
-			// After first positional, remaining args are either more positional or passthrough
 			if arg != "shell" && arg != "ssh-init" {
 				passthrough = append(passthrough, args[i+1:]...)
 				i = len(args)
@@ -256,10 +246,8 @@ func resolveMode(positional, passthrough []string, flags cliFlags) (runMode, []s
 func runCleanup() {
 	log.Info("removing asylum images...")
 
-	// Remove base and project images
 	docker.RemoveImages("asylum:latest")
 
-	// Find and remove project images
 	out, err := exec.Command("docker", "images", "--format", "{{.Repository}}:{{.Tag}}", "--filter", "reference=asylum:proj-*").Output()
 	if err == nil {
 		for _, img := range strings.Split(strings.TrimSpace(string(out)), "\n") {

@@ -69,7 +69,7 @@ func EnsureBase(version string, noCache bool) (bool, error) {
 	return true, nil
 }
 
-func EnsureProject(packages map[string][]string, version string) (string, error) {
+func EnsureProject(packages map[string][]string, version string, baseRebuilt bool) (string, error) {
 	if len(packages) == 0 {
 		return baseTag, nil
 	}
@@ -78,7 +78,7 @@ func EnsureProject(packages map[string][]string, version string) (string, error)
 	tag := "asylum:proj-" + hash[:12]
 
 	existing, err := docker.InspectLabel(tag, "asylum.packages.hash")
-	if err == nil && existing == hash {
+	if err == nil && existing == hash && !baseRebuilt {
 		log.Info("project image up to date")
 		return tag, nil
 	}
