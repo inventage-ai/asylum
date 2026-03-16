@@ -107,20 +107,30 @@ func TestClaudeHasSession(t *testing.T) {
 	t.Setenv("HOME", dir)
 
 	a := Claude{}
-	configDir := filepath.Join(dir, ".asylum", "agents", "claude", "projects")
+	projectsDir := filepath.Join(dir, ".asylum", "agents", "claude", "projects")
 
 	if a.HasSession("/some/project") {
 		t.Error("should be false when projects dir doesn't exist")
 	}
 
-	os.MkdirAll(configDir, 0755)
+	// Directory for a different project — should not match
+	os.MkdirAll(filepath.Join(projectsDir, "-other-project"), 0755)
+	os.WriteFile(filepath.Join(projectsDir, "-other-project", "session.jsonl"), []byte("data"), 0644)
 	if a.HasSession("/some/project") {
-		t.Error("should be false when projects dir is empty")
+		t.Error("should be false when only a different project has sessions")
 	}
 
-	os.MkdirAll(filepath.Join(configDir, "abc123"), 0755)
+	// Matching project directory but no .jsonl files
+	matchDir := filepath.Join(projectsDir, "-some-project")
+	os.MkdirAll(matchDir, 0755)
+	if a.HasSession("/some/project") {
+		t.Error("should be false when matching project dir has no .jsonl files")
+	}
+
+	// Matching project with a .jsonl file
+	os.WriteFile(filepath.Join(matchDir, "abc123.jsonl"), []byte("data"), 0644)
 	if !a.HasSession("/some/project") {
-		t.Error("should be true when projects dir has entries")
+		t.Error("should be true when matching project dir has .jsonl files")
 	}
 }
 
@@ -129,20 +139,33 @@ func TestGeminiHasSession(t *testing.T) {
 	t.Setenv("HOME", dir)
 
 	a := Gemini{}
-	configDir := filepath.Join(dir, ".asylum", "agents", "gemini", "tmp")
+	tmpDir := filepath.Join(dir, ".asylum", "agents", "gemini", "tmp")
 
 	if a.HasSession("/some/project") {
 		t.Error("should be false when tmp dir doesn't exist")
 	}
 
-	os.MkdirAll(configDir, 0755)
+	// Slug dir with .project_root pointing to a different project
+	otherDir := filepath.Join(tmpDir, "other")
+	os.MkdirAll(filepath.Join(otherDir, "chats"), 0755)
+	os.WriteFile(filepath.Join(otherDir, ".project_root"), []byte("/other/project\n"), 0644)
+	os.WriteFile(filepath.Join(otherDir, "chats", "session.json"), []byte("{}"), 0644)
 	if a.HasSession("/some/project") {
-		t.Error("should be false when tmp dir is empty")
+		t.Error("should be false when .project_root points elsewhere")
 	}
 
-	os.MkdirAll(filepath.Join(configDir, "hash123", "chats"), 0755)
+	// Matching .project_root but empty chats/
+	matchDir := filepath.Join(tmpDir, "project")
+	os.MkdirAll(filepath.Join(matchDir, "chats"), 0755)
+	os.WriteFile(filepath.Join(matchDir, ".project_root"), []byte("/some/project\n"), 0644)
+	if a.HasSession("/some/project") {
+		t.Error("should be false when chats dir is empty")
+	}
+
+	// Matching .project_root with chat files
+	os.WriteFile(filepath.Join(matchDir, "chats", "session.json"), []byte("{}"), 0644)
 	if !a.HasSession("/some/project") {
-		t.Error("should be true when tmp dir has entries")
+		t.Error("should be true when matching project has chat files")
 	}
 }
 
@@ -151,22 +174,24 @@ func TestCodexHasSession(t *testing.T) {
 	t.Setenv("HOME", dir)
 
 	a := Codex{}
-	configDir := filepath.Join(dir, ".asylum", "agents", "codex")
+	sessionsDir := filepath.Join(dir, ".asylum", "agents", "codex", "sessions")
 
 	if a.HasSession("/some/project") {
-		t.Error("should be false when history.jsonl doesn't exist")
+		t.Error("should be false when sessions dir doesn't exist")
 	}
 
-	os.MkdirAll(configDir, 0755)
-	historyFile := filepath.Join(configDir, "history.jsonl")
-
-	os.WriteFile(historyFile, []byte(""), 0644)
+	// Sessions dir exists but no rollout files
+	os.MkdirAll(filepath.Join(sessionsDir, "2026", "03", "16"), 0755)
 	if a.HasSession("/some/project") {
-		t.Error("should be false when history.jsonl is empty")
+		t.Error("should be false when sessions dir has no rollout files")
 	}
 
-	os.WriteFile(historyFile, []byte(`{"session": "data"}`), 0644)
+	// Add a rollout file
+	os.WriteFile(
+		filepath.Join(sessionsDir, "2026", "03", "16", "rollout-2026-03-16T14-30-00-abc123.jsonl"),
+		[]byte("data"), 0644,
+	)
 	if !a.HasSession("/some/project") {
-		t.Error("should be true when history.jsonl is non-empty")
+		t.Error("should be true when rollout files exist")
 	}
 }

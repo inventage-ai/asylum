@@ -26,7 +26,25 @@ func (Gemini) HasSession(projectPath string) bool {
 	if err != nil {
 		return false
 	}
-	return len(entries) > 0
+	// Scan for a .project_root file matching this project path
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		root, err := os.ReadFile(filepath.Join(tmpDir, e.Name(), ".project_root"))
+		if err != nil {
+			continue
+		}
+		if strings.TrimSpace(string(root)) != projectPath {
+			continue
+		}
+		chats, err := os.ReadDir(filepath.Join(tmpDir, e.Name(), "chats"))
+		if err != nil {
+			return false
+		}
+		return len(chats) > 0
+	}
+	return false
 }
 
 func (Gemini) Command(resume bool, extraArgs []string) []string {

@@ -25,12 +25,19 @@ func (Codex) HasSession(projectPath string) bool {
 	if err != nil {
 		return false
 	}
-	historyFile := filepath.Join(configDir, "history.jsonl")
-	info, err := os.Stat(historyFile)
-	if err != nil {
-		return false
-	}
-	return info.Size() > 0
+	sessionsDir := filepath.Join(configDir, "sessions")
+	found := false
+	filepath.WalkDir(sessionsDir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || found {
+			return filepath.SkipDir
+		}
+		if !d.IsDir() && strings.HasPrefix(d.Name(), "rollout-") && strings.HasSuffix(d.Name(), ".jsonl") {
+			found = true
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	return found
 }
 
 func (Codex) Command(resume bool, extraArgs []string) []string {

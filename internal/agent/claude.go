@@ -25,12 +25,19 @@ func (Claude) HasSession(projectPath string) bool {
 	if err != nil {
 		return false
 	}
-	projectsDir := filepath.Join(configDir, "projects")
-	entries, err := os.ReadDir(projectsDir)
+	// Claude encodes project paths by replacing "/" with "-"
+	encoded := strings.ReplaceAll(projectPath, "/", "-")
+	projDir := filepath.Join(configDir, "projects", encoded)
+	entries, err := os.ReadDir(projDir)
 	if err != nil {
 		return false
 	}
-	return len(entries) > 0
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".jsonl") {
+			return true
+		}
+	}
+	return false
 }
 
 func (Claude) Command(resume bool, extraArgs []string) []string {
