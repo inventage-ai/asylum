@@ -27,6 +27,11 @@ func main() {
 		return
 	}
 
+	if flags.Version {
+		fmt.Printf("asylum %s\n", version)
+		return
+	}
+
 	if flags.Cleanup {
 		runCleanup()
 		return
@@ -145,6 +150,7 @@ type cliFlags struct {
 	Rebuild bool
 	Cleanup bool
 	Help    bool
+	Version bool
 }
 
 func parseArgs(args []string) (cliFlags, []string, []string) {
@@ -201,6 +207,9 @@ func parseArgs(args []string) (cliFlags, []string, []string) {
 			i++
 		case arg == "--cleanup":
 			flags.Cleanup = true
+			i++
+		case arg == "--version":
+			flags.Version = true
 			i++
 		case arg == "-h" || arg == "--help":
 			flags.Help = true
@@ -292,6 +301,7 @@ Flags:
   -n, --new            Start new session (skip resume)
   --rebuild            Force rebuild Docker image
   --cleanup            Remove Asylum images and cached data
+  --version            Show version
   -h, --help           Show this help
 `, version)
 }

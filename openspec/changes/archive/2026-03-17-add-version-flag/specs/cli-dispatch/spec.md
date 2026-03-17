@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Flag parsing
 The CLI SHALL parse `-a/--agent`, `-p`, `-v`, `--java`, `-n/--new`, `--cleanup`, `--rebuild`, `--version`, and `-h/--help` flags. Unknown flags SHALL be passed through to the agent.
@@ -33,10 +33,3 @@ The CLI SHALL dispatch to version display, agent mode (default), shell mode, ssh
 #### Scenario: Arbitrary command
 - **WHEN** `asylum ls -la` is run
 - **THEN** `ls -la` runs in the container
-
-### Requirement: Process replacement
-The CLI SHALL use `syscall.Exec` to replace itself with the docker process.
-
-#### Scenario: Exec into docker
-- **WHEN** the docker run args are assembled
-- **THEN** `syscall.Exec` is called with the docker binary path and args
