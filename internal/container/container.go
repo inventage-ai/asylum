@@ -133,14 +133,9 @@ func appendVolumes(args []string, home string, opts RunOpts) []string {
 		}
 	}
 
-	// Custom volumes from config
 	for _, v := range opts.Config.Volumes {
 		parsed := config.ParseVolume(v, home)
-		mount := parsed.Host + ":" + parsed.Container
-		if parsed.Options != "" {
-			mount += ":" + parsed.Options
-		}
-		args = append(args, "-v", mount)
+		vol(parsed.Host, parsed.Container, parsed.Options)
 	}
 
 	return args
