@@ -73,7 +73,10 @@ func EnsureProject(packages map[string][]string, version string, baseRebuilt boo
 		return baseTag, nil
 	}
 
-	dockerfile := generateProjectDockerfile(packages)
+	dockerfile, err := generateProjectDockerfile(packages)
+	if err != nil {
+		return "", err
+	}
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(dockerfile)))
 	tag := "asylum:proj-" + hash[:12]
 
@@ -110,7 +113,17 @@ func EnsureProject(packages map[string][]string, version string, baseRebuilt boo
 }
 
 
-func generateProjectDockerfile(packages map[string][]string) string {
+var knownPackageTypes = map[string]bool{
+	"apt": true, "npm": true, "pip": true, "run": true,
+}
+
+func generateProjectDockerfile(packages map[string][]string) (string, error) {
+	for k := range packages {
+		if !knownPackageTypes[k] {
+			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, run)", k)
+		}
+	}
+
 	var b strings.Builder
 	b.WriteString("FROM asylum:latest\n")
 
@@ -145,5 +158,5 @@ func generateProjectDockerfile(packages map[string][]string) string {
 	// Ensure we always end as the non-root user
 	b.WriteString("\nUSER claude\n")
 
-	return b.String()
+	return b.String(), nil
 }
