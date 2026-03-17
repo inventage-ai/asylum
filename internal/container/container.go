@@ -86,10 +86,10 @@ func containerName(projectDir string) string {
 func safeHostname(projectDir string) string {
 	base := strings.ToLower(filepath.Base(projectDir))
 	safe := invalidHostnameChars.ReplaceAllString(base, "-")
-	safe = strings.Trim(safe, "-")
 	if len(safe) > 56 { // leave room for "asylum-" prefix (7 chars) within 63 total
 		safe = safe[:56]
 	}
+	safe = strings.Trim(safe, "-")
 	if safe == "" {
 		safe = "project"
 	}
