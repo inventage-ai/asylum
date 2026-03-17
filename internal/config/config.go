@@ -78,7 +78,12 @@ func merge(base, overlay Config) Config {
 		result.Agent = overlay.Agent
 	}
 
+	result.Ports = make([]string, 0, len(base.Ports)+len(overlay.Ports))
+	result.Ports = append(result.Ports, base.Ports...)
 	result.Ports = append(result.Ports, overlay.Ports...)
+
+	result.Volumes = make([]string, 0, len(base.Volumes)+len(overlay.Volumes))
+	result.Volumes = append(result.Volumes, base.Volumes...)
 	result.Volumes = append(result.Volumes, overlay.Volumes...)
 
 	if overlay.Versions != nil {
