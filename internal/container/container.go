@@ -56,7 +56,7 @@ func RunArgs(opts RunOpts) ([]string, error) {
 		"-w", opts.ProjectDir,
 	}
 
-	args = appendVolumes(args, home, opts)
+	args = appendVolumes(args, home, containerName, opts)
 	args = appendEnvVars(args, home, opts)
 	args = appendPorts(args, opts.Config.Ports)
 
@@ -75,7 +75,7 @@ func containerName(projectDir string) string {
 	return fmt.Sprintf("asylum-%x", h[:6])
 }
 
-func appendVolumes(args []string, home string, opts RunOpts) []string {
+func appendVolumes(args []string, home, cname string, opts RunOpts) []string {
 	vol := func(host, container, mode string) {
 		mount := host + ":" + container
 		if mode != "" {
@@ -83,8 +83,6 @@ func appendVolumes(args []string, home string, opts RunOpts) []string {
 		}
 		args = append(args, "-v", mount)
 	}
-
-	containerName := containerName(opts.ProjectDir)
 
 	// Project directory at real path
 	vol(opts.ProjectDir, opts.ProjectDir, "z")
@@ -102,7 +100,7 @@ func appendVolumes(args []string, home string, opts RunOpts) []string {
 	}
 
 	// Caches
-	cacheBase := filepath.Join(home, ".asylum", "cache", containerName)
+	cacheBase := filepath.Join(home, ".asylum", "cache", cname)
 	caches := map[string]string{
 		"npm":    "/home/claude/.npm",
 		"pip":    "/home/claude/.cache/pip",
@@ -116,7 +114,7 @@ func appendVolumes(args []string, home string, opts RunOpts) []string {
 	}
 
 	// Shell history
-	histDir := filepath.Join(home, ".asylum", "projects", containerName, "history")
+	histDir := filepath.Join(home, ".asylum", "projects", cname, "history")
 	os.MkdirAll(histDir, 0755)
 	vol(histDir, "/home/claude/.shell_history", "rw")
 
