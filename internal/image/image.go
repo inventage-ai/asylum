@@ -112,7 +112,6 @@ func EnsureProject(packages map[string][]string, version string, baseRebuilt boo
 	return tag, nil
 }
 
-
 var knownPackageTypes = map[string]bool{
 	"apt": true, "npm": true, "pip": true, "run": true,
 }

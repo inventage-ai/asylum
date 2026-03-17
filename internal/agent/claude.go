@@ -48,4 +48,3 @@ func (Claude) Command(resume bool, extraArgs []string) []string {
 	parts = append(parts, quoteArgs(extraArgs)...)
 	return wrapZsh(strings.Join(parts, " "))
 }
-
