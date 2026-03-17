@@ -22,9 +22,6 @@ type CLIFlags struct {
 	Ports   []string
 	Volumes []string
 	Java    string
-	New     bool
-	Rebuild bool
-	Cleanup bool
 }
 
 type Volume struct {
