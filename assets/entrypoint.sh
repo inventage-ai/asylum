@@ -99,7 +99,7 @@ fi
 git config --global --add safe.directory '*'
 
 # Check for MCP configuration
-if [ -f "/workspace/.mcp.json" ] || [ -f "/workspace/mcp.json" ]; then
+if [ -n "$HOST_PROJECT_DIR" ] && { [ -f "$HOST_PROJECT_DIR/.mcp.json" ] || [ -f "$HOST_PROJECT_DIR/mcp.json" ]; }; then
     echo "MCP configuration detected."
 fi
 
