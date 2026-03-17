@@ -94,6 +94,9 @@ else
 EOF
 fi
 
+# Trust all mounted repositories (container is ephemeral, all mounts are user-chosen)
+git config --global --add safe.directory '*'
+
 # Check for MCP configuration
 if [ -f "/workspace/.mcp.json" ] || [ -f "/workspace/mcp.json" ]; then
     echo "MCP configuration detected."
