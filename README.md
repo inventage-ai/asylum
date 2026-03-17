@@ -57,6 +57,7 @@ asylum <cmd> [args...]     Run any command in the container
 | `-n`, `--new` | Start a fresh session (skip auto-resume) |
 | `--rebuild` | Force rebuild the Docker image |
 | `--cleanup` | Remove Asylum images and cached data |
+| `--version` | Show version |
 
 Flags not recognized by Asylum are passed through to the agent.
 
