@@ -84,21 +84,25 @@ func merge(base, overlay Config) Config {
 	result.Volumes = append(result.Volumes, overlay.Volumes...)
 
 	if overlay.Versions != nil {
-		if result.Versions == nil {
-			result.Versions = make(map[string]string)
+		merged := make(map[string]string, len(base.Versions)+len(overlay.Versions))
+		for k, v := range base.Versions {
+			merged[k] = v
 		}
 		for k, v := range overlay.Versions {
-			result.Versions[k] = v
+			merged[k] = v
 		}
+		result.Versions = merged
 	}
 
 	if overlay.Packages != nil {
-		if result.Packages == nil {
-			result.Packages = make(map[string][]string)
+		merged := make(map[string][]string, len(base.Packages)+len(overlay.Packages))
+		for k, v := range base.Packages {
+			merged[k] = append([]string(nil), v...)
 		}
 		for k, v := range overlay.Packages {
-			result.Packages[k] = append(result.Packages[k], v...)
+			merged[k] = append(merged[k], v...)
 		}
+		result.Packages = merged
 	}
 
 	return result

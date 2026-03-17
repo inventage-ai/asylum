@@ -97,6 +97,32 @@ func TestMerge(t *testing.T) {
 	}
 }
 
+func TestMergeDoesNotMutateBase(t *testing.T) {
+	base := Config{
+		Versions: map[string]string{"java": "17"},
+		Packages: map[string][]string{"apt": {"curl"}},
+	}
+	overlay := Config{
+		Versions: map[string]string{"java": "21", "node": "20"},
+		Packages: map[string][]string{"apt": {"jq"}, "npm": {"typescript"}},
+	}
+
+	merge(base, overlay)
+
+	if base.Versions["java"] != "17" {
+		t.Errorf("merge mutated base.Versions[java]: got %q, want %q", base.Versions["java"], "17")
+	}
+	if _, ok := base.Versions["node"]; ok {
+		t.Error("merge mutated base.Versions: added node key")
+	}
+	if len(base.Packages["apt"]) != 1 || base.Packages["apt"][0] != "curl" {
+		t.Errorf("merge mutated base.Packages[apt]: got %v, want [curl]", base.Packages["apt"])
+	}
+	if _, ok := base.Packages["npm"]; ok {
+		t.Error("merge mutated base.Packages: added npm key")
+	}
+}
+
 func TestApplyFlags(t *testing.T) {
 	cfg := Config{
 		Agent: "claude",
