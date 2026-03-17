@@ -155,9 +155,9 @@ func ParseVolume(raw string, homeDir string) Volume {
 			return Volume{Host: host, Container: host, Options: parts[1]}
 		}
 		// "/host:/container"
-		return Volume{Host: expandTilde(parts[0]), Container: parts[1]}
+		return Volume{Host: expandTilde(parts[0]), Container: expandTilde(parts[1])}
 	default:
 		// "/host:/container:opts" or more
-		return Volume{Host: expandTilde(parts[0]), Container: parts[1], Options: strings.Join(parts[2:], ":")}
+		return Volume{Host: expandTilde(parts[0]), Container: expandTilde(parts[1]), Options: strings.Join(parts[2:], ":")}
 	}
 }

@@ -189,6 +189,16 @@ func TestParseVolume(t *testing.T) {
 			raw:  "~/data:rw",
 			want: Volume{Host: "/home/user/data", Container: "/home/user/data", Options: "rw"},
 		},
+		{
+			name: "tilde in container path",
+			raw:  "~/host:~/container",
+			want: Volume{Host: "/home/user/host", Container: "/home/user/container"},
+		},
+		{
+			name: "tilde in container path with options",
+			raw:  "~/host:~/container:ro",
+			want: Volume{Host: "/home/user/host", Container: "/home/user/container", Options: "ro"},
+		},
 	}
 
 	for _, tt := range tests {
