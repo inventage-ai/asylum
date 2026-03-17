@@ -26,7 +26,9 @@ func Init() error {
 		data, err := os.ReadFile(knownHosts)
 		if err == nil {
 			dst := filepath.Join(sshDir, "known_hosts")
-			os.WriteFile(dst, data, 0600)
+			if err := os.WriteFile(dst, data, 0600); err != nil {
+				return fmt.Errorf("write known_hosts: %w", err)
+			}
 			log.Success("copied known_hosts")
 		}
 	}
