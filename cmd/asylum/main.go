@@ -118,18 +118,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	dockerBin, err := exec.LookPath("docker")
+	if err != nil {
+		log.Error("docker not found in PATH")
+		os.Exit(1)
+	}
+
 	if containerMode == container.ModeAgent {
 		if c, ok := a.(interface{ WriteMarker(string) error }); ok {
 			if err := c.WriteMarker(projectDir); err != nil {
 				log.Error("write session marker: %v", err)
 			}
 		}
-	}
-
-	dockerBin, err := exec.LookPath("docker")
-	if err != nil {
-		log.Error("docker not found in PATH")
-		os.Exit(1)
 	}
 
 	fullArgs := append([]string{"docker"}, args...)
