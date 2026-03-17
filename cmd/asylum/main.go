@@ -37,7 +37,11 @@ func main() {
 		return
 	}
 
-	mode, extraArgs := resolveMode(positional, passthrough)
+	mode, extraArgs, err := resolveMode(positional, passthrough)
+	if err != nil {
+		log.Error("%v", err)
+		os.Exit(1)
+	}
 
 	if mode == modeSSHInit {
 		if err := ssh.Init(); err != nil {
@@ -239,24 +243,30 @@ func parseArgs(args []string) (cliFlags, []string, []string) {
 	return flags, positional, passthrough
 }
 
-func resolveMode(positional, passthrough []string) (runMode, []string) {
+func resolveMode(positional, passthrough []string) (runMode, []string, error) {
 	if len(positional) == 0 {
-		return modeAgent, passthrough
+		return modeAgent, passthrough, nil
 	}
 
 	switch positional[0] {
 	case "shell":
+		if len(positional) > 1 {
+			return 0, nil, fmt.Errorf("unexpected argument %q after shell", positional[1])
+		}
 		for _, arg := range passthrough {
 			if arg == "--admin" {
-				return modeAdminShell, nil
+				return modeAdminShell, nil, nil
 			}
 		}
-		return modeShell, nil
+		return modeShell, nil, nil
 	case "ssh-init":
-		return modeSSHInit, nil
+		if len(positional) > 1 {
+			return 0, nil, fmt.Errorf("unexpected argument %q after ssh-init", positional[1])
+		}
+		return modeSSHInit, nil, nil
 	default:
 		// Arbitrary command: first positional + everything after
-		return modeCommand, append(positional, passthrough...)
+		return modeCommand, append(positional, passthrough...), nil
 	}
 }
 
