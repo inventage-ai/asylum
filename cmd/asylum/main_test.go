@@ -164,6 +164,22 @@ func TestParseArgs_UnknownFlagPassthrough(t *testing.T) {
 	}
 }
 
+func TestParseArgs_TrailingFlagWithNoValue(t *testing.T) {
+	cases := [][]string{
+		{"-a"},
+		{"--agent"},
+		{"-p"},
+		{"-v"},
+		{"--java"},
+	}
+	for _, args := range cases {
+		_, _, _, err := parseArgs(args)
+		if err == nil {
+			t.Errorf("parseArgs(%v) expected error for trailing flag with no value, got nil", args)
+		}
+	}
+}
+
 func TestParseArgs_PositionalArgRouting(t *testing.T) {
 	// "shell" is a known positional — no passthrough collected
 	_, positional, passthrough, err := parseArgs([]string{"shell"})
