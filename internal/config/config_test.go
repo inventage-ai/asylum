@@ -270,6 +270,76 @@ ports:
 	}
 }
 
+func TestToolVersionsJava(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	t.Run("provides java version", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".tool-versions"), []byte("java 21.0.2\nnodejs 20.11.0\n"), 0644)
+
+		cfg, err := Load(dir, CLIFlags{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Versions["java"] != "21.0.2" {
+			t.Errorf("java = %q, want %q", cfg.Versions["java"], "21.0.2")
+		}
+	})
+
+	t.Run("no java line", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".tool-versions"), []byte("nodejs 20.11.0\n"), 0644)
+
+		cfg, err := Load(dir, CLIFlags{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Versions["java"] != "" {
+			t.Errorf("java = %q, want empty", cfg.Versions["java"])
+		}
+	})
+
+	t.Run("no file", func(t *testing.T) {
+		dir := t.TempDir()
+
+		cfg, err := Load(dir, CLIFlags{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Versions["java"] != "" {
+			t.Errorf("java = %q, want empty", cfg.Versions["java"])
+		}
+	})
+
+	t.Run("asylum config overrides", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".tool-versions"), []byte("java 21.0.2\n"), 0644)
+		os.WriteFile(filepath.Join(dir, ".asylum"), []byte("versions:\n  java: \"17\"\n"), 0644)
+
+		cfg, err := Load(dir, CLIFlags{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Versions["java"] != "17" {
+			t.Errorf("java = %q, want %q", cfg.Versions["java"], "17")
+		}
+	})
+
+	t.Run("CLI flag overrides", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".tool-versions"), []byte("java 21.0.2\n"), 0644)
+
+		cfg, err := Load(dir, CLIFlags{Java: "25"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.Versions["java"] != "25" {
+			t.Errorf("java = %q, want %q", cfg.Versions["java"], "25")
+		}
+	})
+}
+
 func TestLoadSkipsDirectoryAsConfig(t *testing.T) {
 	homeDir := t.TempDir()
 	t.Setenv("HOME", homeDir)

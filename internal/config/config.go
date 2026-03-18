@@ -51,6 +51,13 @@ func Load(projectDir string, flags CLIFlags) (Config, error) {
 		cfg = merge(cfg, layer)
 	}
 
+	if java := readToolVersionsJava(projectDir); java != "" && cfg.Versions["java"] == "" {
+		if cfg.Versions == nil {
+			cfg.Versions = make(map[string]string)
+		}
+		cfg.Versions["java"] = java
+	}
+
 	cfg = applyFlags(cfg, flags)
 	return cfg, nil
 }
@@ -131,6 +138,19 @@ func applyFlags(cfg Config, flags CLIFlags) Config {
 	cfg.Ports = append(cfg.Ports, flags.Ports...)
 	cfg.Volumes = append(cfg.Volumes, flags.Volumes...)
 	return cfg
+}
+
+func readToolVersionsJava(projectDir string) string {
+	data, err := os.ReadFile(filepath.Join(projectDir, ".tool-versions"))
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(data), "\n") {
+		if name, version, ok := strings.Cut(line, " "); ok && name == "java" {
+			return strings.TrimSpace(version)
+		}
+	}
+	return ""
 }
 
 var mountOptions = map[string]bool{
