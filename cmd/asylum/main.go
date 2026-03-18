@@ -253,7 +253,9 @@ func runCleanup() {
 		log.Error("remove asylum:latest: %v", err)
 	}
 
-	if imgs, err := docker.ListImages("asylum:proj-*"); err == nil && len(imgs) > 0 {
+	if imgs, err := docker.ListImages("asylum:proj-*"); err != nil {
+		log.Error("list project images: %v", err)
+	} else if len(imgs) > 0 {
 		if err := docker.RemoveImages(imgs...); err != nil {
 			log.Error("remove project images: %v", err)
 		}
