@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+## 0.3.1 — 2026-03-18
+
+### Added
+- `asylum shell` and `asylum run` exec into a running container instead of failing with a name conflict
+- Read Java version from `.tool-versions` (mise/asdf) into config automatically
+- Mount git worktree directories so git works inside containers for worktree checkouts
+- Show commit hash in `--version` and `self-update` output
+
+### Changed
+- Non-pre-installed Java versions activated in entrypoint instead of showing a warning
+- Only remove containers started during the session on dockerd exit (preserve pre-existing)
+
+### Fixed
+- Fix mise not found in project Dockerfile (`$HOME/.local/bin/mise` full path)
+- Fix Java version format in project Dockerfile (pass as-is, don't prepend `temurin-`)
+- Fix self-update showing branch name instead of commit hash
+- Validate port values before passing to Docker
+- Validate Java version before interpolation into Dockerfile
+- Error when `run` subcommand has no command
+- Merge `known_hosts` instead of overwriting on `ssh-init`
+- Handle tab-separated `.tool-versions` for Java detection
+- Skip files deleted between WalkDir and Info in copyDir
+- Verify download size against Content-Length before replacing binary
+- Close response body on non-200 status in fetchTagCommit
+- Check version for dev channel to skip redundant downloads
+- Numerous robustness fixes: deterministic env var ordering, slice mutation safety, partial cleanup reporting
+
 ## 0.3.0 — 2026-03-18
 
 ### Added
