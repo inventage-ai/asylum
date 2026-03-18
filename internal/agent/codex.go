@@ -1,10 +1,11 @@
 package agent
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/inventage-ai/asylum/internal/log"
 )
 
 type Codex struct{}
@@ -58,7 +59,7 @@ func (Codex) Command(resume bool, extraArgs []string) []string {
 		if len(extraArgs) == 0 {
 			return wrapZsh("codex resume --last --yolo")
 		}
-		fmt.Fprintln(os.Stderr, "! codex: resume skipped because extra args were provided")
+		log.Warn("codex: resume skipped because extra args were provided")
 	}
 	parts := []string{"codex", "--yolo"}
 	parts = append(parts, quoteArgs(extraArgs)...)
