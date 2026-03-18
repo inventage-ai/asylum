@@ -378,3 +378,79 @@ func TestContainerName(t *testing.T) {
 	}
 }
 
+func TestAppendVolumesUserVolumes(t *testing.T) {
+	home := t.TempDir()
+	projectDir := t.TempDir()
+	cname := containerName(projectDir)
+
+	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
+	if err := os.MkdirAll(agentConfigDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	tests := []struct {
+		name        string
+		volumes     []string
+		wantHost    string
+		wantCont    string
+		wantOptions string
+	}{
+		{
+			name:     "simple absolute path mounts same on both sides",
+			volumes:  []string{"/data"},
+			wantHost: "/data",
+			wantCont: "/data",
+		},
+		{
+			name:     "host:container volume",
+			volumes:  []string{"/src:/dst"},
+			wantHost: "/src",
+			wantCont: "/dst",
+		},
+		{
+			name:        "host:container:options volume",
+			volumes:     []string{"/src:/dst:ro"},
+			wantHost:    "/src",
+			wantCont:    "/dst",
+			wantOptions: "ro",
+		},
+		{
+			name:     "tilde expanded in host path",
+			volumes:  []string{"~/data:/data"},
+			wantHost: filepath.Join(home, "data"),
+			wantCont: "/data",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := RunOpts{
+				Config:     config.Config{Volumes: tt.volumes},
+				Agent:      stubAgent{},
+				ProjectDir: projectDir,
+			}
+
+			args, err := appendVolumes([]string{}, home, cname, opts)
+			if err != nil {
+				t.Fatalf("appendVolumes: %v", err)
+			}
+
+			wantMount := tt.wantHost + ":" + tt.wantCont
+			if tt.wantOptions != "" {
+				wantMount += ":" + tt.wantOptions
+			}
+
+			found := false
+			for i, arg := range args {
+				if arg == "-v" && i+1 < len(args) && args[i+1] == wantMount {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Errorf("expected -v %q in args %v", wantMount, args)
+			}
+		})
+	}
+}
+
