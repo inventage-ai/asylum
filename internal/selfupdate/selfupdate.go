@@ -17,8 +17,9 @@ import (
 const repo = "inventage-ai/asylum"
 
 type release struct {
-	TagName string  `json:"tag_name"`
-	Assets  []asset `json:"assets"`
+	TagName         string  `json:"tag_name"`
+	TargetCommitish string  `json:"target_commitish"`
+	Assets          []asset `json:"assets"`
 }
 
 type asset struct {
@@ -80,8 +81,19 @@ func Run(currentVersion, channel, execPath string) error {
 		return err
 	}
 
-	log.Success("updated to %s", version)
+	if c := shortCommit(rel.TargetCommitish); c != "" {
+		log.Success("updated to %s (%s)", version, c)
+	} else {
+		log.Success("updated to %s", version)
+	}
 	return nil
+}
+
+func shortCommit(commitish string) string {
+	if len(commitish) >= 7 {
+		return commitish[:7]
+	}
+	return commitish
 }
 
 func fetchRelease(channel string) (release, error) {

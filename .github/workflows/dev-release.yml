@@ -17,7 +17,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Build all targets
-        run: VERSION=dev make build-all
+        run: VERSION=dev COMMIT=${{ github.sha }} make build-all
 
       - name: Delete existing dev release
         run: gh release delete dev --yes --cleanup-tag 2>/dev/null || true

@@ -17,7 +17,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Build all targets
-        run: VERSION=${GITHUB_REF_NAME#v} make build-all
+        run: VERSION=${GITHUB_REF_NAME#v} COMMIT=${{ github.sha }} make build-all
 
       - name: Create release
         uses: softprops/action-gh-release@v2

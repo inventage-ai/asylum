@@ -1,5 +1,6 @@
 VERSION ?= dev
-LDFLAGS := -ldflags "-X main.version=$(VERSION)"
+COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null)
+LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT)"
 BINARY := asylum
 BUILD_DIR := build
 

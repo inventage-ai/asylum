@@ -19,6 +19,7 @@ import (
 )
 
 var version = "dev"
+var commit = ""
 
 func die(format string, args ...any) {
 	log.Error(format, args...)
@@ -37,7 +38,11 @@ func main() {
 	}
 
 	if flags.Version {
-		fmt.Printf("asylum %s\n", version)
+		if commit != "" {
+			fmt.Printf("asylum %s (%s)\n", version, commit)
+		} else {
+			fmt.Printf("asylum %s\n", version)
+		}
 		return
 	}
 
