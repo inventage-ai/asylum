@@ -79,7 +79,7 @@ func EnsureProject(packages map[string][]string, version string, baseRebuilt boo
 	tag := "asylum:proj-" + hash[:12]
 
 	existing, err := docker.InspectLabel(tag, "asylum.packages.hash")
-	if err == nil && existing == hash && !baseRebuilt {
+	if err == nil && existing == hash && !baseRebuilt && !noCache {
 		log.Info("project image up to date")
 		return tag, nil
 	}
