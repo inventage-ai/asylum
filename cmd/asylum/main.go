@@ -261,6 +261,9 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			if len(rest) > 0 && rest[0] == "--" {
 				rest = rest[1:]
 			}
+			if len(rest) == 0 {
+				return cliFlags{}, "", nil, fmt.Errorf("'run' requires a command (e.g., asylum run ls -la)")
+			}
 			extraArgs = append(extraArgs, rest...)
 			i = len(args)
 		case strings.HasPrefix(arg, "-"):

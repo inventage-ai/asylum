@@ -168,9 +168,14 @@ func TestParseArgs(t *testing.T) {
 			wantExtra: []string{"ls"},
 		},
 		{
-			name:    "run with no command",
+			name:    "run with no command errors",
 			args:    []string{"run"},
-			wantSub: "run",
+			wantErr: true,
+		},
+		{
+			name:    "run with only double dash errors",
+			args:    []string{"run", "--"},
+			wantErr: true,
 		},
 
 		// self-update subcommand
