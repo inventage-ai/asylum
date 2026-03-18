@@ -108,6 +108,11 @@ fi
 # Trust all mounted repositories (container is ephemeral, all mounts are user-chosen)
 git config --global --add safe.directory '*'
 
+# Ignore file mode changes (Docker Desktop mounts lose execute bits on file rewrites)
+if grep -q linuxkit /proc/version 2>/dev/null; then
+    git config --global core.fileMode false
+fi
+
 # Check for MCP configuration
 if [ -n "$HOST_PROJECT_DIR" ] && { [ -f "$HOST_PROJECT_DIR/.mcp.json" ] || [ -f "$HOST_PROJECT_DIR/mcp.json" ]; }; then
     echo "MCP configuration detected."
