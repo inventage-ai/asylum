@@ -140,4 +140,19 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("pip package with shell operators rejected", func(t *testing.T) {
+		bad := []string{
+			"ruff; rm -rf /",
+			"ruff && echo pwned",
+			"ruff\necho pwned",
+			"ruff$(evil)",
+		}
+		for _, name := range bad {
+			_, err := generateProjectDockerfile(map[string][]string{"pip": {name}})
+			if err == nil {
+				t.Errorf("expected error for pip package name %q", name)
+			}
+		}
+	})
 }
