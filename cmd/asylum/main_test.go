@@ -3,6 +3,8 @@ package main
 import (
 	"reflect"
 	"testing"
+
+	"github.com/inventage-ai/asylum/internal/container"
 )
 
 func TestResolveMode(t *testing.T) {
@@ -10,39 +12,40 @@ func TestResolveMode(t *testing.T) {
 		name        string
 		positional  []string
 		passthrough []string
-		wantMode    runMode
+		wantMode    container.Mode
+		wantSSH     bool
 		wantExtra   []string
 		wantErr     bool
 	}{
 		{
 			name:      "no positional defaults to agent",
-			wantMode:  modeAgent,
+			wantMode:  container.ModeAgent,
 			wantExtra: nil,
 		},
 		{
 			name:        "no positional passes through passthrough args",
 			passthrough: []string{"--some-flag"},
-			wantMode:    modeAgent,
+			wantMode:    container.ModeAgent,
 			wantExtra:   []string{"--some-flag"},
 		},
 		{
 			name:       "shell positional",
 			positional: []string{"shell"},
-			wantMode:   modeShell,
+			wantMode:   container.ModeShell,
 			wantExtra:  nil,
 		},
 		{
 			name:        "shell with --admin in passthrough",
 			positional:  []string{"shell"},
 			passthrough: []string{"--admin"},
-			wantMode:    modeAdminShell,
+			wantMode:    container.ModeAdminShell,
 			wantExtra:   nil,
 		},
 		{
 			name:        "shell with other passthrough flags (no --admin)",
 			positional:  []string{"shell"},
 			passthrough: []string{"--verbose"},
-			wantMode:    modeShell,
+			wantMode:    container.ModeShell,
 			wantExtra:   nil,
 		},
 		{
@@ -53,7 +56,7 @@ func TestResolveMode(t *testing.T) {
 		{
 			name:       "ssh-init positional",
 			positional: []string{"ssh-init"},
-			wantMode:   modeSSHInit,
+			wantSSH:    true,
 			wantExtra:  nil,
 		},
 		{
@@ -65,20 +68,20 @@ func TestResolveMode(t *testing.T) {
 			name:        "arbitrary command mode",
 			positional:  []string{"run"},
 			passthrough: []string{"arg1", "arg2"},
-			wantMode:    modeCommand,
+			wantMode:    container.ModeCommand,
 			wantExtra:   []string{"run", "arg1", "arg2"},
 		},
 		{
 			name:       "arbitrary command no passthrough",
 			positional: []string{"ls"},
-			wantMode:   modeCommand,
+			wantMode:   container.ModeCommand,
 			wantExtra:  []string{"ls"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mode, extra, err := resolveMode(tt.positional, tt.passthrough)
+			mode, isSSH, extra, err := resolveMode(tt.positional, tt.passthrough)
 			if tt.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -88,7 +91,10 @@ func TestResolveMode(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if mode != tt.wantMode {
+			if isSSH != tt.wantSSH {
+				t.Errorf("isSSH = %v, want %v", isSSH, tt.wantSSH)
+			}
+			if !tt.wantSSH && mode != tt.wantMode {
 				t.Errorf("mode = %d, want %d", mode, tt.wantMode)
 			}
 			if !reflect.DeepEqual(extra, tt.wantExtra) {

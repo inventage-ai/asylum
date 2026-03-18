@@ -37,13 +37,13 @@ func main() {
 		return
 	}
 
-	mode, extraArgs, err := resolveMode(positional, passthrough)
+	containerMode, isSSHInit, extraArgs, err := resolveMode(positional, passthrough)
 	if err != nil {
 		log.Error("%v", err)
 		os.Exit(1)
 	}
 
-	if mode == modeSSHInit {
+	if isSSHInit {
 		if err := ssh.Init(); err != nil {
 			log.Error("%v", err)
 			os.Exit(1)
@@ -96,18 +96,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	var containerMode container.Mode
-	switch mode {
-	case modeShell:
-		containerMode = container.ModeShell
-	case modeAdminShell:
-		containerMode = container.ModeAdminShell
-	case modeCommand:
-		containerMode = container.ModeCommand
-	default:
-		containerMode = container.ModeAgent
-	}
-
 	args, err := container.RunArgs(container.RunOpts{
 		Config:     cfg,
 		Agent:      a,
@@ -142,16 +130,6 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-type runMode int
-
-const (
-	modeAgent runMode = iota
-	modeShell
-	modeAdminShell
-	modeSSHInit
-	modeCommand
-)
 
 type cliFlags struct {
 	Agent   string
@@ -243,30 +221,29 @@ func parseArgs(args []string) (cliFlags, []string, []string) {
 	return flags, positional, passthrough
 }
 
-func resolveMode(positional, passthrough []string) (runMode, []string, error) {
+func resolveMode(positional, passthrough []string) (container.Mode, bool, []string, error) {
 	if len(positional) == 0 {
-		return modeAgent, passthrough, nil
+		return container.ModeAgent, false, passthrough, nil
 	}
 
 	switch positional[0] {
 	case "shell":
 		if len(positional) > 1 {
-			return 0, nil, fmt.Errorf("unexpected argument %q after shell", positional[1])
+			return 0, false, nil, fmt.Errorf("unexpected argument %q after shell", positional[1])
 		}
 		for _, arg := range passthrough {
 			if arg == "--admin" {
-				return modeAdminShell, nil, nil
+				return container.ModeAdminShell, false, nil, nil
 			}
 		}
-		return modeShell, nil, nil
+		return container.ModeShell, false, nil, nil
 	case "ssh-init":
 		if len(positional) > 1 {
-			return 0, nil, fmt.Errorf("unexpected argument %q after ssh-init", positional[1])
+			return 0, false, nil, fmt.Errorf("unexpected argument %q after ssh-init", positional[1])
 		}
-		return modeSSHInit, nil, nil
+		return 0, true, nil, nil
 	default:
-		// Arbitrary command: first positional + everything after
-		return modeCommand, append(positional, passthrough...), nil
+		return container.ModeCommand, false, append(positional, passthrough...), nil
 	}
 }
 
