@@ -36,14 +36,21 @@ fi
 if [ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]; then
     source "$HOME/.sdkman/bin/sdkman-init.sh"
     if [ -n "${ASYLUM_JAVA_VERSION:-}" ]; then
-        match=$(ls -d "$HOME/.sdkman/candidates/java/${ASYLUM_JAVA_VERSION}"*-tem 2>/dev/null | head -1)
-        if [ -n "$match" ]; then
-            export JAVA_HOME="$match"
-            export PATH="$JAVA_HOME/bin:$PATH"
-        else
-            echo "Warning: Java version matching '${ASYLUM_JAVA_VERSION}' not found. Installed:"
-            ls "$HOME/.sdkman/candidates/java/" 2>/dev/null || true
-        fi
+        case "${ASYLUM_JAVA_VERSION}" in
+            17|21|25)
+                match=$(ls -d "$HOME/.sdkman/candidates/java/${ASYLUM_JAVA_VERSION}"*-tem 2>/dev/null | head -1)
+                if [ -n "$match" ]; then
+                    export JAVA_HOME="$match"
+                    export PATH="$JAVA_HOME/bin:$PATH"
+                else
+                    echo "Warning: Java version matching '${ASYLUM_JAVA_VERSION}' not found. Installed:"
+                    ls "$HOME/.sdkman/candidates/java/" 2>/dev/null || true
+                fi
+                ;;
+            *)
+                echo "Warning: ASYLUM_JAVA_VERSION '${ASYLUM_JAVA_VERSION}' is not a supported version (17, 21, 25). Ignoring."
+                ;;
+        esac
     fi
 fi
 
