@@ -148,8 +148,12 @@ func parseArgs(args []string) (cliFlags, []string, []string, error) {
 	i := 0
 	next := func(flag string) (string, error) {
 		if i+1 < len(args) {
+			val := args[i+1]
+			if strings.HasPrefix(val, "-") {
+				return "", fmt.Errorf("flag %q requires a value, got %q", flag, val)
+			}
 			i += 2
-			return args[i-1], nil
+			return val, nil
 		}
 		return "", fmt.Errorf("flag %q requires a value", flag)
 	}
