@@ -1,8 +1,8 @@
 # Asylum - Multi-language development environment for AI coding agents
 FROM debian:trixie
 
-# Prevent interactive prompts during installation
-ENV DEBIAN_FRONTEND=noninteractive
+# Prevent interactive prompts during installation (build-time only)
+ARG DEBIAN_FRONTEND=noninteractive
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
 ENV LC_ALL=en_US.UTF-8
