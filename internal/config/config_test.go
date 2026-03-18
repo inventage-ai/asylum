@@ -190,14 +190,14 @@ func TestParseVolume(t *testing.T) {
 			want: Volume{Host: "/home/user/data", Container: "/home/user/data", Options: "rw"},
 		},
 		{
-			name: "tilde in container path",
+			name: "tilde in container path preserved",
 			raw:  "~/host:~/container",
-			want: Volume{Host: "/home/user/host", Container: "/home/user/container"},
+			want: Volume{Host: "/home/user/host", Container: "~/container"},
 		},
 		{
 			name: "tilde in container path with options",
 			raw:  "~/host:~/container:ro",
-			want: Volume{Host: "/home/user/host", Container: "/home/user/container", Options: "ro"},
+			want: Volume{Host: "/home/user/host", Container: "~/container", Options: "ro"},
 		},
 	}
 
