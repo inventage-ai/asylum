@@ -302,6 +302,45 @@ func TestAppendEnvVars(t *testing.T) {
 		}
 	})
 
+	t.Run("config env vars emitted before hardcoded vars", func(t *testing.T) {
+		cfg := config.Config{Env: map[string]string{"MY_VAR": "hello", "OTHER": "world"}}
+		opts := RunOpts{
+			Config:     cfg,
+			Agent:      stubAgent{envVars: map[string]string{}},
+			ProjectDir: "/work/proj",
+		}
+		got := appendEnvVars([]string{}, opts)
+
+		// Find positions of config env vars and ASYLUM_DOCKER
+		myVarIdx, asylumIdx := -1, -1
+		for i, v := range got {
+			if v == "MY_VAR=hello" {
+				myVarIdx = i
+			}
+			if v == "ASYLUM_DOCKER=1" {
+				asylumIdx = i
+			}
+		}
+		if myVarIdx == -1 {
+			t.Fatalf("MY_VAR=hello not found in %v", got)
+		}
+		if asylumIdx == -1 {
+			t.Fatalf("ASYLUM_DOCKER=1 not found in %v", got)
+		}
+		if myVarIdx > asylumIdx {
+			t.Errorf("config env vars should appear before hardcoded vars, MY_VAR at %d, ASYLUM_DOCKER at %d", myVarIdx, asylumIdx)
+		}
+
+		// Both config env vars present
+		joined := strings.Join(got, " ")
+		if !strings.Contains(joined, "-e MY_VAR=hello") {
+			t.Errorf("expected MY_VAR=hello in %v", got)
+		}
+		if !strings.Contains(joined, "-e OTHER=world") {
+			t.Errorf("expected OTHER=world in %v", got)
+		}
+	})
+
 	t.Run("agent env vars included", func(t *testing.T) {
 		opts := RunOpts{
 			Config:     config.Config{},

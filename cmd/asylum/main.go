@@ -81,6 +81,7 @@ func main() {
 		Agent:   flags.Agent,
 		Ports:   flags.Ports,
 		Volumes: flags.Volumes,
+		Env:     flags.Env,
 		Java:    flags.Java,
 	})
 	if err != nil {
@@ -149,6 +150,7 @@ type cliFlags struct {
 	Agent   string
 	Ports   []string
 	Volumes []string
+	Env     map[string]string
 	Java    string
 	New     bool
 	Rebuild bool
@@ -202,6 +204,19 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			var v string
 			if v, err = next(arg); err == nil {
 				flags.Volumes = append(flags.Volumes, v)
+			}
+		case arg == "-e":
+			var val string
+			if val, err = next(arg); err == nil {
+				k, v, ok := strings.Cut(val, "=")
+				if !ok || k == "" {
+					err = fmt.Errorf("invalid env var %q: must be KEY=VALUE", val)
+				} else {
+					if flags.Env == nil {
+						flags.Env = make(map[string]string)
+					}
+					flags.Env[k] = v
+				}
 			}
 		case arg == "--java":
 			flags.Java, err = next(arg)
@@ -382,6 +397,7 @@ Flags:
   -a, --agent <name>   Agent: claude, gemini, codex (default: claude)
   -p <port>            Port forwarding (repeatable)
   -v <volume>          Additional volume mount (repeatable)
+  -e KEY=VALUE         Environment variable (repeatable, last wins)
   --java <version>     Java version in container
   -n, --new            Start new session (skip resume)
   --rebuild            Force rebuild Docker image

@@ -181,6 +181,10 @@ func appendEnvVars(args []string, opts RunOpts) []string {
 		args = append(args, "-e", k+"="+v)
 	}
 
+	for _, k := range slices.Sorted(maps.Keys(opts.Config.Env)) {
+		env(k, opts.Config.Env[k])
+	}
+
 	env("ASYLUM_DOCKER", "1")
 	env("HISTFILE", "/home/claude/.shell_history/zsh_history")
 	env("HOST_PROJECT_DIR", opts.ProjectDir)

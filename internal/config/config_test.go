@@ -95,6 +95,36 @@ func TestMerge(t *testing.T) {
 			},
 		},
 		{
+			name: "env map last wins",
+			base: Config{Env: map[string]string{"KEY": "old"}},
+			over: Config{Env: map[string]string{"KEY": "new"}},
+			check: func(t *testing.T, c Config) {
+				if c.Env["KEY"] != "new" {
+					t.Errorf("env KEY = %q, want %q", c.Env["KEY"], "new")
+				}
+			},
+		},
+		{
+			name: "env maps merged",
+			base: Config{Env: map[string]string{"A": "1"}},
+			over: Config{Env: map[string]string{"B": "2"}},
+			check: func(t *testing.T, c Config) {
+				if c.Env["A"] != "1" || c.Env["B"] != "2" {
+					t.Errorf("env = %v, want A=1 B=2", c.Env)
+				}
+			},
+		},
+		{
+			name: "env nil overlay keeps base",
+			base: Config{Env: map[string]string{"A": "1"}},
+			over: Config{},
+			check: func(t *testing.T, c Config) {
+				if c.Env["A"] != "1" {
+					t.Errorf("env A = %q, want %q", c.Env["A"], "1")
+				}
+			},
+		},
+		{
 			name: "nil base maps handled",
 			base: Config{},
 			over: Config{Versions: map[string]string{"java": "21"}, Packages: map[string][]string{"apt": {"curl"}}},
@@ -163,6 +193,19 @@ func TestApplyFlags(t *testing.T) {
 	}
 	if result.Versions["java"] != "17" {
 		t.Errorf("java = %q, want %q", result.Versions["java"], "17")
+	}
+}
+
+func TestApplyFlagsEnv(t *testing.T) {
+	cfg := Config{Env: map[string]string{"A": "1"}}
+	flags := CLIFlags{Env: map[string]string{"A": "2", "B": "3"}}
+	result := applyFlags(cfg, flags)
+
+	if result.Env["A"] != "2" {
+		t.Errorf("env A = %q, want %q", result.Env["A"], "2")
+	}
+	if result.Env["B"] != "3" {
+		t.Errorf("env B = %q, want %q", result.Env["B"], "3")
 	}
 }
 
@@ -267,6 +310,26 @@ ports:
 	}
 	if !found {
 		t.Errorf("ports %v missing 8080", cfg.Ports)
+	}
+}
+
+func TestLoadEnv(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, ".asylum"), []byte("env:\n  MY_KEY: val1\n  OTHER: base\n"), 0644)
+	os.WriteFile(filepath.Join(dir, ".asylum.local"), []byte("env:\n  MY_KEY: val2\n"), 0644)
+
+	cfg, err := Load(dir, CLIFlags{})
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Env["MY_KEY"] != "val2" {
+		t.Errorf("env MY_KEY = %q, want %q", cfg.Env["MY_KEY"], "val2")
+	}
+	if cfg.Env["OTHER"] != "base" {
+		t.Errorf("env OTHER = %q, want %q", cfg.Env["OTHER"], "base")
 	}
 }
 

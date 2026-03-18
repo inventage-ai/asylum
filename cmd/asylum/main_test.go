@@ -98,6 +98,38 @@ func TestParseArgs(t *testing.T) {
 			wantFlags: cliFlags{Cleanup: true},
 		},
 
+		// -e env var
+		{
+			name:      "env var single",
+			args:      []string{"-e", "FOO=bar"},
+			wantFlags: cliFlags{Env: map[string]string{"FOO": "bar"}},
+		},
+		{
+			name:      "env var repeatable last wins",
+			args:      []string{"-e", "K=1", "-e", "K=2"},
+			wantFlags: cliFlags{Env: map[string]string{"K": "2"}},
+		},
+		{
+			name:      "env var multiple keys",
+			args:      []string{"-e", "A=1", "-e", "B=2"},
+			wantFlags: cliFlags{Env: map[string]string{"A": "1", "B": "2"}},
+		},
+		{
+			name:      "env var empty value allowed",
+			args:      []string{"-e", "K="},
+			wantFlags: cliFlags{Env: map[string]string{"K": ""}},
+		},
+		{
+			name:    "env var missing equals",
+			args:    []string{"-e", "NOEQUALS"},
+			wantErr: true,
+		},
+		{
+			name:    "env var empty key",
+			args:    []string{"-e", "=value"},
+			wantErr: true,
+		},
+
 		// -- separator
 		{
 			name:      "double dash passes args to agent",
@@ -237,6 +269,11 @@ func TestParseArgs(t *testing.T) {
 		{
 			name:    "trailing --java",
 			args:    []string{"--java"},
+			wantErr: true,
+		},
+		{
+			name:    "trailing -e",
+			args:    []string{"-e"},
 			wantErr: true,
 		},
 	}

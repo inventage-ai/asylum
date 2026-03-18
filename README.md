@@ -53,6 +53,7 @@ asylum self-update [--dev]    Update to latest version
 | `-a`, `--agent` | Agent to use: `claude`, `gemini`, `codex` (default: `claude`) |
 | `-p <port>` | Forward a port (repeatable, e.g. `-p 3000 -p 8080:80`) |
 | `-v <volume>` | Mount a volume (repeatable, e.g. `-v ~/data:/data:ro`) |
+| `-e KEY=VALUE` | Set environment variable (repeatable, last wins) |
 | `--java <version>` | Select Java version (`17`, `21`, `25` pre-installed; others installed on demand) |
 | `-n`, `--new` | Start a fresh session (skip auto-resume) |
 | `--rebuild` | Force rebuild the Docker image |
@@ -85,6 +86,10 @@ ports:
 volumes:
   - ~/shared-data:/data:ro
 
+env:
+  MY_API_KEY: "abc123"
+  DEBUG: "true"
+
 versions:
   java: "17"
 
@@ -105,6 +110,7 @@ packages:
 
 - **Scalars** (agent, java version): last value wins
 - **Lists** (ports, volumes): concatenated across layers
+- **Maps** (env, versions): merged per key, last value wins
 - **Package lists** (apt, npm, pip, run): each sub-list concatenated independently
 
 ## How It Works
