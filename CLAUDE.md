@@ -83,6 +83,7 @@ If a log line explains what is happening, any comment above that line which esse
 - Test files live next to the code they test (`config_test.go` next to `config.go`).
 - Test the important logic: config merging, volume shorthand parsing, session detection, command generation, hash computation. Don't test trivial getters.
 - Use `testdata/` directories for fixture files.
+- **Integration tests** (`integration/`) require Docker and are slow (each `docker run` against the 5.6GB image takes seconds). They are gated behind `-tags integration` and excluded from `go test ./...`. Only run them via `make test-integration` as a final check before merging — do not run them during iterative development.
 
 ## Dependencies
 

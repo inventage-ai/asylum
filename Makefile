@@ -3,7 +3,7 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION)"
 BINARY := asylum
 BUILD_DIR := build
 
-.PHONY: build build-all clean test
+.PHONY: build build-all clean test test-integration
 
 build:
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/asylum
@@ -19,3 +19,6 @@ clean:
 
 test:
 	go test ./...
+
+test-integration:
+	go test -tags integration -v -timeout 30m ./integration/
