@@ -14,6 +14,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/docker"
 	"github.com/inventage-ai/asylum/internal/image"
 	"github.com/inventage-ai/asylum/internal/log"
+	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/ssh"
 )
 
@@ -47,6 +48,26 @@ func main() {
 
 	if subcommand == "ssh-init" {
 		if err := ssh.Init(); err != nil {
+			die("%v", err)
+		}
+		return
+	}
+
+	if subcommand == "self-update" {
+		projectDir, err := filepath.Abs(".")
+		if err != nil {
+			die("resolve project dir: %v", err)
+		}
+		cfg, err := config.Load(projectDir, config.CLIFlags{})
+		if err != nil {
+			die("load config: %v", err)
+		}
+		channel := selfupdate.ResolveChannel(flags.Dev, cfg.ReleaseChannel)
+		execPath, err := os.Executable()
+		if err != nil {
+			die("resolve executable: %v", err)
+		}
+		if err := selfupdate.Run(version, channel, execPath); err != nil {
 			die("%v", err)
 		}
 		return
@@ -136,6 +157,7 @@ type cliFlags struct {
 	Help    bool
 	Version bool
 	Admin   bool
+	Dev     bool
 }
 
 func parseArgs(args []string) (cliFlags, string, []string, error) {
@@ -214,6 +236,17 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			i++
 			if i < len(args) {
 				return cliFlags{}, "", nil, fmt.Errorf("unexpected argument %q after ssh-init", args[i])
+			}
+		case arg == "self-update":
+			subcommand = "self-update"
+			i++
+			for i < len(args) {
+				if args[i] == "--dev" {
+					flags.Dev = true
+					i++
+				} else {
+					return cliFlags{}, "", nil, fmt.Errorf("unknown flag %q for self-update (only --dev is supported)", args[i])
+				}
 			}
 		case arg == "run":
 			subcommand = "run"
@@ -299,6 +332,7 @@ Usage:
   asylum [flags] shell --admin  Admin shell with sudo notice
   asylum [flags] run <cmd>      Run command in container
   asylum ssh-init               Initialize SSH directory
+  asylum self-update [--dev]    Update to latest version
 
 Flags:
   -a, --agent <name>   Agent: claude, gemini, codex (default: claude)

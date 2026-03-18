@@ -2,7 +2,8 @@
 set -e
 
 REPO="inventage-ai/asylum"
-INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"
+INSTALL_DIR="${INSTALL_DIR:-$HOME/.asylum/bin}"
+SYMLINK_DIR="${SYMLINK_DIR:-/usr/local/bin}"
 
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
@@ -36,11 +37,24 @@ echo "Downloading asylum ${VERSION} for ${OS}/${ARCH}..."
 curl -fsSL -o /tmp/asylum "$URL"
 chmod +x /tmp/asylum
 
-if [ -w "$INSTALL_DIR" ]; then
-    mv /tmp/asylum "${INSTALL_DIR}/asylum"
+mkdir -p "$INSTALL_DIR"
+mv /tmp/asylum "${INSTALL_DIR}/asylum"
+
+# Create symlink in a well-known PATH directory.
+# Remove any existing file/symlink first to handle legacy installs
+# where the binary lived directly in SYMLINK_DIR.
+target="${SYMLINK_DIR}/asylum"
+if [ -w "$SYMLINK_DIR" ]; then
+    rm -f "$target"
+    ln -s "${INSTALL_DIR}/asylum" "$target"
+elif [ -L "$target" ] || [ -e "$target" ]; then
+    echo "Updating symlink in ${SYMLINK_DIR} (requires sudo)..."
+    sudo rm -f "$target"
+    sudo ln -s "${INSTALL_DIR}/asylum" "$target"
 else
-    echo "Installing to ${INSTALL_DIR} (requires sudo)..."
-    sudo mv /tmp/asylum "${INSTALL_DIR}/asylum"
+    echo "Creating symlink in ${SYMLINK_DIR} (requires sudo)..."
+    sudo ln -s "${INSTALL_DIR}/asylum" "$target"
 fi
 
 echo "asylum ${VERSION} installed to ${INSTALL_DIR}/asylum"
+echo "Symlinked from ${target}"

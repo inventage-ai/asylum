@@ -1,0 +1,35 @@
+name: Dev Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  dev-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build all targets
+        run: VERSION=dev make build-all
+
+      - name: Delete existing dev release
+        run: gh release delete dev --yes --cleanup-tag 2>/dev/null || true
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Create dev pre-release
+        run: |
+          gh release create dev \
+            --prerelease \
+            --title "Development Build" \
+            --notes "Rolling build from \`main\` ($(date -u '+%Y-%m-%d %H:%M UTC')). Install with: \`asylum self-update --dev\`" \
+            build/asylum-*
+        env:
+          GH_TOKEN: ${{ github.token }}

@@ -75,6 +75,26 @@ func TestMerge(t *testing.T) {
 			},
 		},
 		{
+			name: "release-channel last wins",
+			base: Config{ReleaseChannel: "stable"},
+			over: Config{ReleaseChannel: "dev"},
+			check: func(t *testing.T, c Config) {
+				if c.ReleaseChannel != "dev" {
+					t.Errorf("release-channel = %q, want %q", c.ReleaseChannel, "dev")
+				}
+			},
+		},
+		{
+			name: "release-channel empty overlay keeps base",
+			base: Config{ReleaseChannel: "dev"},
+			over: Config{},
+			check: func(t *testing.T, c Config) {
+				if c.ReleaseChannel != "dev" {
+					t.Errorf("release-channel = %q, want %q", c.ReleaseChannel, "dev")
+				}
+			},
+		},
+		{
 			name: "nil base maps handled",
 			base: Config{},
 			over: Config{Versions: map[string]string{"java": "21"}, Packages: map[string][]string{"apt": {"curl"}}},

@@ -11,11 +11,12 @@ import (
 )
 
 type Config struct {
-	Agent    string              `yaml:"agent"`
-	Ports    []string            `yaml:"ports"`
-	Volumes  []string            `yaml:"volumes"`
-	Versions map[string]string   `yaml:"versions"`
-	Packages map[string][]string `yaml:"packages"`
+	Agent          string              `yaml:"agent"`
+	ReleaseChannel string              `yaml:"release-channel"`
+	Ports          []string            `yaml:"ports"`
+	Volumes        []string            `yaml:"volumes"`
+	Versions       map[string]string   `yaml:"versions"`
+	Packages       map[string][]string `yaml:"packages"`
 }
 
 type CLIFlags struct {
@@ -74,6 +75,9 @@ func merge(base, overlay Config) Config {
 
 	if overlay.Agent != "" {
 		result.Agent = overlay.Agent
+	}
+	if overlay.ReleaseChannel != "" {
+		result.ReleaseChannel = overlay.ReleaseChannel
 	}
 
 	result.Ports = concatSlices(base.Ports, overlay.Ports)

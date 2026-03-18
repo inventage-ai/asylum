@@ -173,6 +173,24 @@ func TestParseArgs(t *testing.T) {
 			wantSub: "run",
 		},
 
+		// self-update subcommand
+		{
+			name:    "self-update",
+			args:    []string{"self-update"},
+			wantSub: "self-update",
+		},
+		{
+			name:      "self-update with dev flag",
+			args:      []string{"self-update", "--dev"},
+			wantSub:   "self-update",
+			wantFlags: cliFlags{Dev: true},
+		},
+		{
+			name:    "self-update unknown flag errors",
+			args:    []string{"self-update", "--verbose"},
+			wantErr: true,
+		},
+
 		// strict: unknown flags error
 		{
 			name:    "unknown flag errors",
@@ -265,6 +283,9 @@ func TestParseArgs(t *testing.T) {
 			}
 			if flags.Admin != tt.wantFlags.Admin {
 				t.Errorf("Admin = %v, want %v", flags.Admin, tt.wantFlags.Admin)
+			}
+			if flags.Dev != tt.wantFlags.Dev {
+				t.Errorf("Dev = %v, want %v", flags.Dev, tt.wantFlags.Dev)
 			}
 		})
 	}
