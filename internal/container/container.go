@@ -272,7 +272,8 @@ func copyDir(src, dst string) error {
 
 		info, err := d.Info()
 		if err != nil {
-			return err
+			// File may have been deleted between WalkDir and Info; skip it.
+			return nil
 		}
 
 		if d.IsDir() {
