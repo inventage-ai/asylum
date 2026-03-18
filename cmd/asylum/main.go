@@ -109,6 +109,20 @@ func main() {
 		die("%v", err)
 	}
 
+	// For shell/run modes, exec into a running container instead of starting a new one
+	cname := container.ContainerName(projectDir)
+	if (containerMode == container.ModeShell || containerMode == container.ModeAdminShell || containerMode == container.ModeCommand) && docker.IsRunning(cname) {
+		args := container.ExecArgs(cname, containerMode, extraArgs)
+		dockerBin, err := exec.LookPath("docker")
+		if err != nil {
+			die("docker not found in PATH")
+		}
+		fullArgs := append([]string{"docker"}, args...)
+		if err := syscall.Exec(dockerBin, fullArgs, os.Environ()); err != nil {
+			die("exec docker: %v", err)
+		}
+	}
+
 	baseRebuilt, err := image.EnsureBase(version, flags.Rebuild)
 	if err != nil {
 		die("%v", err)

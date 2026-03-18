@@ -363,8 +363,8 @@ func TestContainerCommandAgentExtraArgs(t *testing.T) {
 }
 
 func TestContainerName(t *testing.T) {
-	name1 := containerName("/home/user/projectA")
-	name2 := containerName("/home/user/projectB")
+	name1 := ContainerName("/home/user/projectA")
+	name2 := ContainerName("/home/user/projectB")
 
 	if name1 == name2 {
 		t.Error("different project dirs should produce different container names")
@@ -373,7 +373,7 @@ func TestContainerName(t *testing.T) {
 		t.Errorf("container name %q should start with asylum-", name1)
 	}
 	// Should be deterministic
-	if containerName("/home/user/projectA") != name1 {
+	if ContainerName("/home/user/projectA") != name1 {
 		t.Error("containerName should be deterministic")
 	}
 }
@@ -381,7 +381,7 @@ func TestContainerName(t *testing.T) {
 func TestAppendVolumesUserVolumes(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()
-	cname := containerName(projectDir)
+	cname := ContainerName(projectDir)
 
 	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
 	if err := os.MkdirAll(agentConfigDir, 0755); err != nil {
@@ -449,6 +449,41 @@ func TestAppendVolumesUserVolumes(t *testing.T) {
 			}
 			if !found {
 				t.Errorf("expected -v %q in args %v", wantMount, args)
+			}
+		})
+	}
+}
+
+func TestExecArgs(t *testing.T) {
+	tests := []struct {
+		name      string
+		mode      Mode
+		extraArgs []string
+		want      []string
+	}{
+		{
+			name: "shell",
+			mode: ModeShell,
+			want: []string{"exec", "-it", "asylum-test", "/bin/zsh"},
+		},
+		{
+			name: "admin shell execs as root",
+			mode: ModeAdminShell,
+			want: []string{"exec", "-it", "-u", "root", "asylum-test", "/bin/zsh"},
+		},
+		{
+			name:      "run command",
+			mode:      ModeCommand,
+			extraArgs: []string{"echo", "hello"},
+			want:      []string{"exec", "-it", "asylum-test", "echo", "hello"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExecArgs("asylum-test", tt.mode, tt.extraArgs)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ExecArgs() = %v, want %v", got, tt.want)
 			}
 		})
 	}

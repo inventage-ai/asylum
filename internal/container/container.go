@@ -43,7 +43,7 @@ func RunArgs(opts RunOpts) ([]string, error) {
 		return nil, fmt.Errorf("home dir: %w", err)
 	}
 
-	containerName := containerName(opts.ProjectDir)
+	containerName := ContainerName(opts.ProjectDir)
 	hostname := safeHostname(opts.ProjectDir)
 
 	seeded, err := ensureAgentConfig(home, opts.Agent)
@@ -78,7 +78,7 @@ func RunArgs(opts RunOpts) ([]string, error) {
 	return args, nil
 }
 
-func containerName(projectDir string) string {
+func ContainerName(projectDir string) string {
 	h := sha256.Sum256([]byte(projectDir))
 	return fmt.Sprintf("asylum-%x", h[:6])
 }
@@ -191,6 +191,21 @@ func appendPorts(args []string, ports []string) []string {
 		} else {
 			args = append(args, "-p", p+":"+p)
 		}
+	}
+	return args
+}
+
+func ExecArgs(containerName string, mode Mode, extraArgs []string) []string {
+	args := []string{"exec", "-it"}
+	if mode == ModeAdminShell {
+		args = append(args, "-u", "root")
+	}
+	args = append(args, containerName)
+	switch mode {
+	case ModeShell, ModeAdminShell:
+		args = append(args, "/bin/zsh")
+	case ModeCommand:
+		args = append(args, extraArgs...)
 	}
 	return args
 }

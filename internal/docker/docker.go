@@ -63,6 +63,12 @@ func PruneImages(filterLabel string) error {
 	return cmd.Run()
 }
 
+func IsRunning(name string) bool {
+	cmd := exec.Command("docker", "inspect", "--format", "{{.State.Running}}", name)
+	out, err := cmd.Output()
+	return err == nil && strings.TrimSpace(string(out)) == "true"
+}
+
 func ListImages(filter string) ([]string, error) {
 	cmd := exec.Command("docker", "images", "--format", "{{.Repository}}:{{.Tag}}", "--filter", "reference="+filter)
 	out, err := cmd.Output()
