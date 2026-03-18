@@ -34,10 +34,7 @@ func AssetName() string {
 // ResolveChannel returns "dev" if the dev flag is set or the config channel is
 // "dev", otherwise "stable".
 func ResolveChannel(devFlag bool, configChannel string) string {
-	if devFlag {
-		return "dev"
-	}
-	if configChannel == "dev" {
+	if devFlag || configChannel == "dev" {
 		return "dev"
 	}
 	return "stable"
