@@ -61,7 +61,9 @@ func EnsureBase(version string, noCache bool) (bool, error) {
 	}
 
 	log.Success("base image built")
-	docker.PruneImages("asylum.version")
+	if err := docker.PruneImages("asylum.version"); err != nil {
+		log.Error("prune old base images: %v", err)
+	}
 
 	return true, nil
 }
