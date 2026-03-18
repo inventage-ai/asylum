@@ -89,13 +89,18 @@ If a log line explains what is happening, any comment above that line which esse
 
 Only `gopkg.in/yaml.v3` — everything else is standard library. ANSI colors are hand-rolled, CLI parsing is manual (to support passthrough semantics). Avoid adding dependencies unless they save significant effort.
 
+## Changelog
+
+`CHANGELOG.md` tracks all user-facing changes. When making significant changes (new features, bug fixes, breaking changes), add an entry under the **Unreleased** section at the top. Use the existing categories: **Added**, **Changed**, **Fixed**, **Removed**. Keep entries concise — one line per change. Do not create categories that have no entries.
+
+To release, use the `/release` command (e.g., `/release 0.3.0`). It moves unreleased entries into a versioned section, commits, and tags.
+
 ## CI/CD
 
 - **CI** (`.github/workflows/ci.yml`): Runs `go test` and `go vet` on every push/PR to main, then builds all four targets.
 - **Release** (`.github/workflows/release.yml`): Triggered by version tags (`v*`). Builds binaries with version baked in and publishes them as GitHub release assets.
+- **Dev Release** (`.github/workflows/dev-release.yml`): Builds and publishes a rolling `dev` pre-release on every push to `main`.
 - **Install script** (`install.sh`): Detects OS/arch and downloads the correct binary from the latest GitHub release.
-
-To release: `git tag v0.x.0 && git push origin v0.x.0`
 
 ## What NOT to Do
 
