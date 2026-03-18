@@ -10,6 +10,7 @@ if [ "${ASYLUM_DOCKER:-}" = "1" ]; then
     elif command -v dockerd >/dev/null 2>&1; then
         echo "Starting Docker daemon..."
         sudo dockerd --storage-driver=vfs --log-level=warn >/tmp/dockerd.log 2>&1 &
+        DOCKERD_PID=$!
         for i in $(seq 1 30); do
             if docker info >/dev/null 2>&1; then
                 echo "Docker daemon ready"
@@ -140,4 +141,11 @@ if [ -t 0 ] && [ -t 1 ]; then
     echo ""
 fi
 
-exec "$@"
+# If dockerd is running, skip exec so the trap can kill it on exit.
+# Otherwise, exec replaces this shell (saves a process).
+if [ -n "${DOCKERD_PID:-}" ]; then
+    trap 'sudo kill -9 $DOCKERD_PID 2>/dev/null' EXIT
+    "$@"
+else
+    exec "$@"
+fi
