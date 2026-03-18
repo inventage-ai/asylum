@@ -56,7 +56,7 @@ func Run(currentVersion, channel, execPath string) error {
 	}
 
 	version := rel.TagName
-	if currentVersion == strings.TrimPrefix(version, "v") {
+	if channel == "stable" && currentVersion == strings.TrimPrefix(version, "v") {
 		log.Success("already up to date (%s)", version)
 		return nil
 	}
