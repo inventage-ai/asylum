@@ -185,8 +185,9 @@ func appendEnvVars(args []string, opts RunOpts) []string {
 		env("ASYLUM_JAVA_VERSION", java)
 	}
 
-	for k, v := range opts.Agent.EnvVars() {
-		env(k, v)
+	agentEnv := opts.Agent.EnvVars()
+	for _, k := range slices.Sorted(maps.Keys(agentEnv)) {
+		env(k, agentEnv[k])
 	}
 
 	return args
