@@ -273,8 +273,12 @@ func runCleanup() {
 			log.Error("home dir: %v", err)
 			return
 		}
-		os.RemoveAll(filepath.Join(home, ".asylum", "cache"))
-		os.RemoveAll(filepath.Join(home, ".asylum", "projects"))
+		if err := os.RemoveAll(filepath.Join(home, ".asylum", "cache")); err != nil {
+			log.Error("remove cache: %v", err)
+		}
+		if err := os.RemoveAll(filepath.Join(home, ".asylum", "projects")); err != nil {
+			log.Error("remove projects: %v", err)
+		}
 		log.Success("cached data removed")
 	}
 
