@@ -80,7 +80,8 @@ fi
 if [ -n "${CLAUDE_CONFIG_DIR:-}" ]; then
     cfg="$CLAUDE_CONFIG_DIR/.claude.json"
     if [ ! -f "$cfg" ] || ! grep -q '"oauthAccount"' "$cfg" 2>/dev/null; then
-        latest=$(ls -t "$CLAUDE_CONFIG_DIR/backups/.claude.json.backup."* 2>/dev/null | head -1)
+        latest=$(find "$CLAUDE_CONFIG_DIR/backups" -maxdepth 1 -name '.claude.json.backup.*' -printf '%T@\t%p\n' 2>/dev/null \
+            | sort -rn | head -1 | cut -f2-)
         if [ -n "$latest" ] && grep -q '"oauthAccount"' "$latest" 2>/dev/null; then
             cp "$latest" "$cfg"
             echo "Restored Claude config from backup"
