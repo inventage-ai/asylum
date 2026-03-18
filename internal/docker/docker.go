@@ -11,8 +11,6 @@ import (
 
 func DockerAvailable() error {
 	cmd := exec.Command("docker", "info")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("docker daemon not running (is Docker installed and started?): %w", err)
 	}
