@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Set terminal tab title on container start (default `🤖 projectname`, configurable via `tab-title` with `{project}`, `{agent}`, `{mode}` placeholders)
+
 ## 0.3.2 — 2026-03-18
 
 ### Added

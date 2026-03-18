@@ -109,6 +109,7 @@ func main() {
 		if err != nil {
 			die("%v", err)
 		}
+		setTabTitle(cfg.TabTitle, projectDir, agentName, containerMode)
 		execDocker(execArgs)
 	}
 
@@ -143,6 +144,7 @@ func main() {
 		}
 	}
 
+	setTabTitle(cfg.TabTitle, projectDir, agentName, containerMode)
 	execDocker(args)
 }
 
@@ -304,6 +306,29 @@ func versionString(short bool) string {
 		return v + "\n"
 	}
 	return "asylum " + v + "\n"
+}
+
+const defaultTabTitle = "🤖 {project}"
+
+func setTabTitle(template, projectDir, agent string, mode container.Mode) {
+	if template == "" {
+		template = defaultTabTitle
+	}
+	modeName := "agent"
+	switch mode {
+	case container.ModeShell:
+		modeName = "shell"
+	case container.ModeAdminShell:
+		modeName = "admin"
+	case container.ModeCommand:
+		modeName = "run"
+	}
+	r := strings.NewReplacer(
+		"{project}", filepath.Base(projectDir),
+		"{agent}", agent,
+		"{mode}", modeName,
+	)
+	fmt.Printf("\033]0;%s\007", r.Replace(template))
 }
 
 func execDocker(args []string) {

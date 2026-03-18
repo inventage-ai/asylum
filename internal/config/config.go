@@ -14,6 +14,7 @@ import (
 type Config struct {
 	Agent          string              `yaml:"agent"`
 	ReleaseChannel string              `yaml:"release-channel"`
+	TabTitle       string              `yaml:"tab-title"`
 	Ports          []string            `yaml:"ports"`
 	Volumes        []string            `yaml:"volumes"`
 	Env            map[string]string   `yaml:"env"`
@@ -92,6 +93,9 @@ func merge(base, overlay Config) Config {
 	}
 	if overlay.ReleaseChannel != "" {
 		result.ReleaseChannel = overlay.ReleaseChannel
+	}
+	if overlay.TabTitle != "" {
+		result.TabTitle = overlay.TabTitle
 	}
 
 	result.Ports = slices.Concat(base.Ports, overlay.Ports)
