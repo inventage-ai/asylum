@@ -39,7 +39,11 @@ func main() {
 
 	if flags.Version {
 		if commit != "" {
-			fmt.Printf("asylum %s (%s)\n", version, commit)
+			short := commit
+			if len(short) > 7 {
+				short = short[:7]
+			}
+			fmt.Printf("asylum %s (%s)\n", version, short)
 		} else {
 			fmt.Printf("asylum %s\n", version)
 		}
@@ -108,7 +112,11 @@ func main() {
 	// For shell/run modes, exec into a running container instead of starting a new one
 	cname := container.ContainerName(projectDir)
 	if (containerMode == container.ModeShell || containerMode == container.ModeAdminShell || containerMode == container.ModeCommand) && docker.IsRunning(cname) {
-		execDocker(container.ExecArgs(cname, containerMode, extraArgs))
+		execArgs, err := container.ExecArgs(cname, containerMode, extraArgs)
+		if err != nil {
+			die("%v", err)
+		}
+		execDocker(execArgs)
 	}
 
 	baseRebuilt, err := image.EnsureBase(version, flags.Rebuild)

@@ -481,7 +481,10 @@ func TestExecArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ExecArgs("asylum-test", tt.mode, tt.extraArgs)
+			got, err := ExecArgs("asylum-test", tt.mode, tt.extraArgs)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ExecArgs() = %v, want %v", got, tt.want)
 			}
@@ -557,5 +560,12 @@ func TestResolveGitWorktree(t *testing.T) {
 			t.Errorf("commonDir should be absolute, got %q", common)
 		}
 	})
+}
+
+func TestExecArgsRejectsAgent(t *testing.T) {
+	_, err := ExecArgs("asylum-test", ModeAgent, nil)
+	if err == nil {
+		t.Error("expected error for ModeAgent, got nil")
+	}
 }
 

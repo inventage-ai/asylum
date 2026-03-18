@@ -204,7 +204,10 @@ func appendPorts(args []string, ports []string) []string {
 	return args
 }
 
-func ExecArgs(containerName string, mode Mode, extraArgs []string) []string {
+func ExecArgs(containerName string, mode Mode, extraArgs []string) ([]string, error) {
+	if mode == ModeAgent {
+		return nil, fmt.Errorf("exec into running container is not supported for agent mode")
+	}
 	args := []string{"exec", "-it"}
 	if mode == ModeAdminShell {
 		args = append(args, "-u", "root")
@@ -216,7 +219,7 @@ func ExecArgs(containerName string, mode Mode, extraArgs []string) []string {
 	case ModeCommand:
 		args = append(args, extraArgs...)
 	}
-	return args
+	return args, nil
 }
 
 func containerCommand(opts RunOpts) []string {
