@@ -38,15 +38,7 @@ func main() {
 	}
 
 	if flags.Version {
-		if commit != "" {
-			short := commit
-			if len(short) > 7 {
-				short = short[:7]
-			}
-			fmt.Printf("asylum %s (%s)\n", version, short)
-		} else {
-			fmt.Printf("asylum %s\n", version)
-		}
+		fmt.Print(versionString(flags.Short))
 		return
 	}
 
@@ -163,6 +155,7 @@ type cliFlags struct {
 	Cleanup bool
 	Help    bool
 	Version bool
+	Short   bool
 	Admin   bool
 	Dev     bool
 }
@@ -224,6 +217,10 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 		case arg == "--version":
 			flags.Version = true
 			i++
+			if i < len(args) && args[i] == "--short" {
+				flags.Short = true
+				i++
+			}
 		case arg == "-h" || arg == "--help":
 			flags.Help = true
 			i++
@@ -277,6 +274,21 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 	}
 
 	return flags, subcommand, extraArgs, nil
+}
+
+func versionString(short bool) string {
+	v := version
+	if commit != "" {
+		c := commit
+		if len(c) > 7 {
+			c = c[:7]
+		}
+		v += " (" + c + ")"
+	}
+	if short {
+		return v + "\n"
+	}
+	return "asylum " + v + "\n"
 }
 
 func execDocker(args []string) {
