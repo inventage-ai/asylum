@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -230,10 +231,8 @@ func resolveMode(positional, passthrough []string) (container.Mode, bool, []stri
 		if len(positional) > 1 {
 			return 0, false, nil, fmt.Errorf("unexpected argument %q after shell", positional[1])
 		}
-		for _, arg := range passthrough {
-			if arg == "--admin" {
-				return container.ModeAdminShell, false, nil, nil
-			}
+		if slices.Contains(passthrough, "--admin") {
+			return container.ModeAdminShell, false, nil, nil
 		}
 		return container.ModeShell, false, nil, nil
 	case "ssh-init":

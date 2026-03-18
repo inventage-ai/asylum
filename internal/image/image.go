@@ -22,6 +22,26 @@ func assetHash() string {
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag string, labels, buildArgs map[string]string, noCache bool) error {
+	tmpDir, err := os.MkdirTemp("", "asylum-build-")
+	if err != nil {
+		return fmt.Errorf("create temp dir: %w", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	dfPath := filepath.Join(tmpDir, "Dockerfile")
+	if err := os.WriteFile(dfPath, dockerfileContent, 0644); err != nil {
+		return err
+	}
+	for name, content := range extraFiles {
+		if err := os.WriteFile(filepath.Join(tmpDir, name), content, 0755); err != nil {
+			return err
+		}
+	}
+
+	return docker.Build(tmpDir, dfPath, tag, labels, buildArgs, noCache)
+}
+
 func EnsureBase(version string, noCache bool) (bool, error) {
 	hash := assetHash()
 
@@ -33,20 +53,6 @@ func EnsureBase(version string, noCache bool) (bool, error) {
 
 	log.Build("building base image...")
 
-	tmpDir, err := os.MkdirTemp("", "asylum-build-")
-	if err != nil {
-		return false, fmt.Errorf("create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	dfPath := filepath.Join(tmpDir, "Dockerfile")
-	if err := os.WriteFile(dfPath, assets.Dockerfile, 0644); err != nil {
-		return false, err
-	}
-	if err := os.WriteFile(filepath.Join(tmpDir, "entrypoint.sh"), assets.Entrypoint, 0755); err != nil {
-		return false, err
-	}
-
 	labels := map[string]string{
 		"asylum.hash":    hash,
 		"asylum.version": version,
@@ -57,7 +63,7 @@ func EnsureBase(version string, noCache bool) (bool, error) {
 		"USERNAME": "claude",
 	}
 
-	if err := docker.Build(tmpDir, dfPath, baseTag, labels, buildArgs, noCache); err != nil {
+	if err := buildImage(assets.Dockerfile, map[string][]byte{"entrypoint.sh": assets.Entrypoint}, baseTag, labels, buildArgs, noCache); err != nil {
 		return false, fmt.Errorf("build base image: %w", err)
 	}
 
@@ -89,23 +95,12 @@ func EnsureProject(packages map[string][]string, version string, baseRebuilt boo
 
 	log.Build("building project image...")
 
-	tmpDir, err := os.MkdirTemp("", "asylum-proj-")
-	if err != nil {
-		return "", fmt.Errorf("create temp dir: %w", err)
-	}
-	defer os.RemoveAll(tmpDir)
-
-	dfPath := filepath.Join(tmpDir, "Dockerfile")
-	if err := os.WriteFile(dfPath, []byte(dockerfile), 0644); err != nil {
-		return "", err
-	}
-
 	labels := map[string]string{
 		"asylum.packages.hash": hash,
 		"asylum.version":       version,
 	}
 
-	if err := docker.Build(tmpDir, dfPath, tag, labels, nil, noCache); err != nil {
+	if err := buildImage([]byte(dockerfile), nil, tag, labels, nil, noCache); err != nil {
 		return "", fmt.Errorf("build project image: %w", err)
 	}
 
@@ -173,7 +168,6 @@ func generateProjectDockerfile(packages map[string][]string) (string, error) {
 	writeUserRuns("$HOME/.local/bin/uv tool install ", packages["pip"])
 	writeUserRuns("", packages["run"])
 
-	// Ensure we always end as the non-root user
 	b.WriteString("\nUSER claude\n")
 
 	return b.String(), nil
