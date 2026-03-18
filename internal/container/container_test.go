@@ -3,9 +3,33 @@ package container
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/inventage-ai/asylum/internal/config"
 )
+
+// stubAgent satisfies agent.Agent for tests that need a minimal implementation.
+type stubAgent struct {
+	envVars    map[string]string
+	hasSession bool
+	command    []string
+}
+
+func (s stubAgent) Name() string                          { return "stub" }
+func (s stubAgent) Binary() string                        { return "stub-bin" }
+func (s stubAgent) NativeConfigDir() string               { return "~/.stub" }
+func (s stubAgent) ContainerConfigDir() string            { return "/home/stub/.stub" }
+func (s stubAgent) AsylumConfigDir() string               { return "~/.asylum/agents/stub" }
+func (s stubAgent) EnvVars() map[string]string            { return s.envVars }
+func (s stubAgent) HasSession(projectPath string) bool    { return s.hasSession }
+func (s stubAgent) Command(resume bool, extra []string) []string {
+	if resume {
+		return append([]string{"stub-resume"}, extra...)
+	}
+	return append([]string{"stub"}, extra...)
+}
 
 func TestCopyDir(t *testing.T) {
 	t.Run("copies files and nested directories", func(t *testing.T) {
@@ -155,3 +179,204 @@ func TestSafeHostname(t *testing.T) {
 		})
 	}
 }
+
+func TestAppendPorts(t *testing.T) {
+	tests := []struct {
+		name  string
+		ports []string
+		want  []string
+	}{
+		{
+			name:  "no ports",
+			ports: nil,
+			want:  []string{},
+		},
+		{
+			name:  "port without colon expands to host:container",
+			ports: []string{"8080"},
+			want:  []string{"-p", "8080:8080"},
+		},
+		{
+			name:  "port with colon used as-is",
+			ports: []string{"8080:9090"},
+			want:  []string{"-p", "8080:9090"},
+		},
+		{
+			name:  "multiple ports mixed",
+			ports: []string{"3000", "4000:5000"},
+			want:  []string{"-p", "3000:3000", "-p", "4000:5000"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := appendPorts([]string{}, tt.ports)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("appendPorts(%v) = %v, want %v", tt.ports, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestAppendEnvVars(t *testing.T) {
+	home := "/home/testuser"
+
+	t.Run("always includes required env vars", func(t *testing.T) {
+		opts := RunOpts{
+			Config:     config.Config{},
+			Agent:      stubAgent{envVars: map[string]string{}},
+			ProjectDir: "/work/myproject",
+		}
+		got := appendEnvVars([]string{}, home, opts)
+		joined := strings.Join(got, " ")
+
+		for _, want := range []string{
+			"-e ASYLUM_DOCKER=1",
+			"-e HISTFILE=/home/claude/.shell_history/zsh_history",
+			"-e HOST_PROJECT_DIR=/work/myproject",
+		} {
+			if !strings.Contains(joined, want) {
+				t.Errorf("expected %q in args %v", want, got)
+			}
+		}
+	})
+
+	t.Run("java version included when set", func(t *testing.T) {
+		cfg := config.Config{Versions: map[string]string{"java": "17"}}
+		opts := RunOpts{
+			Config:     cfg,
+			Agent:      stubAgent{envVars: map[string]string{}},
+			ProjectDir: "/work/proj",
+		}
+		got := appendEnvVars([]string{}, home, opts)
+		joined := strings.Join(got, " ")
+		if !strings.Contains(joined, "-e ASYLUM_JAVA_VERSION=17") {
+			t.Errorf("expected ASYLUM_JAVA_VERSION=17 in %v", got)
+		}
+	})
+
+	t.Run("java version omitted when empty", func(t *testing.T) {
+		opts := RunOpts{
+			Config:     config.Config{},
+			Agent:      stubAgent{envVars: map[string]string{}},
+			ProjectDir: "/work/proj",
+		}
+		got := appendEnvVars([]string{}, home, opts)
+		for _, v := range got {
+			if strings.HasPrefix(v, "ASYLUM_JAVA_VERSION") {
+				t.Errorf("unexpected ASYLUM_JAVA_VERSION in %v", got)
+			}
+		}
+	})
+
+	t.Run("agent env vars included", func(t *testing.T) {
+		opts := RunOpts{
+			Config:     config.Config{},
+			Agent:      stubAgent{envVars: map[string]string{"MY_TOKEN": "secret"}},
+			ProjectDir: "/work/proj",
+		}
+		got := appendEnvVars([]string{}, home, opts)
+		joined := strings.Join(got, " ")
+		if !strings.Contains(joined, "-e MY_TOKEN=secret") {
+			t.Errorf("expected MY_TOKEN=secret in %v", got)
+		}
+	})
+}
+
+func TestContainerCommand(t *testing.T) {
+	projectDir := t.TempDir()
+
+	tests := []struct {
+		name string
+		opts RunOpts
+		want []string
+	}{
+		{
+			name: "shell mode",
+			opts: RunOpts{Mode: ModeShell},
+			want: []string{"/bin/zsh"},
+		},
+		{
+			name: "admin shell mode",
+			opts: RunOpts{Mode: ModeAdminShell},
+			want: []string{"bash", "-c", "echo 'Admin shell - sudo access enabled' && exec /bin/zsh"},
+		},
+		{
+			name: "command mode passes extra args through",
+			opts: RunOpts{Mode: ModeCommand, ExtraArgs: []string{"ls", "-la"}},
+			want: []string{"ls", "-la"},
+		},
+		{
+			name: "agent mode with new session (no resume)",
+			opts: RunOpts{
+				Mode:       ModeAgent,
+				NewSession: true,
+				Agent:      stubAgent{hasSession: true},
+				ProjectDir: projectDir,
+			},
+			want: []string{"stub"},
+		},
+		{
+			name: "agent mode resumes when session exists",
+			opts: RunOpts{
+				Mode:       ModeAgent,
+				NewSession: false,
+				Agent:      stubAgent{hasSession: true},
+				ProjectDir: projectDir,
+			},
+			want: []string{"stub-resume"},
+		},
+		{
+			name: "agent mode no resume when session absent",
+			opts: RunOpts{
+				Mode:       ModeAgent,
+				NewSession: false,
+				Agent:      stubAgent{hasSession: false},
+				ProjectDir: projectDir,
+			},
+			want: []string{"stub"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := containerCommand(tt.opts)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("containerCommand() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestContainerCommandAgentExtraArgs(t *testing.T) {
+	dir := t.TempDir()
+	opts := RunOpts{
+		Mode:       ModeAgent,
+		NewSession: false,
+		Agent:      stubAgent{hasSession: false},
+		ProjectDir: dir,
+		ExtraArgs:  []string{"fix", "the", "bug"},
+	}
+	got := containerCommand(opts)
+	want := []string{"stub", "fix", "the", "bug"}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("containerCommand() = %v, want %v", got, want)
+	}
+}
+
+func TestContainerName(t *testing.T) {
+	name1 := containerName("/home/user/projectA")
+	name2 := containerName("/home/user/projectB")
+
+	if name1 == name2 {
+		t.Error("different project dirs should produce different container names")
+	}
+	if !strings.HasPrefix(name1, "asylum-") {
+		t.Errorf("container name %q should start with asylum-", name1)
+	}
+	// Should be deterministic
+	if containerName("/home/user/projectA") != name1 {
+		t.Error("containerName should be deterministic")
+	}
+}
+
