@@ -153,7 +153,7 @@ fi
 # If dockerd is running, skip exec so the trap can kill it on exit.
 # Otherwise, exec replaces this shell (saves a process).
 if [ -n "${DOCKERD_PID:-}" ]; then
-    trap 'sudo kill -9 $DOCKERD_PID 2>/dev/null' EXIT
+    trap 'docker rm -f $(docker ps -aq) 2>/dev/null; sudo kill -9 $DOCKERD_PID 2>/dev/null' EXIT
     "$@"
 else
     exec "$@"
