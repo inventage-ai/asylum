@@ -163,6 +163,9 @@ func generateProjectDockerfile(packages map[string][]string) (string, error) {
 		}
 		b.WriteString("\nUSER claude\n")
 		for _, item := range items {
+			if strings.TrimSpace(item) == "" {
+				continue
+			}
 			b.WriteString("RUN " + prefix + item + "\n")
 		}
 	}
