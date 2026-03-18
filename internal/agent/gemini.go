@@ -41,7 +41,9 @@ func (Gemini) HasSession(projectPath string) bool {
 		if err != nil {
 			continue
 		}
-		return len(chats) > 0
+		if len(chats) > 0 {
+			return true
+		}
 	}
 	return false
 }
