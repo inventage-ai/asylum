@@ -327,7 +327,9 @@ func runCleanup() {
 	case errs == 0:
 		log.Success("images removed")
 	case errs < 2:
-		log.Success("some images removed (see errors above)")
+		log.Warn("some images removed (see errors above)")
+	default:
+		log.Warn("no images removed (see errors above)")
 	}
 
 	fmt.Print("Remove cached data (~/.asylum/cache/ and ~/.asylum/projects/)? (y/N) ")
