@@ -48,7 +48,13 @@ if command -v mise >/dev/null 2>&1; then
 fi
 
 # Create Python virtual environment if project has Python markers
-if [ -n "$HOST_PROJECT_DIR" ] && [ ! -d "$HOST_PROJECT_DIR/.venv" ] && [ -f "$HOST_PROJECT_DIR/requirements.txt" -o -f "$HOST_PROJECT_DIR/pyproject.toml" -o -f "$HOST_PROJECT_DIR/setup.py" ]; then
+has_python_marker() {
+    for f in requirements.txt pyproject.toml setup.py; do
+        [ -f "$HOST_PROJECT_DIR/$f" ] && return 0
+    done
+    return 1
+}
+if [ -n "$HOST_PROJECT_DIR" ] && [ ! -d "$HOST_PROJECT_DIR/.venv" ] && has_python_marker; then
     echo "Python project detected, creating virtual environment..."
     cd "$HOST_PROJECT_DIR"
     if uv venv .venv; then
