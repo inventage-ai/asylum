@@ -108,7 +108,7 @@ RUN curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell && \
 RUN echo 'eval "$(fnm env)"' >> ~/.bashrc
 
 # Install Node.js global packages
-RUN bash -c 'eval "$(fnm env)" && \
+RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && \
     npm install -g \
         typescript \
         @types/node \
@@ -125,10 +125,10 @@ RUN curl -fsSL https://claude.ai/install.sh | bash && \
     ~/.local/bin/claude --version
 
 # Install Gemini CLI
-RUN bash -c 'eval "$(fnm env)" && npm install -g @google/gemini-cli'
+RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @google/gemini-cli'
 
 # Install Codex
-RUN bash -c 'eval "$(fnm env)" && npm install -g @openai/codex'
+RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @openai/codex'
 
 # Install SDKMAN for Java toolchain management
 RUN curl -s "https://get.sdkman.io?rcupdate=false" | bash && \

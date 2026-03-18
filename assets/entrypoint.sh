@@ -24,11 +24,11 @@ if [ "${ASYLUM_DOCKER:-}" = "1" ]; then
 fi
 
 # Ensure proper PATH
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/share/fnm:$HOME/.local/bin:$PATH"
 
 # Setup fnm if available
 if command -v fnm >/dev/null 2>&1; then
-    eval "$(fnm env)"
+    eval "$(fnm env --shell bash)"
 fi
 
 # Source SDKMAN if available, and select Java version if configured
