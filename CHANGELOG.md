@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.3 — 2026-03-18
+
 ### Added
 - Set terminal tab title on container start (default `🤖 projectname`, configurable via `tab-title` with `{project}`, `{agent}`, `{mode}` placeholders)
 - Dev channel self-update shows commit count and recent commit messages
