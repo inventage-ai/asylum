@@ -2,9 +2,15 @@
 
 ## Unreleased
 
+## 0.3.2 — 2026-03-18
+
 ### Added
+- MIT license file
 - `env` config field (`map[string]string`) for setting arbitrary environment variables via config layers
 - `-e KEY=VALUE` CLI flag for setting environment variables (repeatable, highest precedence)
+
+### Fixed
+- Self-update always skipping download on dev channel
 
 ## 0.3.1 — 2026-03-18
 
