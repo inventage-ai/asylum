@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 	"syscall"
 
@@ -26,7 +25,7 @@ func die(format string, args ...any) {
 }
 
 func main() {
-	flags, positional, passthrough, err := parseArgs(os.Args[1:])
+	flags, subcommand, extraArgs, err := parseArgs(os.Args[1:])
 	if err != nil {
 		die("%v", err)
 	}
@@ -46,17 +45,14 @@ func main() {
 		return
 	}
 
-	containerMode, isSSHInit, extraArgs, err := resolveMode(positional, passthrough)
-	if err != nil {
-		die("%v", err)
-	}
-
-	if isSSHInit {
+	if subcommand == "ssh-init" {
 		if err := ssh.Init(); err != nil {
 			die("%v", err)
 		}
 		return
 	}
+
+	containerMode := resolveMode(subcommand, flags.Admin)
 
 	projectDir, err := filepath.Abs(".")
 	if err != nil {
@@ -139,12 +135,13 @@ type cliFlags struct {
 	Cleanup bool
 	Help    bool
 	Version bool
+	Admin   bool
 }
 
-func parseArgs(args []string) (cliFlags, []string, []string, error) {
+func parseArgs(args []string) (cliFlags, string, []string, error) {
 	var flags cliFlags
-	var positional []string
-	var passthrough []string
+	var subcommand string
+	var extraArgs []string
 
 	i := 0
 	next := func(flag string) (string, error) {
@@ -163,7 +160,7 @@ func parseArgs(args []string) (cliFlags, []string, []string, error) {
 		arg := args[i]
 
 		if arg == "--" {
-			passthrough = append(passthrough, args[i+1:]...)
+			extraArgs = append(extraArgs, args[i+1:]...)
 			break
 		}
 
@@ -201,47 +198,55 @@ func parseArgs(args []string) (cliFlags, []string, []string, error) {
 		case arg == "-h" || arg == "--help":
 			flags.Help = true
 			i++
-		case strings.HasPrefix(arg, "-"):
-			passthrough = append(passthrough, args[i:]...)
-			i = len(args)
-		default:
-			positional = append(positional, arg)
-			if arg != "shell" && arg != "ssh-init" {
-				passthrough = append(passthrough, args[i+1:]...)
-				i = len(args)
-			} else {
-				i++
+		case arg == "shell":
+			subcommand = "shell"
+			i++
+			for i < len(args) {
+				if args[i] == "--admin" {
+					flags.Admin = true
+					i++
+				} else {
+					return cliFlags{}, "", nil, fmt.Errorf("unknown flag %q for shell (only --admin is supported)", args[i])
+				}
 			}
+		case arg == "ssh-init":
+			subcommand = "ssh-init"
+			i++
+			if i < len(args) {
+				return cliFlags{}, "", nil, fmt.Errorf("unexpected argument %q after ssh-init", args[i])
+			}
+		case arg == "run":
+			subcommand = "run"
+			rest := args[i+1:]
+			if len(rest) > 0 && rest[0] == "--" {
+				rest = rest[1:]
+			}
+			extraArgs = append(extraArgs, rest...)
+			i = len(args)
+		case strings.HasPrefix(arg, "-"):
+			return cliFlags{}, "", nil, fmt.Errorf("unknown flag %q", arg)
+		default:
+			return cliFlags{}, "", nil, fmt.Errorf("unexpected argument %q (use 'run' to execute commands in the container)", arg)
 		}
 		if err != nil {
-			return cliFlags{}, nil, nil, err
+			return cliFlags{}, "", nil, err
 		}
 	}
 
-	return flags, positional, passthrough, nil
+	return flags, subcommand, extraArgs, nil
 }
 
-func resolveMode(positional, passthrough []string) (container.Mode, bool, []string, error) {
-	if len(positional) == 0 {
-		return container.ModeAgent, false, passthrough, nil
-	}
-
-	switch positional[0] {
+func resolveMode(subcommand string, admin bool) container.Mode {
+	switch subcommand {
 	case "shell":
-		if len(positional) > 1 {
-			return 0, false, nil, fmt.Errorf("unexpected argument %q after shell", positional[1])
+		if admin {
+			return container.ModeAdminShell
 		}
-		if slices.Contains(passthrough, "--admin") {
-			return container.ModeAdminShell, false, nil, nil
-		}
-		return container.ModeShell, false, nil, nil
-	case "ssh-init":
-		if len(positional) > 1 {
-			return 0, false, nil, fmt.Errorf("unexpected argument %q after ssh-init", positional[1])
-		}
-		return 0, true, nil, nil
+		return container.ModeShell
+	case "run":
+		return container.ModeCommand
 	default:
-		return container.ModeCommand, false, append(positional, passthrough...), nil
+		return container.ModeAgent
 	}
 }
 
@@ -288,12 +293,12 @@ func printUsage() {
 	fmt.Printf(`asylum %s — Docker sandbox for AI coding agents
 
 Usage:
-  asylum                     Start default agent in YOLO mode
-  asylum -a gemini           Start Gemini CLI in YOLO mode
-  asylum shell               Interactive zsh shell
-  asylum shell --admin       Admin shell with sudo notice
-  asylum ssh-init            Initialize SSH directory
-  asylum <cmd> [args...]     Run arbitrary command in container
+  asylum [flags]                Start default agent
+  asylum [flags] -- [args]      Start agent with extra args
+  asylum [flags] shell          Interactive zsh shell
+  asylum [flags] shell --admin  Admin shell with sudo notice
+  asylum [flags] run <cmd>      Run command in container
+  asylum ssh-init               Initialize SSH directory
 
 Flags:
   -a, --agent <name>   Agent: claude, gemini, codex (default: claude)

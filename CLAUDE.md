@@ -1,6 +1,6 @@
 # Asylum
 
-Agent-agnostic Docker sandbox for AI coding agents (Claude Code, Gemini CLI, Codex). Single Go binary, cross-compiled for ARM and x86. See `PLAN.md` for the full specification.
+Agent-agnostic Docker sandbox for AI coding agents (Claude Code, Gemini CLI, Codex). Single Go binary, cross-compiled for ARM and x86.
 
 ## Change Management
 
@@ -100,5 +100,5 @@ To release: `git tag v0.x.0 && git push origin v0.x.0`
 
 - Do not add Docker SDK. Shell out to the `docker` CLI — it's simpler and avoids a huge dependency tree.
 - Do not create unnecessary abstractions, utility packages, or helper functions for one-off operations.
-- Do not add config options, features, or agent support beyond what PLAN.md specifies.
+- Do not add config options, features, or agent support without consulting the user.
 - Do not attempt to fix git corruption (broken packfiles, bad objects, etc.) yourself. Always prompt the user to resolve it.

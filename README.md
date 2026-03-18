@@ -37,13 +37,12 @@ On first run, Asylum builds a Docker image (~5 min) and seeds agent config from 
 ## Usage
 
 ```
-asylum                     Start default agent in YOLO mode
-asylum -a gemini           Start Gemini CLI
-asylum -a codex            Start Codex
-asylum shell               Interactive zsh shell
-asylum shell --admin       Shell with sudo notice
-asylum ssh-init            Set up SSH keys for containers
-asylum <cmd> [args...]     Run any command in the container
+asylum [flags]                Start default agent
+asylum [flags] -- [args]      Start agent with extra args
+asylum [flags] shell          Interactive zsh shell
+asylum [flags] shell --admin  Admin shell with sudo notice
+asylum [flags] run <cmd>      Run command in container
+asylum ssh-init               Set up SSH keys for containers
 ```
 
 ### Flags
@@ -59,7 +58,7 @@ asylum <cmd> [args...]     Run any command in the container
 | `--cleanup` | Remove Asylum images and cached data |
 | `--version` | Show version |
 
-Flags not recognized by Asylum are passed through to the agent.
+Use `--` to pass extra flags to the agent (e.g. `asylum -- --verbose`). Use `run` to execute commands in the container (e.g. `asylum run python test.py`).
 
 ## Configuration
 

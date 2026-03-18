@@ -9,247 +9,263 @@ import (
 
 func TestResolveMode(t *testing.T) {
 	tests := []struct {
-		name        string
-		positional  []string
-		passthrough []string
-		wantMode    container.Mode
-		wantSSH     bool
-		wantExtra   []string
-		wantErr     bool
+		name     string
+		subcmd   string
+		admin    bool
+		wantMode container.Mode
+	}{
+		{"default agent", "", false, container.ModeAgent},
+		{"shell", "shell", false, container.ModeShell},
+		{"shell admin", "shell", true, container.ModeAdminShell},
+		{"run", "run", false, container.ModeCommand},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := resolveMode(tt.subcmd, tt.admin); got != tt.wantMode {
+				t.Errorf("resolveMode(%q, %v) = %d, want %d", tt.subcmd, tt.admin, got, tt.wantMode)
+			}
+		})
+	}
+}
+
+func TestParseArgs(t *testing.T) {
+	tests := []struct {
+		name      string
+		args      []string
+		wantFlags cliFlags
+		wantSub   string
+		wantExtra []string
+		wantErr   bool
 	}{
 		{
-			name:      "no positional defaults to agent",
-			wantMode:  container.ModeAgent,
-			wantExtra: nil,
+			name:    "no args",
+			args:    nil,
+			wantSub: "",
 		},
 		{
-			name:        "no positional passes through passthrough args",
-			passthrough: []string{"--some-flag"},
-			wantMode:    container.ModeAgent,
-			wantExtra:   []string{"--some-flag"},
+			name:      "version flag",
+			args:      []string{"--version"},
+			wantFlags: cliFlags{Version: true},
 		},
 		{
-			name:       "shell positional",
-			positional: []string{"shell"},
-			wantMode:   container.ModeShell,
-			wantExtra:  nil,
+			name:      "help flag",
+			args:      []string{"-h"},
+			wantFlags: cliFlags{Help: true},
 		},
 		{
-			name:        "shell with --admin in passthrough",
-			positional:  []string{"shell"},
-			passthrough: []string{"--admin"},
-			wantMode:    container.ModeAdminShell,
-			wantExtra:   nil,
+			name:      "agent long form",
+			args:      []string{"-a", "gemini"},
+			wantFlags: cliFlags{Agent: "gemini"},
 		},
 		{
-			name:        "shell with other passthrough flags (no --admin)",
-			positional:  []string{"shell"},
-			passthrough: []string{"--verbose"},
-			wantMode:    container.ModeShell,
-			wantExtra:   nil,
+			name:      "agent shorthand",
+			args:      []string{"-acodex"},
+			wantFlags: cliFlags{Agent: "codex"},
 		},
 		{
-			name:       "shell with extra positional returns error",
-			positional: []string{"shell", "extra"},
-			wantErr:    true,
+			name:      "port single",
+			args:      []string{"-p", "8080"},
+			wantFlags: cliFlags{Ports: []string{"8080"}},
 		},
 		{
-			name:       "ssh-init positional",
-			positional: []string{"ssh-init"},
-			wantSSH:    true,
-			wantExtra:  nil,
+			name:      "port repeatable",
+			args:      []string{"-p", "3000", "-p", "4000"},
+			wantFlags: cliFlags{Ports: []string{"3000", "4000"}},
 		},
 		{
-			name:       "ssh-init with extra positional returns error",
-			positional: []string{"ssh-init", "extra"},
-			wantErr:    true,
+			name:      "volume",
+			args:      []string{"-v", "~/data:/data"},
+			wantFlags: cliFlags{Volumes: []string{"~/data:/data"}},
 		},
 		{
-			name:        "arbitrary command mode",
-			positional:  []string{"run"},
-			passthrough: []string{"arg1", "arg2"},
-			wantMode:    container.ModeCommand,
-			wantExtra:   []string{"run", "arg1", "arg2"},
+			name:      "java",
+			args:      []string{"--java", "21"},
+			wantFlags: cliFlags{Java: "21"},
 		},
 		{
-			name:       "arbitrary command no passthrough",
-			positional: []string{"ls"},
-			wantMode:   container.ModeCommand,
-			wantExtra:  []string{"ls"},
+			name:      "new flag",
+			args:      []string{"-n"},
+			wantFlags: cliFlags{New: true},
+		},
+		{
+			name:      "rebuild flag",
+			args:      []string{"--rebuild"},
+			wantFlags: cliFlags{Rebuild: true},
+		},
+		{
+			name:      "cleanup flag",
+			args:      []string{"--cleanup"},
+			wantFlags: cliFlags{Cleanup: true},
+		},
+
+		// -- separator
+		{
+			name:      "double dash passes args to agent",
+			args:      []string{"--", "fix", "the", "bug"},
+			wantExtra: []string{"fix", "the", "bug"},
+		},
+		{
+			name:      "flags before double dash",
+			args:      []string{"-a", "gemini", "--", "--verbose"},
+			wantFlags: cliFlags{Agent: "gemini"},
+			wantExtra: []string{"--verbose"},
+		},
+
+		// shell subcommand
+		{
+			name:    "shell",
+			args:    []string{"shell"},
+			wantSub: "shell",
+		},
+		{
+			name:      "shell admin",
+			args:      []string{"shell", "--admin"},
+			wantSub:   "shell",
+			wantFlags: cliFlags{Admin: true},
+		},
+		{
+			name:    "shell unknown flag errors",
+			args:    []string{"shell", "--verbose"},
+			wantErr: true,
+		},
+		{
+			name:      "flags before shell",
+			args:      []string{"-p", "8080", "shell"},
+			wantSub:   "shell",
+			wantFlags: cliFlags{Ports: []string{"8080"}},
+		},
+
+		// ssh-init subcommand
+		{
+			name:    "ssh-init",
+			args:    []string{"ssh-init"},
+			wantSub: "ssh-init",
+		},
+		{
+			name:    "ssh-init extra arg errors",
+			args:    []string{"ssh-init", "extra"},
+			wantErr: true,
+		},
+
+		// run subcommand
+		{
+			name:      "run command",
+			args:      []string{"run", "python", "test.py", "-v"},
+			wantSub:   "run",
+			wantExtra: []string{"python", "test.py", "-v"},
+		},
+		{
+			name:      "run with optional double dash",
+			args:      []string{"run", "--", "python", "test.py"},
+			wantSub:   "run",
+			wantExtra: []string{"python", "test.py"},
+		},
+		{
+			name:      "run with flags before it",
+			args:      []string{"-p", "8080", "run", "ls"},
+			wantSub:   "run",
+			wantFlags: cliFlags{Ports: []string{"8080"}},
+			wantExtra: []string{"ls"},
+		},
+		{
+			name:    "run with no command",
+			args:    []string{"run"},
+			wantSub: "run",
+		},
+
+		// strict: unknown flags error
+		{
+			name:    "unknown flag errors",
+			args:    []string{"--bogus"},
+			wantErr: true,
+		},
+		{
+			name:    "unknown short flag errors",
+			args:    []string{"-x"},
+			wantErr: true,
+		},
+		{
+			name:    "unexpected positional errors",
+			args:    []string{"openspec"},
+			wantErr: true,
+		},
+
+		// trailing flag with no value
+		{
+			name:    "trailing -a",
+			args:    []string{"-a"},
+			wantErr: true,
+		},
+		{
+			name:    "trailing --agent",
+			args:    []string{"--agent"},
+			wantErr: true,
+		},
+		{
+			name:    "trailing -p",
+			args:    []string{"-p"},
+			wantErr: true,
+		},
+		{
+			name:    "trailing -v",
+			args:    []string{"-v"},
+			wantErr: true,
+		},
+		{
+			name:    "trailing --java",
+			args:    []string{"--java"},
+			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mode, isSSH, extra, err := resolveMode(tt.positional, tt.passthrough)
+			flags, subcmd, extra, err := parseArgs(tt.args)
 			if tt.wantErr {
 				if err == nil {
-					t.Error("expected error, got nil")
+					t.Fatal("expected error, got nil")
 				}
 				return
 			}
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if isSSH != tt.wantSSH {
-				t.Errorf("isSSH = %v, want %v", isSSH, tt.wantSSH)
-			}
-			if !tt.wantSSH && mode != tt.wantMode {
-				t.Errorf("mode = %d, want %d", mode, tt.wantMode)
+			if subcmd != tt.wantSub {
+				t.Errorf("subcommand = %q, want %q", subcmd, tt.wantSub)
 			}
 			if !reflect.DeepEqual(extra, tt.wantExtra) {
-				t.Errorf("extra = %v, want %v", extra, tt.wantExtra)
+				t.Errorf("extraArgs = %v, want %v", extra, tt.wantExtra)
+			}
+			if flags.Agent != tt.wantFlags.Agent {
+				t.Errorf("Agent = %q, want %q", flags.Agent, tt.wantFlags.Agent)
+			}
+			if !reflect.DeepEqual(flags.Ports, tt.wantFlags.Ports) {
+				t.Errorf("Ports = %v, want %v", flags.Ports, tt.wantFlags.Ports)
+			}
+			if !reflect.DeepEqual(flags.Volumes, tt.wantFlags.Volumes) {
+				t.Errorf("Volumes = %v, want %v", flags.Volumes, tt.wantFlags.Volumes)
+			}
+			if flags.Java != tt.wantFlags.Java {
+				t.Errorf("Java = %q, want %q", flags.Java, tt.wantFlags.Java)
+			}
+			if flags.New != tt.wantFlags.New {
+				t.Errorf("New = %v, want %v", flags.New, tt.wantFlags.New)
+			}
+			if flags.Rebuild != tt.wantFlags.Rebuild {
+				t.Errorf("Rebuild = %v, want %v", flags.Rebuild, tt.wantFlags.Rebuild)
+			}
+			if flags.Cleanup != tt.wantFlags.Cleanup {
+				t.Errorf("Cleanup = %v, want %v", flags.Cleanup, tt.wantFlags.Cleanup)
+			}
+			if flags.Help != tt.wantFlags.Help {
+				t.Errorf("Help = %v, want %v", flags.Help, tt.wantFlags.Help)
+			}
+			if flags.Version != tt.wantFlags.Version {
+				t.Errorf("Version = %v, want %v", flags.Version, tt.wantFlags.Version)
+			}
+			if flags.Admin != tt.wantFlags.Admin {
+				t.Errorf("Admin = %v, want %v", flags.Admin, tt.wantFlags.Admin)
 			}
 		})
-	}
-}
-
-func TestParseArgs_Version(t *testing.T) {
-	flags, positional, passthrough, err := parseArgs([]string{"--version"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !flags.Version {
-		t.Error("expected Version flag to be true")
-	}
-	if len(positional) != 0 {
-		t.Errorf("expected no positional args, got %v", positional)
-	}
-	if len(passthrough) != 0 {
-		t.Errorf("expected no passthrough args, got %v", passthrough)
-	}
-}
-
-func TestParseArgs_AgentShorthand(t *testing.T) {
-	flags, _, _, err := parseArgs([]string{"-a", "gemini"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if flags.Agent != "gemini" {
-		t.Errorf("agent = %q, want %q", flags.Agent, "gemini")
-	}
-
-	flags2, _, _, err2 := parseArgs([]string{"-acodex"})
-	if err2 != nil {
-		t.Fatalf("unexpected error: %v", err2)
-	}
-	if flags2.Agent != "codex" {
-		t.Errorf("agent = %q, want %q", flags2.Agent, "codex")
-	}
-}
-
-func TestParseArgs_DoubleDashSeparator(t *testing.T) {
-	flags, positional, passthrough, err := parseArgs([]string{"--", "fix", "the", "bug"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if flags.Version || flags.New {
-		t.Error("no flags expected before --")
-	}
-	if len(positional) != 0 {
-		t.Errorf("expected no positional, got %v", positional)
-	}
-	if !reflect.DeepEqual(passthrough, []string{"fix", "the", "bug"}) {
-		t.Errorf("passthrough = %v, want [fix, the, bug]", passthrough)
-	}
-}
-
-func TestParseArgs_UnknownFlagPassthrough(t *testing.T) {
-	_, _, passthrough, err := parseArgs([]string{"--unknown-flag", "val"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(passthrough) == 0 || passthrough[0] != "--unknown-flag" {
-		t.Errorf("unknown flag should be in passthrough, got %v", passthrough)
-	}
-}
-
-func TestParseArgs_Port(t *testing.T) {
-	flags, _, _, err := parseArgs([]string{"-p", "8080"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(flags.Ports) != 1 || flags.Ports[0] != "8080" {
-		t.Errorf("ports = %v, want [8080]", flags.Ports)
-	}
-
-	// repeatable
-	flags2, _, _, err2 := parseArgs([]string{"-p", "3000", "-p", "4000"})
-	if err2 != nil {
-		t.Fatalf("unexpected error: %v", err2)
-	}
-	if len(flags2.Ports) != 2 || flags2.Ports[0] != "3000" || flags2.Ports[1] != "4000" {
-		t.Errorf("ports = %v, want [3000, 4000]", flags2.Ports)
-	}
-}
-
-func TestParseArgs_Volume(t *testing.T) {
-	flags, _, _, err := parseArgs([]string{"-v", "~/data:/data"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(flags.Volumes) != 1 || flags.Volumes[0] != "~/data:/data" {
-		t.Errorf("volumes = %v, want [~/data:/data]", flags.Volumes)
-	}
-
-	// repeatable
-	flags2, _, _, err2 := parseArgs([]string{"-v", "/a:/a", "-v", "/b:/b"})
-	if err2 != nil {
-		t.Fatalf("unexpected error: %v", err2)
-	}
-	if len(flags2.Volumes) != 2 || flags2.Volumes[0] != "/a:/a" || flags2.Volumes[1] != "/b:/b" {
-		t.Errorf("volumes = %v, want [/a:/a, /b:/b]", flags2.Volumes)
-	}
-}
-
-func TestParseArgs_Java(t *testing.T) {
-	flags, _, _, err := parseArgs([]string{"--java", "21"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if flags.Java != "21" {
-		t.Errorf("java = %q, want %q", flags.Java, "21")
-	}
-}
-
-func TestParseArgs_TrailingFlagWithNoValue(t *testing.T) {
-	cases := [][]string{
-		{"-a"},
-		{"--agent"},
-		{"-p"},
-		{"-v"},
-		{"--java"},
-	}
-	for _, args := range cases {
-		_, _, _, err := parseArgs(args)
-		if err == nil {
-			t.Errorf("parseArgs(%v) expected error for trailing flag with no value, got nil", args)
-		}
-	}
-}
-
-func TestParseArgs_PositionalArgRouting(t *testing.T) {
-	// "shell" is a known positional — no passthrough collected
-	_, positional, passthrough, err := parseArgs([]string{"shell"})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if len(positional) != 1 || positional[0] != "shell" {
-		t.Errorf("positional = %v, want [shell]", positional)
-	}
-	if len(passthrough) != 0 {
-		t.Errorf("passthrough = %v, want empty", passthrough)
-	}
-
-	// Unknown positional routes everything after it to passthrough
-	_, positional2, passthrough2, err2 := parseArgs([]string{"run", "arg1", "arg2"})
-	if err2 != nil {
-		t.Fatalf("unexpected error: %v", err2)
-	}
-	if len(positional2) != 1 || positional2[0] != "run" {
-		t.Errorf("positional = %v, want [run]", positional2)
-	}
-	if !reflect.DeepEqual(passthrough2, []string{"arg1", "arg2"}) {
-		t.Errorf("passthrough = %v, want [arg1, arg2]", passthrough2)
 	}
 }
