@@ -2,12 +2,18 @@
 
 ## Unreleased
 
+## 0.3.0 — 2026-03-18
+
 ### Added
 - `self-update` subcommand to update the binary from GitHub releases
 - `--dev` flag for `self-update` to track rolling builds from `main`
 - `release-channel` config option to permanently select stable or dev channel
 - Dev release CI workflow that publishes a `dev` pre-release on every push to `main`
 - Install script now places binary in `~/.asylum/bin/` with symlink from `/usr/local/bin/`
+
+### Changed
+- Replace SDKMAN with mise for Java and Gradle version management (faster container startup)
+- Non-pre-installed Java versions are automatically added to the project Dockerfile
 
 ### Fixed
 - Auto-restore Claude config from backup when `.claude.json` is missing or lacks auth
