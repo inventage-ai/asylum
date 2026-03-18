@@ -58,3 +58,9 @@ func expandHome(path string) (string, error) {
 	}
 	return path, nil
 }
+
+// resolveConfigDir expands the agent's AsylumConfigDir (which uses ~ prefix)
+// to an absolute path.
+func resolveConfigDir(a Agent) (string, error) {
+	return expandHome(a.AsylumConfigDir())
+}

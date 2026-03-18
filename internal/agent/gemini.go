@@ -16,8 +16,8 @@ func (Gemini) AsylumConfigDir() string  { return "~/.asylum/agents/gemini" }
 
 func (Gemini) EnvVars() map[string]string { return nil }
 
-func (Gemini) HasSession(projectPath string) bool {
-	configDir, err := expandHome("~/.asylum/agents/gemini")
+func (g Gemini) HasSession(projectPath string) bool {
+	configDir, err := resolveConfigDir(g)
 	if err != nil {
 		return false
 	}

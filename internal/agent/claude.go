@@ -20,8 +20,8 @@ func (Claude) EnvVars() map[string]string {
 	}
 }
 
-func (Claude) HasSession(projectPath string) bool {
-	configDir, err := expandHome("~/.asylum/agents/claude")
+func (c Claude) HasSession(projectPath string) bool {
+	configDir, err := resolveConfigDir(c)
 	if err != nil {
 		return false
 	}

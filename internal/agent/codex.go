@@ -25,8 +25,8 @@ func (Codex) EnvVars() map[string]string {
 // markerDir returns the directory used to store per-project session markers.
 // Codex stores sessions in a global date-organized tree with no per-project
 // metadata, so we use a separate marker to avoid resuming the wrong project.
-func (Codex) markerDir(projectPath string) (string, error) {
-	configDir, err := expandHome("~/.asylum/agents/codex")
+func (c Codex) markerDir(projectPath string) (string, error) {
+	configDir, err := resolveConfigDir(c)
 	if err != nil {
 		return "", err
 	}
