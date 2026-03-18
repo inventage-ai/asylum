@@ -66,3 +66,17 @@ func PruneImages(filterLabel string) error {
 	return cmd.Run()
 }
 
+func ListImages(filter string) ([]string, error) {
+	cmd := exec.Command("docker", "images", "--format", "{{.Repository}}:{{.Tag}}", "--filter", "reference="+filter)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, err
+	}
+	var images []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line != "" {
+			images = append(images, line)
+		}
+	}
+	return images, nil
+}

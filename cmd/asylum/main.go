@@ -253,13 +253,10 @@ func runCleanup() {
 		log.Error("remove asylum:latest: %v", err)
 	}
 
-	out, err := exec.Command("docker", "images", "--format", "{{.Repository}}:{{.Tag}}", "--filter", "reference=asylum:proj-*").Output()
-	if err == nil {
-		for _, img := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-			if img != "" {
-				if err := docker.RemoveImages(img); err != nil {
-					log.Error("remove %s: %v", img, err)
-				}
+	if imgs, err := docker.ListImages("asylum:proj-*"); err == nil {
+		for _, img := range imgs {
+			if err := docker.RemoveImages(img); err != nil {
+				log.Error("remove %s: %v", img, err)
 			}
 		}
 	}
