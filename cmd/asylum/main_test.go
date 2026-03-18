@@ -259,38 +259,8 @@ func TestParseArgs(t *testing.T) {
 			if !reflect.DeepEqual(extra, tt.wantExtra) {
 				t.Errorf("extraArgs = %v, want %v", extra, tt.wantExtra)
 			}
-			if flags.Agent != tt.wantFlags.Agent {
-				t.Errorf("Agent = %q, want %q", flags.Agent, tt.wantFlags.Agent)
-			}
-			if !reflect.DeepEqual(flags.Ports, tt.wantFlags.Ports) {
-				t.Errorf("Ports = %v, want %v", flags.Ports, tt.wantFlags.Ports)
-			}
-			if !reflect.DeepEqual(flags.Volumes, tt.wantFlags.Volumes) {
-				t.Errorf("Volumes = %v, want %v", flags.Volumes, tt.wantFlags.Volumes)
-			}
-			if flags.Java != tt.wantFlags.Java {
-				t.Errorf("Java = %q, want %q", flags.Java, tt.wantFlags.Java)
-			}
-			if flags.New != tt.wantFlags.New {
-				t.Errorf("New = %v, want %v", flags.New, tt.wantFlags.New)
-			}
-			if flags.Rebuild != tt.wantFlags.Rebuild {
-				t.Errorf("Rebuild = %v, want %v", flags.Rebuild, tt.wantFlags.Rebuild)
-			}
-			if flags.Cleanup != tt.wantFlags.Cleanup {
-				t.Errorf("Cleanup = %v, want %v", flags.Cleanup, tt.wantFlags.Cleanup)
-			}
-			if flags.Help != tt.wantFlags.Help {
-				t.Errorf("Help = %v, want %v", flags.Help, tt.wantFlags.Help)
-			}
-			if flags.Version != tt.wantFlags.Version {
-				t.Errorf("Version = %v, want %v", flags.Version, tt.wantFlags.Version)
-			}
-			if flags.Admin != tt.wantFlags.Admin {
-				t.Errorf("Admin = %v, want %v", flags.Admin, tt.wantFlags.Admin)
-			}
-			if flags.Dev != tt.wantFlags.Dev {
-				t.Errorf("Dev = %v, want %v", flags.Dev, tt.wantFlags.Dev)
+			if !reflect.DeepEqual(flags, tt.wantFlags) {
+				t.Errorf("flags = %+v, want %+v", flags, tt.wantFlags)
 			}
 		})
 	}
