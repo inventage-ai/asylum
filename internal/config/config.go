@@ -20,6 +20,11 @@ type Config struct {
 	Env            map[string]string   `yaml:"env"`
 	Versions       map[string]string   `yaml:"versions"`
 	Packages       map[string][]string `yaml:"packages"`
+	Features       map[string]bool     `yaml:"features"`
+}
+
+func (c Config) Feature(name string) bool {
+	return c.Features[name]
 }
 
 type CLIFlags struct {
@@ -113,6 +118,13 @@ func merge(base, overlay Config) Config {
 		maps.Copy(merged, base.Versions)
 		maps.Copy(merged, overlay.Versions)
 		result.Versions = merged
+	}
+
+	if overlay.Features != nil {
+		merged := make(map[string]bool, len(base.Features)+len(overlay.Features))
+		maps.Copy(merged, base.Features)
+		maps.Copy(merged, overlay.Features)
+		result.Features = merged
 	}
 
 	if overlay.Packages != nil {

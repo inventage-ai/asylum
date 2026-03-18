@@ -186,6 +186,7 @@ func appendEnvVars(args []string, opts RunOpts) []string {
 	}
 
 	env("ASYLUM_DOCKER", "1")
+	env("CLAUDE_CODE_DISABLE_TERMINAL_TITLE", "1")
 	env("HISTFILE", "/home/claude/.shell_history/zsh_history")
 	env("HOST_PROJECT_DIR", opts.ProjectDir)
 
@@ -253,7 +254,7 @@ func containerCommand(opts RunOpts) []string {
 	default:
 		resume := !opts.NewSession && opts.Agent.HasSession(opts.ProjectDir)
 		extra := opts.ExtraArgs
-		if opts.Agent.Name() == "claude" && !resume {
+		if opts.Config.Feature("session-name") && opts.Agent.Name() == "claude" && !resume {
 			extra = append([]string{"--name", filepath.Base(opts.ProjectDir)}, extra...)
 		}
 		return opts.Agent.Command(resume, extra)
