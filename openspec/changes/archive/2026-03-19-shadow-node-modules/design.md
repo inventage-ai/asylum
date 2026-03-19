@@ -28,7 +28,7 @@ Using `--mount type=volume,src=<name>,dst=<path>` instead of `-v name:path` beca
 
 ### 3. Walk with early exits for performance
 
-`findNodeModules` short-circuits if `package.json` doesn't exist at the project root (not a Node.js project). During the walk, it skips `.git`, `.venv`, `vendor`, `target`, `build`, `dist` — directories that never contain relevant `node_modules`. It also skips recursing into `node_modules` itself (nested `node_modules` inside `node_modules` is handled by the outer shadow).
+`findNodeModulesDirs` walks the project tree looking for `package.json` files and returns the `node_modules` path next to each one — whether or not `node_modules` exists yet. This ensures fresh clones get shadow volumes before `npm install` runs. During the walk, it skips `.git`, `.venv`, `vendor`, `target`, `dist` — directories that never contain relevant `package.json` files. It also skips recursing into `node_modules` itself (packages inside `node_modules` have their own `package.json` but should not get separate shadow volumes).
 
 ### 4. Default-on with opt-out via `FeatureOff()`
 

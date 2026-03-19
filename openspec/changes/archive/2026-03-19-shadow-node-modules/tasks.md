@@ -4,12 +4,12 @@
 
 ## 2. Node modules detection
 
-- [x] 2.1 Implement `findNodeModules(projectDir)` in `internal/container/container.go`
-- [x] 2.2 Short-circuit on missing `package.json` at project root
-- [x] 2.3 Skip `.git`, `.venv`, `vendor`, `target`, `build`, `dist` during walk
-- [x] 2.4 Skip nested `node_modules` inside `node_modules` (SkipDir on match)
+- [x] 2.1 Implement `findNodeModulesDirs(projectDir)` — find `package.json` files and return `node_modules` paths next to them
+- [x] 2.2 Return paths even when `node_modules` does not exist yet (proactive shadow for fresh clones)
+- [x] 2.3 Skip `.git`, `.venv`, `vendor`, `target`, `dist` during walk
+- [x] 2.4 Skip `node_modules` directories during walk (don't shadow packages inside node_modules)
 - [x] 2.5 Sort results for deterministic output
-- [x] 2.6 Add tests: top-level, monorepo, nested skip, no package.json, no node_modules, heavy dir skip
+- [x] 2.6 Add tests: root, subdirectory, monorepo, no package.json, no node_modules, heavy dir skip, node_modules recursion
 
 ## 3. Volume shadow integration
 
@@ -32,4 +32,4 @@
 ## 7. Verification
 
 - [x] 7.1 Run `go test ./...` and `go vet ./...`
-- [ ] 7.2 Manual test: run asylum on a Node.js project, verify `docker volume ls` shows the named volume
+- [x] 7.2 Manual test: run asylum on a Node.js project, verify `docker volume ls` shows the named volume

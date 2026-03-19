@@ -116,7 +116,7 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	// binaries aren't visible inside the container. Named volumes
 	// persist across container restarts so npm install isn't lost.
 	if !opts.Config.FeatureOff("shadow-node-modules") {
-		for _, nm := range findNodeModules(opts.ProjectDir) {
+		for _, nm := range findNodeModulesDirs(opts.ProjectDir) {
 			rel, _ := filepath.Rel(opts.ProjectDir, nm)
 			hash := fmt.Sprintf("%x", sha256.Sum256([]byte(rel)))[:11]
 			volName := cname + "-npm-" + hash
@@ -367,18 +367,16 @@ func resolveGitWorktree(projectDir string) (worktreeDir, commonDir string) {
 }
 
 
-// findNodeModules returns absolute paths to node_modules directories
-// within projectDir. It skips nested node_modules inside node_modules
-// and other heavy directories that can't contain relevant node_modules.
-func findNodeModules(projectDir string) []string {
-	if !fileExists(filepath.Join(projectDir, "package.json")) {
-		return nil
-	}
-
-	// Directories that never contain relevant node_modules
+// findNodeModulesDirs returns absolute paths to node_modules directories
+// that should be shadowed. It finds every directory containing a
+// package.json and returns the node_modules path next to it, whether or
+// not node_modules exists yet. This ensures fresh clones get shadow
+// volumes before npm install runs.
+func findNodeModulesDirs(projectDir string) []string {
+	// Directories that never contain relevant package.json files
 	skip := map[string]bool{
 		".git": true, ".venv": true, "__pycache__": true,
-		"vendor": true, "target": true, "build": true, "dist": true,
+		"vendor": true, "target": true, "dist": true,
 	}
 
 	var results []string
@@ -391,11 +389,13 @@ func findNodeModules(projectDir string) []string {
 		}
 		name := d.Name()
 		if name == "node_modules" {
-			results = append(results, path)
 			return filepath.SkipDir
 		}
 		if path != projectDir && skip[name] {
 			return filepath.SkipDir
+		}
+		if fileExists(filepath.Join(path, "package.json")) {
+			results = append(results, filepath.Join(path, "node_modules"))
 		}
 		return nil
 	})
