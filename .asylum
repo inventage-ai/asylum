@@ -1,3 +1,6 @@
 packages:
   apt:
     - golang
+
+volumes:
+  - ~/.asylum/bin:/home/claude/.asylum/bin
