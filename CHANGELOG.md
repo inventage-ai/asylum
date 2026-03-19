@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- fnm not found in interactive shell (missing from PATH in bashrc/zshrc)
+
 ## 0.3.3 — 2026-03-18
 
 ### Added

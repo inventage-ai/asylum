@@ -94,8 +94,8 @@ WORKDIR /home/${USERNAME}
 
 # Install uv for Python package management
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && \
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+    echo 'export PATH="$HOME/.local/share/fnm:$HOME/.local/bin:$PATH"' >> ~/.bashrc && \
+    echo 'export PATH="$HOME/.local/share/fnm:$HOME/.local/bin:$PATH"' >> ~/.zshrc
 
 # Install Node.js via fnm
 RUN curl -fsSL https://fnm.vercel.app/install | bash -s -- --skip-shell && \
@@ -150,7 +150,6 @@ RUN /home/${USERNAME}/.local/bin/uv tool install black && \
 # Install oh-my-zsh and setup fnm/mise for zsh
 RUN sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
     sed -i 's/ZSH_THEME=".*"/ZSH_THEME="robbyrussell"/' ~/.zshrc && \
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc && \
     echo 'eval "$(fnm env)"' >> ~/.zshrc && \
     echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
 
