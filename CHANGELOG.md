@@ -10,6 +10,7 @@
 - Multiple concurrent sessions per project — all modes (agent, shell, run) exec into a running container
 - Container automatically cleaned up when the last session exits (file-based session counter)
 - Integration tests for detached container lifecycle and multi-session behavior
+- Auto-install Node.js dependencies (`npm`, `pnpm`, `yarn`, `bun`) when container starts with empty `node_modules`
 
 ### Changed
 - Container starts detached with idle process; all sessions use `docker exec` instead of `docker run`
