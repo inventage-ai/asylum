@@ -636,6 +636,88 @@ func TestResolveGitWorktree(t *testing.T) {
 	})
 }
 
+func TestFindNodeModules(t *testing.T) {
+	t.Run("finds top-level node_modules", func(t *testing.T) {
+		project := t.TempDir()
+		nm := filepath.Join(project, "node_modules")
+		os.MkdirAll(nm, 0755)
+
+		got := findNodeModules(project)
+		if len(got) != 1 || got[0] != nm {
+			t.Errorf("got %v, want [%s]", got, nm)
+		}
+	})
+
+	t.Run("finds monorepo node_modules", func(t *testing.T) {
+		project := t.TempDir()
+		root := filepath.Join(project, "node_modules")
+		pkg := filepath.Join(project, "packages", "app", "node_modules")
+		os.MkdirAll(root, 0755)
+		os.MkdirAll(pkg, 0755)
+
+		got := findNodeModules(project)
+		want := []string{root, pkg}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+
+	t.Run("skips nested node_modules inside node_modules", func(t *testing.T) {
+		project := t.TempDir()
+		nm := filepath.Join(project, "node_modules")
+		nested := filepath.Join(nm, "some-pkg", "node_modules")
+		os.MkdirAll(nested, 0755)
+
+		got := findNodeModules(project)
+		if len(got) != 1 || got[0] != nm {
+			t.Errorf("got %v, want [%s]", got, nm)
+		}
+	})
+
+	t.Run("no node_modules returns empty", func(t *testing.T) {
+		project := t.TempDir()
+		got := findNodeModules(project)
+		if len(got) != 0 {
+			t.Errorf("got %v, want empty", got)
+		}
+	})
+}
+
+func TestAppendVolumesNodeModulesShadowed(t *testing.T) {
+	home := t.TempDir()
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
+	os.MkdirAll(agentConfigDir, 0755)
+
+	nm := filepath.Join(projectDir, "node_modules")
+	os.MkdirAll(nm, 0755)
+
+	opts := RunOpts{
+		Config:     config.Config{},
+		Agent:      stubAgent{},
+		ProjectDir: projectDir,
+	}
+
+	args, err := appendVolumes([]string{}, home, cname, opts)
+	if err != nil {
+		t.Fatalf("appendVolumes: %v", err)
+	}
+
+	wantMount := "type=volume,dst=" + nm
+	found := false
+	for i, arg := range args {
+		if arg == "--mount" && i+1 < len(args) && args[i+1] == wantMount {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("expected --mount %q in args %v", wantMount, args)
+	}
+}
+
 func TestExecArgsRejectsAgent(t *testing.T) {
 	_, err := ExecArgs("asylum-test", ModeAgent, nil)
 	if err == nil {

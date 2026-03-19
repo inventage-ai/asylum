@@ -112,6 +112,12 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	// Project directory at real path
 	vol(opts.ProjectDir, opts.ProjectDir, "z")
 
+	// Shadow node_modules with anonymous volumes so host OS-specific
+	// binaries aren't visible inside the container.
+	for _, nm := range findNodeModules(opts.ProjectDir) {
+		args = append(args, "--mount", "type=volume,dst="+nm)
+	}
+
 	// Git worktree: mount both the worktree gitdir and main repo's .git
 	if wtDir, commonDir := resolveGitWorktree(opts.ProjectDir); wtDir != "" {
 		vol(wtDir, wtDir, "z")
@@ -354,6 +360,27 @@ func resolveGitWorktree(projectDir string) (worktreeDir, commonDir string) {
 	return gitdir, common
 }
 
+
+// findNodeModules returns absolute paths to node_modules directories
+// within projectDir. It skips nested node_modules inside node_modules.
+func findNodeModules(projectDir string) []string {
+	var results []string
+	filepath.WalkDir(projectDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return nil
+		}
+		if d.IsDir() && d.Name() == "node_modules" {
+			results = append(results, path)
+			return filepath.SkipDir
+		}
+		if d.IsDir() && d.Name() == ".git" {
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	slices.Sort(results)
+	return results
+}
 
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
