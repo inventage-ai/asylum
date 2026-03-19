@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Shadow `node_modules` with anonymous volumes in container to prevent host dependencies from leaking in
+
 ### Fixed
 - fnm not found in interactive shell (missing from PATH in bashrc/zshrc)
 
