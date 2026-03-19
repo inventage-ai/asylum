@@ -45,7 +45,7 @@ func RunArgs(opts RunOpts) ([]string, error) {
 	hostname := safeHostname(opts.ProjectDir)
 
 	args := []string{
-		"run", "-d", "--privileged", "--init",
+		"run", "-d", "--rm", "--privileged", "--init",
 		"--name", containerName,
 		"--hostname", hostname,
 		"-w", opts.ProjectDir,
