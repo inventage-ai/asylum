@@ -105,7 +105,7 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	// binaries aren't visible inside the container. Named volumes
 	// persist across container restarts so npm install isn't lost.
 	if !opts.Config.FeatureOff("shadow-node-modules") {
-		for _, nm := range findNodeModulesDirs(opts.ProjectDir) {
+		for _, nm := range FindNodeModulesDirs(opts.ProjectDir) {
 			rel, _ := filepath.Rel(opts.ProjectDir, nm)
 			hash := fmt.Sprintf("%x", sha256.Sum256([]byte(rel)))[:11]
 			volName := cname + "-npm-" + hash
@@ -361,12 +361,12 @@ func resolveGitWorktree(projectDir string) (worktreeDir, commonDir string) {
 }
 
 
-// findNodeModulesDirs returns absolute paths to node_modules directories
+// FindNodeModulesDirs returns absolute paths to node_modules directories
 // that should be shadowed. It finds every directory containing a
 // package.json and returns the node_modules path next to it, whether or
 // not node_modules exists yet. This ensures fresh clones get shadow
 // volumes before npm install runs.
-func findNodeModulesDirs(projectDir string) []string {
+func FindNodeModulesDirs(projectDir string) []string {
 	// Directories that never contain relevant package.json files
 	skip := map[string]bool{
 		".git": true, ".venv": true, "__pycache__": true,

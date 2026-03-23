@@ -228,6 +228,13 @@ func TestParseArgs(t *testing.T) {
 			wantErr: true,
 		},
 
+		// --skip-onboarding flag
+		{
+			name:      "skip onboarding",
+			args:      []string{"--skip-onboarding"},
+			wantFlags: cliFlags{SkipOnboarding: true},
+		},
+
 		// strict: unknown flags error
 		{
 			name:    "unknown flag errors",

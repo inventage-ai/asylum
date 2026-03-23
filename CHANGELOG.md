@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added
+- Project onboarding framework: scans for setup tasks, prompts once, executes via `docker exec` with proper error handling
+- Node.js dependency auto-install as first onboarding task (disable with `onboarding: { npm: false }`)
+- `--skip-onboarding` CLI flag to skip all onboarding tasks for a single invocation
+- Onboarding state tracking in `~/.asylum/projects/` — skips completed tasks unless lockfile changes
+- `onboarding` config section for per-task control; `features: { onboarding: false }` for global disable
+
 ## 0.4.0 — 2026-03-19
 
 ### Added
@@ -10,7 +17,6 @@
 - Multiple concurrent sessions per project — all modes (agent, shell, run) exec into a running container
 - Container automatically cleaned up when the last session exits (file-based session counter)
 - Integration tests for detached container lifecycle and multi-session behavior
-- Auto-install Node.js dependencies (`npm`, `pnpm`, `yarn`, `bun`) when container starts with empty `node_modules`
 
 ### Changed
 - Container starts detached with idle process; all sessions use `docker exec` instead of `docker run`

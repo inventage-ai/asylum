@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Flag parsing
-The CLI SHALL parse `-a/--agent`, `-p`, `-v`, `--java`, `-n/--new`, `--cleanup`, `--rebuild`, `--version`, and `-h/--help` flags. Unknown flags SHALL be passed through to the agent.
+The CLI SHALL parse `-a/--agent`, `-p`, `-v`, `-e`, `--java`, `-n/--new`, `--skip-onboarding`, `--cleanup`, `--rebuild`, `--version`, and `-h/--help` flags. Unknown flags SHALL be passed through to the agent.
 
 #### Scenario: Known flags consumed
 - **WHEN** `asylum -a gemini -p 3000` is run
@@ -14,6 +14,10 @@ The CLI SHALL parse `-a/--agent`, `-p`, `-v`, `--java`, `-n/--new`, `--cleanup`,
 #### Scenario: Version flag
 - **WHEN** `asylum --version` is run
 - **THEN** the CLI prints `asylum <version>` to stdout and exits with code 0
+
+#### Scenario: Skip onboarding flag
+- **WHEN** `asylum --skip-onboarding` is run
+- **THEN** the onboarding system is not invoked for this session
 
 ### Requirement: Command dispatch
 The CLI SHALL dispatch to version display, agent mode (default), shell mode, ssh-init, cleanup, self-update, or arbitrary command based on flags and positional args.

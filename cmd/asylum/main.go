@@ -15,6 +15,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/docker"
 	"github.com/inventage-ai/asylum/internal/image"
 	"github.com/inventage-ai/asylum/internal/log"
+	"github.com/inventage-ai/asylum/internal/onboarding"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/ssh"
 )
@@ -111,6 +112,7 @@ func main() {
 
 	cname := container.ContainerName(projectDir)
 	newSession := flags.New
+	freshContainer := false
 
 	// If no container running, build images and start one detached
 	if !docker.IsRunning(cname) {
@@ -156,6 +158,14 @@ func main() {
 			docker.RemoveContainer(cname)
 			die("container failed to start")
 		}
+		freshContainer = true
+
+		// Fix ownership of shadow node_modules volumes (Docker creates them as root)
+		if !cfg.FeatureOff("shadow-node-modules") {
+			for _, nm := range container.FindNodeModulesDirs(projectDir) {
+				docker.Exec(cname, "root", "chown", "claude", nm)
+			}
+		}
 	}
 
 	// Write session marker for agent mode
@@ -165,6 +175,18 @@ func main() {
 				log.Error("write session marker: %v", err)
 			}
 		}
+	}
+
+	// Run onboarding tasks (agent mode, first container start only)
+	if containerMode == container.ModeAgent && freshContainer && !flags.SkipOnboarding && !cfg.FeatureOff("onboarding") {
+		containerPath, _ := docker.ReadFile(cname, "/tmp/asylum-path")
+		onboarding.Run(onboarding.Opts{
+			ProjectDir:    projectDir,
+			ContainerName: cname,
+			ContainerPath: containerPath,
+			Tasks:         []onboarding.Task{onboarding.NPMTask{}},
+			Onboarding:    cfg.Onboarding,
+		})
 	}
 
 	// Exec session into the running container
@@ -209,8 +231,9 @@ type cliFlags struct {
 	Help    bool
 	Version bool
 	Short   bool
-	Admin   bool
-	Dev     bool
+	Admin          bool
+	Dev            bool
+	SkipOnboarding bool
 	Safe    bool
 }
 
@@ -280,6 +303,9 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			i++
 		case arg == "--cleanup":
 			flags.Cleanup = true
+			i++
+		case arg == "--skip-onboarding":
+			flags.SkipOnboarding = true
 			i++
 		case arg == "--version":
 			flags.Version = true
@@ -505,6 +531,7 @@ Flags:
   --java <version>     Java version in container
   -n, --new            Start new session (skip resume)
   --rebuild            Force rebuild Docker image
+  --skip-onboarding    Skip project onboarding tasks
   --cleanup            Remove Asylum images and cached data
   --version            Show version
   -h, --help           Show this help

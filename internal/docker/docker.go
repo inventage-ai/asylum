@@ -70,6 +70,21 @@ func RunDetached(args []string) error {
 	return cmd.Run()
 }
 
+func Exec(container, user string, command ...string) error {
+	args := []string{"exec", "-u", user, container}
+	args = append(args, command...)
+	return exec.Command("docker", args...).Run()
+}
+
+// ReadFile reads a file from inside a running container.
+func ReadFile(container, path string) (string, error) {
+	out, err := exec.Command("docker", "exec", container, "cat", path).Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 func RemoveContainer(name string) error {
 	cmd := exec.Command("docker", "rm", "-f", name)
 	cmd.Stderr = os.Stderr
@@ -83,15 +98,20 @@ func ShowLogs(name string) {
 	cmd.Run()
 }
 
-// WaitReady polls until the container is running, up to timeoutSec seconds.
+// WaitReady polls until the container is running and the entrypoint has
+// finished (indicated by /tmp/asylum-path existing), up to timeoutSec seconds.
 func WaitReady(name string, timeoutSec int) bool {
 	for i := 0; i < timeoutSec; i++ {
-		if IsRunning(name) {
+		if IsRunning(name) && fileExists(name, "/tmp/asylum-path") {
 			return true
 		}
 		time.Sleep(time.Second)
 	}
 	return false
+}
+
+func fileExists(container, path string) bool {
+	return exec.Command("docker", "exec", container, "test", "-f", path).Run() == nil
 }
 
 func IsRunning(name string) bool {
