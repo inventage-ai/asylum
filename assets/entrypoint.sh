@@ -153,6 +153,9 @@ if [ -t 0 ] && [ -t 1 ]; then
     echo ""
 fi
 
+# Export resolved PATH for docker exec consumers (onboarding, etc.)
+echo "$PATH" > /tmp/asylum-path
+
 # If dockerd is running, skip exec so the trap can kill it on exit.
 # Otherwise, exec replaces this shell (saves a process).
 if [ -n "${DOCKERD_PID:-}" ]; then

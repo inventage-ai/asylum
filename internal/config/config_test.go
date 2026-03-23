@@ -125,6 +125,26 @@ func TestMerge(t *testing.T) {
 			},
 		},
 		{
+			name: "onboarding map last wins",
+			base: Config{Onboarding: map[string]bool{"npm": true}},
+			over: Config{Onboarding: map[string]bool{"npm": false}},
+			check: func(t *testing.T, c Config) {
+				if c.Onboarding["npm"] != false {
+					t.Errorf("onboarding npm = %v, want false", c.Onboarding["npm"])
+				}
+			},
+		},
+		{
+			name: "onboarding nil overlay keeps base",
+			base: Config{Onboarding: map[string]bool{"npm": false}},
+			over: Config{},
+			check: func(t *testing.T, c Config) {
+				if c.Onboarding["npm"] != false {
+					t.Errorf("onboarding npm = %v, want false", c.Onboarding["npm"])
+				}
+			},
+		},
+		{
 			name: "nil base maps handled",
 			base: Config{},
 			over: Config{Versions: map[string]string{"java": "21"}, Packages: map[string][]string{"apt": {"curl"}}},

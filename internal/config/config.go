@@ -21,6 +21,7 @@ type Config struct {
 	Versions       map[string]string   `yaml:"versions"`
 	Packages       map[string][]string `yaml:"packages"`
 	Features       map[string]bool     `yaml:"features"`
+	Onboarding     map[string]bool     `yaml:"onboarding"`
 }
 
 func (c Config) Feature(name string) bool {
@@ -132,6 +133,13 @@ func merge(base, overlay Config) Config {
 		maps.Copy(merged, base.Features)
 		maps.Copy(merged, overlay.Features)
 		result.Features = merged
+	}
+
+	if overlay.Onboarding != nil {
+		merged := make(map[string]bool, len(base.Onboarding)+len(overlay.Onboarding))
+		maps.Copy(merged, base.Onboarding)
+		maps.Copy(merged, overlay.Onboarding)
+		result.Onboarding = merged
 	}
 
 	if overlay.Packages != nil {

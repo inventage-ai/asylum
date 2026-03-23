@@ -611,7 +611,7 @@ func TestFindNodeModulesDirs(t *testing.T) {
 		project := t.TempDir()
 		os.WriteFile(filepath.Join(project, "package.json"), []byte("{}"), 0644)
 
-		got := findNodeModulesDirs(project)
+		got := FindNodeModulesDirs(project)
 		want := []string{filepath.Join(project, "node_modules")}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
@@ -623,7 +623,7 @@ func TestFindNodeModulesDirs(t *testing.T) {
 		os.WriteFile(filepath.Join(project, "package.json"), []byte("{}"), 0644)
 		// No node_modules directory created
 
-		got := findNodeModulesDirs(project)
+		got := FindNodeModulesDirs(project)
 		want := []string{filepath.Join(project, "node_modules")}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
@@ -637,7 +637,7 @@ func TestFindNodeModulesDirs(t *testing.T) {
 		os.MkdirAll(pkgDir, 0755)
 		os.WriteFile(filepath.Join(pkgDir, "package.json"), []byte("{}"), 0644)
 
-		got := findNodeModulesDirs(project)
+		got := FindNodeModulesDirs(project)
 		want := []string{
 			filepath.Join(project, "node_modules"),
 			filepath.Join(pkgDir, "node_modules"),
@@ -650,7 +650,7 @@ func TestFindNodeModulesDirs(t *testing.T) {
 	t.Run("no package.json anywhere returns empty", func(t *testing.T) {
 		project := t.TempDir()
 		os.MkdirAll(filepath.Join(project, "src"), 0755)
-		got := findNodeModulesDirs(project)
+		got := FindNodeModulesDirs(project)
 		if len(got) != 0 {
 			t.Errorf("got %v, want empty", got)
 		}
@@ -662,7 +662,7 @@ func TestFindNodeModulesDirs(t *testing.T) {
 		os.MkdirAll(frontend, 0755)
 		os.WriteFile(filepath.Join(frontend, "package.json"), []byte("{}"), 0644)
 
-		got := findNodeModulesDirs(project)
+		got := FindNodeModulesDirs(project)
 		want := []string{filepath.Join(frontend, "node_modules")}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
@@ -677,7 +677,7 @@ func TestFindNodeModulesDirs(t *testing.T) {
 		os.MkdirAll(venvPkg, 0755)
 		os.WriteFile(filepath.Join(venvPkg, "package.json"), []byte("{}"), 0644)
 
-		got := findNodeModulesDirs(project)
+		got := FindNodeModulesDirs(project)
 		// Only root node_modules, not .venv/lib/node_modules
 		want := []string{filepath.Join(project, "node_modules")}
 		if !reflect.DeepEqual(got, want) {
@@ -693,7 +693,7 @@ func TestFindNodeModulesDirs(t *testing.T) {
 		os.MkdirAll(nested, 0755)
 		os.WriteFile(filepath.Join(nested, "package.json"), []byte("{}"), 0644)
 
-		got := findNodeModulesDirs(project)
+		got := FindNodeModulesDirs(project)
 		want := []string{filepath.Join(project, "node_modules")}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("got %v, want %v", got, want)
