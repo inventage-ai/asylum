@@ -19,8 +19,9 @@ import (
 
 var invalidHostnameChars = regexp.MustCompile(`[^a-z0-9-]`)
 
-// CacheDirs maps tool names to their container cache paths.
-var CacheDirs = map[string]string{
+// DefaultCacheDirs is the fallback cache dir map when no profiles are configured.
+// Deprecated: use profile.AggregateCacheDirs instead.
+var DefaultCacheDirs = map[string]string{
 	"npm":    "/home/claude/.npm",
 	"pip":    "/home/claude/.cache/pip",
 	"maven":  "/home/claude/.m2",
@@ -41,6 +42,7 @@ type RunOpts struct {
 	Agent      agent.Agent
 	ImageTag   string
 	ProjectDir string
+	CacheDirs  map[string]string // tool name → container path
 }
 
 func RunArgs(opts RunOpts) ([]string, error) {
@@ -142,9 +144,13 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	}
 
 	// Caches (named volumes for better IO on macOS)
-	for _, name := range slices.Sorted(maps.Keys(CacheDirs)) {
+	cacheDirs := opts.CacheDirs
+	if cacheDirs == nil {
+		cacheDirs = DefaultCacheDirs
+	}
+	for _, name := range slices.Sorted(maps.Keys(cacheDirs)) {
 		volName := cname + "-cache-" + name
-		args = append(args, "--mount", "type=volume,src="+volName+",dst="+CacheDirs[name])
+		args = append(args, "--mount", "type=volume,src="+volName+",dst="+cacheDirs[name])
 	}
 
 	// Shell history

@@ -1,0 +1,68 @@
+# Install oh-my-zsh and setup PATH/fnm/mise for zsh
+# oh-my-zsh replaces .zshrc, so PATH must be re-added after install
+RUN sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \
+    sed -i 's/ZSH_THEME=".*"/ZSH_THEME="robbyrussell"/' ~/.zshrc && \
+    echo 'export PATH="$HOME/.local/share/fnm:$HOME/.local/bin:$PATH"' >> ~/.zshrc && \
+    echo 'eval "$(fnm env)"' >> ~/.zshrc && \
+    echo 'eval "$(mise activate zsh)"' >> ~/.zshrc
+
+# Setup direnv hooks
+RUN echo 'eval "$(direnv hook bash)"' >> ~/.bashrc && \
+    echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+
+# Terminal size handling
+RUN cat >> ~/.zshrc <<'EOF'
+
+if [[ -n "$PS1" ]] && command -v stty >/dev/null; then
+  function _update_size {
+    local rows cols
+    { stty size } 2>/dev/null | read rows cols
+    ((rows)) && export LINES=$rows COLUMNS=$cols
+  }
+  TRAPWINCH() { _update_size }
+  _update_size
+fi
+EOF
+
+# Configure git
+RUN git config --global init.defaultBranch main && \
+    git config --global pull.rebase false
+
+# Setup tmux configuration
+RUN cat > ~/.tmux.conf <<'EOF'
+set -g mouse on
+set -g default-terminal "screen-256color"
+set -ga terminal-overrides ",xterm-256color:Tc"
+set -g history-limit 50000
+bind | split-window -h
+bind - split-window -v
+unbind '"'
+unbind %
+bind r source-file ~/.tmux.conf \; display-message "Config reloaded!"
+set -g status-bg black
+set -g status-fg white
+set -g status-left '#[fg=green]#H '
+set -g status-right '#[fg=yellow]%Y-%m-%d %H:%M'
+EOF
+
+# Create workspace directory
+RUN mkdir -p /home/${USERNAME:-claude}/workspace
+
+# Switch back to root for entrypoint setup
+USER root
+
+# Copy entrypoint script
+COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Set working directory
+WORKDIR /workspace
+
+# Set the user for runtime
+USER ${USERNAME:-claude}
+
+# Entrypoint
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["/bin/zsh"]
+
+ENV ASYLUM_DISABLE_FEEDBACK_SURVEY=1
+ENV CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1

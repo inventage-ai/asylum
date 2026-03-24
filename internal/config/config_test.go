@@ -161,7 +161,7 @@ func TestMerge(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := merge(tt.base, tt.over)
+			result := Merge(tt.base, tt.over)
 			tt.check(t, result)
 		})
 	}
@@ -177,7 +177,7 @@ func TestMergeDoesNotMutateBase(t *testing.T) {
 		Packages: map[string][]string{"apt": {"jq"}, "npm": {"typescript"}},
 	}
 
-	merge(base, overlay)
+	Merge(base, overlay)
 
 	if base.Versions["java"] != "17" {
 		t.Errorf("merge mutated base.Versions[java]: got %q, want %q", base.Versions["java"], "17")
@@ -435,6 +435,78 @@ func TestToolVersionsJava(t *testing.T) {
 			t.Errorf("java = %q, want %q", cfg.Versions["java"], "25")
 		}
 	})
+}
+
+func TestMergeProfiles(t *testing.T) {
+	t.Run("nil stays nil when overlay has no profiles", func(t *testing.T) {
+		base := Config{}
+		over := Config{Agent: "gemini"}
+		result := Merge(base, over)
+		if result.Profiles != nil {
+			t.Errorf("profiles should remain nil, got %v", *result.Profiles)
+		}
+	})
+
+	t.Run("overlay replaces base profiles", func(t *testing.T) {
+		baseP := []string{"java", "python"}
+		overP := []string{"node"}
+		base := Config{Profiles: &baseP}
+		over := Config{Profiles: &overP}
+		result := Merge(base, over)
+		if result.Profiles == nil || len(*result.Profiles) != 1 || (*result.Profiles)[0] != "node" {
+			t.Errorf("profiles should be [node], got %v", result.Profiles)
+		}
+	})
+
+	t.Run("explicit empty replaces non-nil", func(t *testing.T) {
+		baseP := []string{"java"}
+		overP := []string{}
+		base := Config{Profiles: &baseP}
+		over := Config{Profiles: &overP}
+		result := Merge(base, over)
+		if result.Profiles == nil || len(*result.Profiles) != 0 {
+			t.Errorf("profiles should be empty slice, got %v", result.Profiles)
+		}
+	})
+
+	t.Run("nil overlay keeps base profiles", func(t *testing.T) {
+		baseP := []string{"java"}
+		base := Config{Profiles: &baseP}
+		over := Config{}
+		result := Merge(base, over)
+		if result.Profiles == nil || len(*result.Profiles) != 1 {
+			t.Errorf("profiles should be [java], got %v", result.Profiles)
+		}
+	})
+}
+
+func TestProfileDefaultsUnderUserConfig(t *testing.T) {
+	// Simulates how main.go merges: profileDefaults as base, user cfg on top
+	profileDefaults := Config{
+		Versions: map[string]string{"java": "21"},
+		Env:      map[string]string{"JAVA_HOME": "/default"},
+	}
+	userCfg := Config{
+		Versions: map[string]string{"java": "17"},
+	}
+	result := Merge(profileDefaults, userCfg)
+	if result.Versions["java"] != "17" {
+		t.Errorf("user config should win: got java=%q, want 17", result.Versions["java"])
+	}
+	// Profile default env should still be present when user doesn't override
+	if result.Env["JAVA_HOME"] != "/default" {
+		t.Errorf("profile default env should persist: got %q", result.Env["JAVA_HOME"])
+	}
+}
+
+func TestApplyFlagsProfiles(t *testing.T) {
+	p := []string{"java", "python"}
+	cfg := Config{}
+	flags := CLIFlags{Profiles: &p}
+	result := applyFlags(cfg, flags)
+	if result.Profiles == nil || len(*result.Profiles) != 2 {
+		t.Errorf("profiles should be [java python], got %v", result.Profiles)
+	}
 }
 
 func TestLoadSkipsDirectoryAsConfig(t *testing.T) {

@@ -17,6 +17,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/image"
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/onboarding"
+	"github.com/inventage-ai/asylum/internal/profile"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/ssh"
 )
@@ -96,15 +97,35 @@ func main() {
 	}
 
 	cfg, err := config.Load(projectDir, config.CLIFlags{
-		Agent:   flags.Agent,
-		Ports:   flags.Ports,
-		Volumes: flags.Volumes,
-		Env:     flags.Env,
-		Java:    flags.Java,
+		Agent:    flags.Agent,
+		Profiles: flags.Profiles,
+		Ports:    flags.Ports,
+		Volumes:  flags.Volumes,
+		Env:      flags.Env,
+		Java:     flags.Java,
 	})
 	if err != nil {
 		die("load config: %v", err)
 	}
+
+	// Resolve all active profiles from final merged config
+	allProfiles, err := profile.Resolve(cfg.Profiles)
+	if err != nil {
+		die("%v", err)
+	}
+
+	// Apply profile config defaults UNDER user config (user wins).
+	var profileDefaults config.Config
+	for _, p := range allProfiles {
+		profileDefaults = config.Merge(profileDefaults, p.Config)
+	}
+	cfg = config.Merge(profileDefaults, cfg)
+
+	// Resolve global-tier profiles (from ~/.asylum/config.yaml only) for base image.
+	// Project-only profiles (in final set but not global) go into the project image.
+	globalProfiles, projectProfiles := resolveProfileTiers(projectDir, allProfiles)
+
+	cacheDirs := profile.AggregateCacheDirs(allProfiles)
 
 	agentName := cfg.Agent
 	if agentName == "" {
@@ -134,12 +155,12 @@ func main() {
 			newSession = true
 		}
 
-		baseRebuilt, err := image.EnsureBase(version, flags.Rebuild)
+		baseRebuilt, err := image.EnsureBase(globalProfiles, version, flags.Rebuild)
 		if err != nil {
 			die("%v", err)
 		}
 
-		imageTag, err := image.EnsureProject(cfg.Packages, cfg.Versions["java"], version, baseRebuilt, flags.Rebuild)
+		imageTag, err := image.EnsureProject(projectProfiles, cfg.Packages, cfg.Versions["java"], version, baseRebuilt, flags.Rebuild)
 		if err != nil {
 			die("%v", err)
 		}
@@ -149,6 +170,7 @@ func main() {
 			Agent:      a,
 			ImageTag:   imageTag,
 			ProjectDir: projectDir,
+			CacheDirs:  cacheDirs,
 		})
 		if err != nil {
 			die("%v", err)
@@ -175,7 +197,7 @@ func main() {
 
 		// Migrate old bind-mounted caches to named volumes (temporary)
 		oldCacheBase := filepath.Join(home, ".asylum", "cache", cname)
-		for tool, dst := range container.CacheDirs {
+		for tool, dst := range cacheDirs {
 			oldDir := filepath.Join(oldCacheBase, tool)
 			if info, err := os.Stat(oldDir); err == nil && info.IsDir() {
 				if err := docker.CopyTo(cname, oldDir, dst); err != nil {
@@ -202,7 +224,7 @@ func main() {
 			ProjectDir:    projectDir,
 			ContainerName: cname,
 			ContainerPath: containerPath,
-			Tasks:         []onboarding.Task{onboarding.NPMTask{}},
+			Tasks:         profile.AggregateOnboardingTasks(allProfiles),
 			Onboarding:    cfg.Onboarding,
 		})
 	}
@@ -238,12 +260,13 @@ func main() {
 }
 
 type cliFlags struct {
-	Agent   string
-	Ports   []string
-	Volumes []string
-	Env     map[string]string
-	Java    string
-	New     bool
+	Agent    string
+	Profiles *[]string
+	Ports    []string
+	Volumes  []string
+	Env      map[string]string
+	Java     string
+	New      bool
 	Rebuild bool
 	Cleanup bool
 	Help    bool
@@ -313,6 +336,12 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			}
 		case arg == "--java":
 			flags.Java, err = next(arg)
+		case arg == "--profiles":
+			var val string
+			if val, err = next(arg); err == nil {
+				p := strings.Split(val, ",")
+				flags.Profiles = &p
+			}
 		case arg == "-n" || arg == "--new":
 			flags.New = true
 			i++
@@ -528,6 +557,40 @@ func runCleanup() {
 	log.Info("agent config (~/.asylum/agents/) preserved — delete manually if needed")
 }
 
+// resolveProfileTiers splits allProfiles into global (for base image) and
+// project-only (for project image). Global profiles come from ~/.asylum/config.yaml;
+// project-only profiles are those in allProfiles but not in the global set.
+func resolveProfileTiers(projectDir string, allProfiles []*profile.Profile) (global, projectOnly []*profile.Profile) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return allProfiles, nil
+	}
+
+	globalCfg, err := config.LoadFile(filepath.Join(home, ".asylum", "config.yaml"))
+	if err != nil {
+		return allProfiles, nil
+	}
+
+	globalResolved, err := profile.Resolve(globalCfg.Profiles)
+	if err != nil {
+		return allProfiles, nil
+	}
+
+	globalSet := map[string]bool{}
+	for _, p := range globalResolved {
+		globalSet[p.Name] = true
+	}
+
+	for _, p := range allProfiles {
+		if globalSet[p.Name] {
+			global = append(global, p)
+		} else {
+			projectOnly = append(projectOnly, p)
+		}
+	}
+	return global, projectOnly
+}
+
 func printUsage() {
 	fmt.Printf(`asylum %s — Docker sandbox for AI coding agents
 
@@ -547,6 +610,7 @@ Flags:
   -v <volume>          Additional volume mount (repeatable)
   -e KEY=VALUE         Environment variable (repeatable, last wins)
   --java <version>     Java version in container
+  --profiles <list>    Comma-separated profiles (default: all)
   -n, --new            Start new session (skip resume)
   --rebuild            Force rebuild Docker image
   --skip-onboarding    Skip project onboarding tasks

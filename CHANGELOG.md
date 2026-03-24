@@ -8,6 +8,11 @@
 ## 0.5.0 — 2026-03-24
 
 ### Added
+- Profile system: language toolchains (java, python, node) are now self-contained profiles that own Dockerfile snippets, entrypoint setup, cache dirs, config defaults, and onboarding tasks
+- `profiles` config option (YAML and `--profiles` CLI flag) to select which profiles are active; `nil` = all (backwards compatible), `[]` = none
+- Hierarchical sub-profiles: `java/maven`, `java/gradle`, `python/uv`, `node/npm`, `node/pnpm`, `node/yarn`
+- Dockerfile and entrypoint split into core + profile snippets + tail, assembled at build time
+- Dynamic welcome banner showing versions only for active profiles
 - First-run onboarding: prompts to mount package manager credentials (Maven) on initial setup
 - Project onboarding framework: scans for setup tasks, prompts once, executes via `docker exec` with proper error handling
 - Node.js dependency auto-install as first onboarding task (disable with `onboarding: { npm: false }`)

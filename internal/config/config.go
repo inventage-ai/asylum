@@ -15,6 +15,7 @@ type Config struct {
 	Agent          string              `yaml:"agent"`
 	ReleaseChannel string              `yaml:"release-channel"`
 	TabTitle       string              `yaml:"tab-title"`
+	Profiles       *[]string           `yaml:"profiles"` // nil = all, empty = none
 	Ports          []string            `yaml:"ports"`
 	Volumes        []string            `yaml:"volumes"`
 	Env            map[string]string   `yaml:"env"`
@@ -36,11 +37,12 @@ func (c Config) FeatureOff(name string) bool {
 }
 
 type CLIFlags struct {
-	Agent   string
-	Ports   []string
-	Volumes []string
-	Env     map[string]string
-	Java    string
+	Agent    string
+	Profiles *[]string
+	Ports    []string
+	Volumes  []string
+	Env      map[string]string
+	Java     string
 }
 
 type Volume struct {
@@ -61,11 +63,11 @@ func Load(projectDir string, flags CLIFlags) (Config, error) {
 		filepath.Join(projectDir, ".asylum"),
 		filepath.Join(projectDir, ".asylum.local"),
 	} {
-		layer, err := loadFile(path)
+		layer, err := LoadFile(path)
 		if err != nil {
 			return Config{}, fmt.Errorf("%s: %w", path, err)
 		}
-		cfg = merge(cfg, layer)
+		cfg = Merge(cfg, layer)
 	}
 
 	if java := readToolVersionsJava(projectDir); java != "" && cfg.Versions["java"] == "" {
@@ -76,7 +78,9 @@ func Load(projectDir string, flags CLIFlags) (Config, error) {
 	return cfg, nil
 }
 
-func loadFile(path string) (Config, error) {
+// LoadFile reads a single config file and returns its parsed Config.
+// Returns a zero Config if the file doesn't exist or is a directory.
+func LoadFile(path string) (Config, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -98,7 +102,8 @@ func loadFile(path string) (Config, error) {
 	return cfg, nil
 }
 
-func merge(base, overlay Config) Config {
+// Merge applies overlay values on top of base, following per-field merge rules.
+func Merge(base, overlay Config) Config {
 	result := base
 
 	if overlay.Agent != "" {
@@ -109,6 +114,9 @@ func merge(base, overlay Config) Config {
 	}
 	if overlay.TabTitle != "" {
 		result.TabTitle = overlay.TabTitle
+	}
+	if overlay.Profiles != nil {
+		result.Profiles = overlay.Profiles
 	}
 
 	result.Ports = slices.Concat(base.Ports, overlay.Ports)
@@ -159,6 +167,9 @@ func merge(base, overlay Config) Config {
 func applyFlags(cfg Config, flags CLIFlags) Config {
 	if flags.Agent != "" {
 		cfg.Agent = flags.Agent
+	}
+	if flags.Profiles != nil {
+		cfg.Profiles = flags.Profiles
 	}
 	if flags.Java != "" {
 		cfg.Versions = setVersion(cfg.Versions, "java", flags.Java)

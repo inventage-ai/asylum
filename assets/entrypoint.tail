@@ -1,0 +1,35 @@
+# Welcome message for interactive sessions
+if [ -t 0 ] && [ -t 1 ]; then
+    echo "Asylum Development Environment"
+    echo "================================"
+    echo "Workspace: $(pwd)"
+# PROFILE_BANNER_PLACEHOLDER
+    echo "Claude:    $(claude --version 2>/dev/null || echo 'not found')"
+    echo "Gemini:    $(gemini --version 2>/dev/null || echo 'not found')"
+    echo "Codex:     $(codex --version 2>/dev/null || echo 'not found')"
+    echo "================================"
+    echo ""
+fi
+
+# Export resolved PATH for docker exec consumers (onboarding, etc.)
+echo "$PATH" > /tmp/asylum-path
+
+# If dockerd is running, skip exec so the trap can kill it on exit.
+# Otherwise, exec replaces this shell (saves a process).
+if [ -n "${DOCKERD_PID:-}" ]; then
+    PRE_EXISTING_CONTAINERS=$(docker ps -aq 2>/dev/null || true)
+    cleanup_containers() {
+        all=$(docker ps -aq 2>/dev/null || true)
+        for c in $all; do
+            case " $PRE_EXISTING_CONTAINERS " in
+                *" $c "*) ;;
+                *) docker rm -f "$c" 2>/dev/null ;;
+            esac
+        done
+        sudo kill -9 $DOCKERD_PID 2>/dev/null
+    }
+    trap cleanup_containers EXIT
+    "$@"
+else
+    exec "$@"
+fi

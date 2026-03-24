@@ -11,14 +11,60 @@ import (
 	"github.com/inventage-ai/asylum/assets"
 	"github.com/inventage-ai/asylum/internal/docker"
 	"github.com/inventage-ai/asylum/internal/log"
+	"github.com/inventage-ai/asylum/internal/profile"
 )
 
 const baseTag = "asylum:latest"
 
-func assetHash() string {
+// assembleDockerfile builds a complete Dockerfile from core + profile snippets + tail.
+func assembleDockerfile(profiles []*profile.Profile) []byte {
+	var b strings.Builder
+	b.Write(assets.DockerfileCore)
+	if !strings.HasSuffix(string(assets.DockerfileCore), "\n") {
+		b.WriteByte('\n')
+	}
+	b.WriteByte('\n')
+	snippets := profile.AssembleDockerSnippets(profiles)
+	if snippets != "" {
+		b.WriteString(snippets)
+	}
+	b.Write(assets.DockerfileTail)
+	return []byte(b.String())
+}
+
+// assembleEntrypoint builds a complete entrypoint from core + profile snippets + tail.
+// Banner lines from profiles are inserted at the PROFILE_BANNER_PLACEHOLDER marker.
+func assembleEntrypoint(profiles []*profile.Profile) []byte {
+	var b strings.Builder
+	b.Write(assets.EntrypointCore)
+	if !strings.HasSuffix(string(assets.EntrypointCore), "\n") {
+		b.WriteByte('\n')
+	}
+	b.WriteByte('\n')
+	snippets := profile.AssembleEntrypointSnippets(profiles)
+	if snippets != "" {
+		b.WriteString(snippets)
+		b.WriteByte('\n')
+	}
+
+	// Insert banner lines at placeholder in tail
+	tail := string(assets.EntrypointTail)
+	bannerLines := profile.AssembleBannerLines(profiles)
+	tail = strings.Replace(tail, "# PROFILE_BANNER_PLACEHOLDER\n", bannerLines, 1)
+
+	b.WriteString(tail)
+	return []byte(b.String())
+}
+
+func baseHash(profiles []*profile.Profile) string {
 	h := sha256.New()
-	h.Write(assets.Dockerfile)
-	h.Write(assets.Entrypoint)
+	h.Write(assets.DockerfileCore)
+	h.Write(assets.DockerfileTail)
+	h.Write(assets.EntrypointCore)
+	h.Write(assets.EntrypointTail)
+	h.Write([]byte(profile.AssembleDockerSnippets(profiles)))
+	h.Write([]byte(profile.AssembleEntrypointSnippets(profiles)))
+	h.Write([]byte(profile.AssembleBannerLines(profiles)))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -42,8 +88,8 @@ func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag stri
 	return docker.Build(tmpDir, dfPath, tag, labels, buildArgs, noCache)
 }
 
-func EnsureBase(version string, noCache bool) (bool, error) {
-	hash := assetHash()
+func EnsureBase(profiles []*profile.Profile, version string, noCache bool) (bool, error) {
+	hash := baseHash(profiles)
 
 	existing, err := docker.InspectLabel(baseTag, "asylum.hash")
 	if err == nil && existing == hash && !noCache {
@@ -63,7 +109,10 @@ func EnsureBase(version string, noCache bool) (bool, error) {
 		"USERNAME": "claude",
 	}
 
-	if err := buildImage(assets.Dockerfile, map[string][]byte{"entrypoint.sh": assets.Entrypoint}, baseTag, labels, buildArgs, noCache); err != nil {
+	dockerfile := assembleDockerfile(profiles)
+	entrypoint := assembleEntrypoint(profiles)
+
+	if err := buildImage(dockerfile, map[string][]byte{"entrypoint.sh": entrypoint}, baseTag, labels, buildArgs, noCache); err != nil {
 		return false, fmt.Errorf("build base image: %w", err)
 	}
 
@@ -78,13 +127,15 @@ func EnsureBase(version string, noCache bool) (bool, error) {
 // Pre-installed Java versions in the base image.
 var preinstalledJava = map[string]bool{"17": true, "21": true, "25": true}
 
-func EnsureProject(packages map[string][]string, javaVersion string, version string, baseRebuilt bool, noCache bool) (string, error) {
+func EnsureProject(projectProfiles []*profile.Profile, packages map[string][]string, javaVersion string, version string, baseRebuilt bool, noCache bool) (string, error) {
+	profileSnippets := profile.AssembleDockerSnippets(projectProfiles)
 	needsCustomJava := javaVersion != "" && !preinstalledJava[javaVersion]
-	if len(packages) == 0 && !needsCustomJava {
+
+	if len(packages) == 0 && !needsCustomJava && profileSnippets == "" {
 		return baseTag, nil
 	}
 
-	dockerfile, err := generateProjectDockerfile(packages, javaVersion)
+	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, javaVersion)
 	if err != nil {
 		return "", err
 	}
@@ -128,7 +179,7 @@ func validatePackageNames(pkgType string, names []string) error {
 	return nil
 }
 
-func generateProjectDockerfile(packages map[string][]string, javaVersion string) (string, error) {
+func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string) (string, error) {
 	for k := range packages {
 		if !knownPackageTypes[k] {
 			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, run)", k)
@@ -142,6 +193,12 @@ func generateProjectDockerfile(packages map[string][]string, javaVersion string)
 
 	var b strings.Builder
 	b.WriteString("FROM asylum:latest\n")
+
+	// Project-level profile snippets
+	if profileSnippets != "" {
+		b.WriteString("\nUSER claude\n")
+		b.WriteString(profileSnippets)
+	}
 
 	if apt := packages["apt"]; len(apt) > 0 {
 		b.WriteString("\nUSER root\n")

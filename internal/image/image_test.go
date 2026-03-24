@@ -7,14 +7,14 @@ import (
 
 func TestGenerateProjectDockerfile(t *testing.T) {
 	t.Run("unknown key rejected", func(t *testing.T) {
-		_, err := generateProjectDockerfile(map[string][]string{"bad": {"x"}}, "")
+		_, err := generateProjectDockerfile("", map[string][]string{"bad": {"x"}}, "")
 		if err == nil {
 			t.Error("expected error for unknown package type")
 		}
 	})
 
 	t.Run("apt packages", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{
+		df, err := generateProjectDockerfile("", map[string][]string{
 			"apt": {"curl", "jq"},
 		}, "")
 		if err != nil {
@@ -35,7 +35,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("npm packages", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{
+		df, err := generateProjectDockerfile("", map[string][]string{
 			"npm": {"typescript", "eslint"},
 		}, "")
 		if err != nil {
@@ -50,7 +50,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("pip packages each get own RUN", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{
+		df, err := generateProjectDockerfile("", map[string][]string{
 			"pip": {"ruff", "black"},
 		}, "")
 		if err != nil {
@@ -71,7 +71,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("run commands emitted as-is", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{
+		df, err := generateProjectDockerfile("", map[string][]string{
 			"run": {"echo hello", "echo world"},
 		}, "")
 		if err != nil {
@@ -86,7 +86,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("empty sub-lists produce no output for that type", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{
+		df, err := generateProjectDockerfile("", map[string][]string{
 			"apt": {},
 			"npm": {"typescript"},
 		}, "")
@@ -102,7 +102,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("always ends with USER claude", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{
+		df, err := generateProjectDockerfile("", map[string][]string{
 			"apt": {"curl"},
 		}, "")
 		if err != nil {
@@ -121,7 +121,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			"curl$(evil)",
 		}
 		for _, name := range bad {
-			_, err := generateProjectDockerfile(map[string][]string{"apt": {name}}, "")
+			_, err := generateProjectDockerfile("", map[string][]string{"apt": {name}}, "")
 			if err == nil {
 				t.Errorf("expected error for apt package name %q", name)
 			}
@@ -134,7 +134,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			"typescript; rm -rf /",
 		}
 		for _, name := range bad {
-			_, err := generateProjectDockerfile(map[string][]string{"npm": {name}}, "")
+			_, err := generateProjectDockerfile("", map[string][]string{"npm": {name}}, "")
 			if err == nil {
 				t.Errorf("expected error for npm package name %q", name)
 			}
@@ -142,7 +142,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("custom java version adds mise install", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{}, "11")
+		df, err := generateProjectDockerfile("", map[string][]string{}, "11")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -158,7 +158,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("pre-installed java version skips mise install", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{"apt": {"curl"}}, "21")
+		df, err := generateProjectDockerfile("", map[string][]string{"apt": {"curl"}}, "21")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -168,7 +168,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("custom java only triggers project image", func(t *testing.T) {
-		df, err := generateProjectDockerfile(map[string][]string{}, "11")
+		df, err := generateProjectDockerfile("", map[string][]string{}, "11")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -185,7 +185,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			"abc",
 		}
 		for _, ver := range bad {
-			_, err := generateProjectDockerfile(map[string][]string{}, ver)
+			_, err := generateProjectDockerfile("", map[string][]string{}, ver)
 			if err == nil {
 				t.Errorf("expected error for java version %q", ver)
 			}
@@ -194,7 +194,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 
 	t.Run("valid java versions accepted", func(t *testing.T) {
 		for _, ver := range []string{"11", "8.0.392", "11.0"} {
-			_, err := generateProjectDockerfile(map[string][]string{}, ver)
+			_, err := generateProjectDockerfile("", map[string][]string{}, ver)
 			if err != nil {
 				t.Errorf("unexpected error for java version %q: %v", ver, err)
 			}
@@ -209,7 +209,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			"ruff$(evil)",
 		}
 		for _, name := range bad {
-			_, err := generateProjectDockerfile(map[string][]string{"pip": {name}}, "")
+			_, err := generateProjectDockerfile("", map[string][]string{"pip": {name}}, "")
 			if err == nil {
 				t.Errorf("expected error for pip package name %q", name)
 			}
