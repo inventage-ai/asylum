@@ -267,13 +267,52 @@ func TestAppendEnvVars(t *testing.T) {
 
 		for _, want := range []string{
 			"-e ASYLUM_DOCKER=1",
-			"-e COLORTERM=truecolor",
-			"-e TERM=xterm-256color",
 			"-e HISTFILE=/home/claude/.shell_history/zsh_history",
 			"-e HOST_PROJECT_DIR=/work/myproject",
 		} {
 			if !strings.Contains(joined, want) {
 				t.Errorf("expected %q in args %v", want, got)
+			}
+		}
+	})
+
+	t.Run("inherits COLORTERM and TERM from host", func(t *testing.T) {
+		t.Setenv("COLORTERM", "truecolor")
+		t.Setenv("TERM", "xterm-256color")
+
+		opts := RunOpts{
+			Config:     config.Config{},
+			Agent:      stubAgent{envVars: map[string]string{}},
+			ProjectDir: "/work/myproject",
+		}
+		got := appendEnvVars([]string{}, opts)
+		joined := strings.Join(got, " ")
+
+		for _, want := range []string{
+			"-e COLORTERM=truecolor",
+			"-e TERM=xterm-256color",
+		} {
+			if !strings.Contains(joined, want) {
+				t.Errorf("expected %q in args %v", want, got)
+			}
+		}
+	})
+
+	t.Run("omits COLORTERM and TERM when unset on host", func(t *testing.T) {
+		t.Setenv("COLORTERM", "")
+		t.Setenv("TERM", "")
+
+		opts := RunOpts{
+			Config:     config.Config{},
+			Agent:      stubAgent{envVars: map[string]string{}},
+			ProjectDir: "/work/myproject",
+		}
+		got := appendEnvVars([]string{}, opts)
+		joined := strings.Join(got, " ")
+
+		for _, unwanted := range []string{"-e COLORTERM=", "-e TERM="} {
+			if strings.Contains(joined, unwanted) {
+				t.Errorf("unexpected %q in args %v", unwanted, got)
 			}
 		}
 	})
