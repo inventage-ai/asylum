@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.5.0 — 2026-03-24
+
 ### Added
 - First-run onboarding: prompts to mount package manager credentials (Maven) on initial setup
 - Project onboarding framework: scans for setup tasks, prompts once, executes via `docker exec` with proper error handling
@@ -16,6 +18,7 @@
 ### Fixed
 - Tilde (`~`) in volume shorthand (e.g. `~/.m2/settings.xml:ro`) now correctly expands to `/home/claude` inside the container instead of the host home directory
 - `.tool-versions` with `java 25` no longer triggers "missing" warning (switched from temurin-prefixed to plain version numbers)
+- Set `COLORTERM` and `TERM` env vars for proper color support in container
 
 ## 0.4.0 — 2026-03-19
 
