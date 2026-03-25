@@ -55,14 +55,6 @@ func (c Config) KitOption(name string) *KitConfig {
 	return c.Kits[name]
 }
 
-// KitBool returns the value of a *bool kit option, defaulting to the given value if nil.
-func KitBool(b *bool, defaultVal bool) bool {
-	if b == nil {
-		return defaultVal
-	}
-	return *b
-}
-
 // AgentActive returns true if the named agent is present in the config.
 func (c Config) AgentActive(name string) bool {
 	if c.Agents == nil {
@@ -77,12 +69,7 @@ func (c Config) KitNames() []string {
 	if c.Kits == nil {
 		return nil
 	}
-	names := make([]string, 0, len(c.Kits))
-	for k := range c.Kits {
-		names = append(names, k)
-	}
-	slices.Sort(names)
-	return names
+	return slices.Sorted(maps.Keys(c.Kits))
 }
 
 // AgentNames returns sorted agent names from the map, or nil if Agents is nil.
@@ -90,12 +77,7 @@ func (c Config) AgentNames() []string {
 	if c.Agents == nil {
 		return nil
 	}
-	names := make([]string, 0, len(c.Agents))
-	for k := range c.Agents {
-		names = append(names, k)
-	}
-	slices.Sort(names)
-	return names
+	return slices.Sorted(maps.Keys(c.Agents))
 }
 
 // JavaVersion returns the effective java version from the java kit's DefaultVersion.
@@ -188,13 +170,7 @@ func Load(projectDir string, flags CLIFlags) (Config, error) {
 
 	// Read Java version from .tool-versions if not already set
 	if java := readToolVersionsJava(projectDir); java != "" && cfg.JavaVersion() == "" {
-		if cfg.Kits == nil {
-			cfg.Kits = map[string]*KitConfig{}
-		}
-		if cfg.Kits["java"] == nil {
-			cfg.Kits["java"] = &KitConfig{}
-		}
-		cfg.Kits["java"].DefaultVersion = java
+		setJavaVersion(&cfg, java)
 	}
 
 	cfg = applyFlags(cfg, flags)
@@ -280,13 +256,7 @@ func applyFlags(cfg Config, flags CLIFlags) Config {
 		cfg.Agents = m
 	}
 	if flags.Java != "" {
-		if cfg.Kits == nil {
-			cfg.Kits = map[string]*KitConfig{}
-		}
-		if cfg.Kits["java"] == nil {
-			cfg.Kits["java"] = &KitConfig{}
-		}
-		cfg.Kits["java"].DefaultVersion = flags.Java
+		setJavaVersion(&cfg, flags.Java)
 	}
 	if flags.Env != nil {
 		if cfg.Env == nil {
@@ -297,6 +267,17 @@ func applyFlags(cfg Config, flags CLIFlags) Config {
 	cfg.Ports = slices.Concat(cfg.Ports, flags.Ports)
 	cfg.Volumes = slices.Concat(cfg.Volumes, flags.Volumes)
 	return cfg
+}
+
+// setJavaVersion ensures the java kit entry exists and sets its DefaultVersion.
+func setJavaVersion(cfg *Config, version string) {
+	if cfg.Kits == nil {
+		cfg.Kits = map[string]*KitConfig{}
+	}
+	if cfg.Kits["java"] == nil {
+		cfg.Kits["java"] = &KitConfig{}
+	}
+	cfg.Kits["java"].DefaultVersion = version
 }
 
 func readToolVersionsJava(projectDir string) string {

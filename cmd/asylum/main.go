@@ -642,14 +642,11 @@ func agentConfigToMap(agents map[string]*config.AgentConfig) map[string]bool {
 // collectPackages aggregates packages from kit configs into the old map format for EnsureProject.
 func collectPackages(cfg config.Config) map[string][]string {
 	pkgs := map[string][]string{}
-	if p := cfg.KitPackages("apt"); len(p) > 0 {
-		pkgs["apt"] = p
-	}
-	if p := cfg.KitPackages("node"); len(p) > 0 {
-		pkgs["npm"] = p
-	}
-	if p := cfg.KitPackages("python"); len(p) > 0 {
-		pkgs["pip"] = p
+	// kit name → output key
+	for kit, key := range map[string]string{"apt": "apt", "node": "npm", "python": "pip"} {
+		if p := cfg.KitPackages(kit); len(p) > 0 {
+			pkgs[key] = p
+		}
 	}
 	if kc := cfg.KitOption("shell"); kc != nil && len(kc.Build) > 0 {
 		pkgs["run"] = kc.Build
