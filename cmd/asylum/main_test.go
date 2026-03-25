@@ -235,6 +235,25 @@ func TestParseArgs(t *testing.T) {
 			wantFlags: cliFlags{SkipOnboarding: true},
 		},
 
+		// --profiles flag
+		{
+			name:      "profiles flag",
+			args:      []string{"--profiles", "java,python"},
+			wantFlags: cliFlags{Profiles: &[]string{"java", "python"}},
+		},
+
+		// --agents flag
+		{
+			name:      "agents flag",
+			args:      []string{"--agents", "claude,gemini"},
+			wantFlags: cliFlags{Agents: &[]string{"claude", "gemini"}},
+		},
+		{
+			name:      "agents single",
+			args:      []string{"--agents", "claude"},
+			wantFlags: cliFlags{Agents: &[]string{"claude"}},
+		},
+
 		// strict: unknown flags error
 		{
 			name:    "unknown flag errors",

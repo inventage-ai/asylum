@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+func init() {
+	RegisterInstall(&AgentInstall{
+		Name: "gemini",
+		DockerSnippet: `# Install Gemini CLI
+RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @google/gemini-cli'
+`,
+		ProfileDeps: []string{"node"},
+		BannerLine: `    echo "Gemini:    $(gemini --version 2>/dev/null || echo 'not found')"
+`,
+	})
+}
+
 type Gemini struct{}
 
 func (Gemini) Name() string             { return "gemini" }

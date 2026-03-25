@@ -110,13 +110,3 @@ RUN curl https://mise.run | sh
 # Setup fnm and mise in bash
 RUN echo 'eval "$(fnm env)"' >> ~/.bashrc && \
     echo 'eval "$(mise activate bash)"' >> ~/.bashrc
-
-# Install Claude Code
-RUN curl -fsSL https://claude.ai/install.sh | bash && \
-    ~/.local/bin/claude --version
-
-# Install Gemini CLI
-RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @google/gemini-cli'
-
-# Install Codex
-RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @openai/codex'

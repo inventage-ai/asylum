@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/inventage-ai/asylum/assets"
+	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/docker"
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/profile"
@@ -16,16 +17,18 @@ import (
 
 const baseTag = "asylum:latest"
 
-// assembleDockerfile builds a complete Dockerfile from core + profile snippets + tail.
-func assembleDockerfile(profiles []*profile.Profile) []byte {
+// assembleDockerfile builds a complete Dockerfile from core + profile snippets + agent snippets + tail.
+func assembleDockerfile(profiles []*profile.Profile, agentInstalls []*agent.AgentInstall) []byte {
 	var b strings.Builder
 	b.Write(assets.DockerfileCore)
 	if !strings.HasSuffix(string(assets.DockerfileCore), "\n") {
 		b.WriteByte('\n')
 	}
 	b.WriteByte('\n')
-	snippets := profile.AssembleDockerSnippets(profiles)
-	if snippets != "" {
+	if snippets := profile.AssembleDockerSnippets(profiles); snippets != "" {
+		b.WriteString(snippets)
+	}
+	if snippets := agent.AssembleAgentSnippets(agentInstalls); snippets != "" {
 		b.WriteString(snippets)
 	}
 	b.Write(assets.DockerfileTail)
@@ -33,30 +36,29 @@ func assembleDockerfile(profiles []*profile.Profile) []byte {
 }
 
 // assembleEntrypoint builds a complete entrypoint from core + profile snippets + tail.
-// Banner lines from profiles are inserted at the PROFILE_BANNER_PLACEHOLDER marker.
-func assembleEntrypoint(profiles []*profile.Profile) []byte {
+// Banner lines from profiles and agents are inserted at the PROFILE_BANNER_PLACEHOLDER marker.
+func assembleEntrypoint(profiles []*profile.Profile, agentInstalls []*agent.AgentInstall) []byte {
 	var b strings.Builder
 	b.Write(assets.EntrypointCore)
 	if !strings.HasSuffix(string(assets.EntrypointCore), "\n") {
 		b.WriteByte('\n')
 	}
 	b.WriteByte('\n')
-	snippets := profile.AssembleEntrypointSnippets(profiles)
-	if snippets != "" {
+	if snippets := profile.AssembleEntrypointSnippets(profiles); snippets != "" {
 		b.WriteString(snippets)
 		b.WriteByte('\n')
 	}
 
 	// Insert banner lines at placeholder in tail
 	tail := string(assets.EntrypointTail)
-	bannerLines := profile.AssembleBannerLines(profiles)
+	bannerLines := profile.AssembleBannerLines(profiles) + agent.AssembleAgentBannerLines(agentInstalls)
 	tail = strings.Replace(tail, "# PROFILE_BANNER_PLACEHOLDER\n", bannerLines, 1)
 
 	b.WriteString(tail)
 	return []byte(b.String())
 }
 
-func baseHash(profiles []*profile.Profile) string {
+func baseHash(profiles []*profile.Profile, agentInstalls []*agent.AgentInstall) string {
 	h := sha256.New()
 	h.Write(assets.DockerfileCore)
 	h.Write(assets.DockerfileTail)
@@ -65,6 +67,8 @@ func baseHash(profiles []*profile.Profile) string {
 	h.Write([]byte(profile.AssembleDockerSnippets(profiles)))
 	h.Write([]byte(profile.AssembleEntrypointSnippets(profiles)))
 	h.Write([]byte(profile.AssembleBannerLines(profiles)))
+	h.Write([]byte(agent.AssembleAgentSnippets(agentInstalls)))
+	h.Write([]byte(agent.AssembleAgentBannerLines(agentInstalls)))
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -88,8 +92,8 @@ func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag stri
 	return docker.Build(tmpDir, dfPath, tag, labels, buildArgs, noCache)
 }
 
-func EnsureBase(profiles []*profile.Profile, version string, noCache bool) (bool, error) {
-	hash := baseHash(profiles)
+func EnsureBase(profiles []*profile.Profile, agentInstalls []*agent.AgentInstall, version string, noCache bool) (bool, error) {
+	hash := baseHash(profiles, agentInstalls)
 
 	existing, err := docker.InspectLabel(baseTag, "asylum.hash")
 	if err == nil && existing == hash && !noCache {
@@ -109,8 +113,8 @@ func EnsureBase(profiles []*profile.Profile, version string, noCache bool) (bool
 		"USERNAME": "claude",
 	}
 
-	dockerfile := assembleDockerfile(profiles)
-	entrypoint := assembleEntrypoint(profiles)
+	dockerfile := assembleDockerfile(profiles, agentInstalls)
+	entrypoint := assembleEntrypoint(profiles, agentInstalls)
 
 	if err := buildImage(dockerfile, map[string][]byte{"entrypoint.sh": entrypoint}, baseTag, labels, buildArgs, noCache); err != nil {
 		return false, fmt.Errorf("build base image: %w", err)

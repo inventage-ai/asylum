@@ -16,6 +16,7 @@ type Config struct {
 	ReleaseChannel string              `yaml:"release-channel"`
 	TabTitle       string              `yaml:"tab-title"`
 	Profiles       *[]string           `yaml:"profiles"` // nil = all, empty = none
+	Agents         *[]string           `yaml:"agents"`   // nil = claude-only, empty = none
 	Ports          []string            `yaml:"ports"`
 	Volumes        []string            `yaml:"volumes"`
 	Env            map[string]string   `yaml:"env"`
@@ -39,6 +40,7 @@ func (c Config) FeatureOff(name string) bool {
 type CLIFlags struct {
 	Agent    string
 	Profiles *[]string
+	Agents   *[]string
 	Ports    []string
 	Volumes  []string
 	Env      map[string]string
@@ -118,6 +120,9 @@ func Merge(base, overlay Config) Config {
 	if overlay.Profiles != nil {
 		result.Profiles = overlay.Profiles
 	}
+	if overlay.Agents != nil {
+		result.Agents = overlay.Agents
+	}
 
 	result.Ports = slices.Concat(base.Ports, overlay.Ports)
 	result.Volumes = slices.Concat(base.Volumes, overlay.Volumes)
@@ -170,6 +175,9 @@ func applyFlags(cfg Config, flags CLIFlags) Config {
 	}
 	if flags.Profiles != nil {
 		cfg.Profiles = flags.Profiles
+	}
+	if flags.Agents != nil {
+		cfg.Agents = flags.Agents
 	}
 	if flags.Java != "" {
 		cfg.Versions = setVersion(cfg.Versions, "java", flags.Java)

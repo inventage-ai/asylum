@@ -6,6 +6,18 @@ import (
 	"strings"
 )
 
+func init() {
+	RegisterInstall(&AgentInstall{
+		Name: "claude",
+		DockerSnippet: `# Install Claude Code
+RUN curl -fsSL https://claude.ai/install.sh | bash && \
+    ~/.local/bin/claude --version
+`,
+		BannerLine: `    echo "Claude:    $(claude --version 2>/dev/null || echo 'not found')"
+`,
+	})
+}
+
 type Claude struct{}
 
 func (Claude) Name() string             { return "claude" }

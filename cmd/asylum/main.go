@@ -99,6 +99,7 @@ func main() {
 	cfg, err := config.Load(projectDir, config.CLIFlags{
 		Agent:    flags.Agent,
 		Profiles: flags.Profiles,
+		Agents:   flags.Agents,
 		Ports:    flags.Ports,
 		Volumes:  flags.Volumes,
 		Env:      flags.Env,
@@ -124,6 +125,16 @@ func main() {
 	// Resolve global-tier profiles (from ~/.asylum/config.yaml only) for base image.
 	// Project-only profiles (in final set but not global) go into the project image.
 	globalProfiles, projectProfiles := resolveProfileTiers(projectDir, allProfiles)
+
+	// Resolve agent installs (nil defaults to claude-only)
+	profileNames := make([]string, len(allProfiles))
+	for i, p := range allProfiles {
+		profileNames[i] = p.Name
+	}
+	agentInstalls, err := agent.ResolveInstalls(cfg.Agents, profileNames)
+	if err != nil {
+		die("%v", err)
+	}
 
 	cacheDirs := profile.AggregateCacheDirs(allProfiles)
 
@@ -155,7 +166,7 @@ func main() {
 			newSession = true
 		}
 
-		baseRebuilt, err := image.EnsureBase(globalProfiles, version, flags.Rebuild)
+		baseRebuilt, err := image.EnsureBase(globalProfiles, agentInstalls, version, flags.Rebuild)
 		if err != nil {
 			die("%v", err)
 		}
@@ -262,6 +273,7 @@ func main() {
 type cliFlags struct {
 	Agent    string
 	Profiles *[]string
+	Agents   *[]string
 	Ports    []string
 	Volumes  []string
 	Env      map[string]string
@@ -341,6 +353,12 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			if val, err = next(arg); err == nil {
 				p := strings.Split(val, ",")
 				flags.Profiles = &p
+			}
+		case arg == "--agents":
+			var val string
+			if val, err = next(arg); err == nil {
+				a := strings.Split(val, ",")
+				flags.Agents = &a
 			}
 		case arg == "-n" || arg == "--new":
 			flags.New = true
@@ -611,6 +629,7 @@ Flags:
   -e KEY=VALUE         Environment variable (repeatable, last wins)
   --java <version>     Java version in container
   --profiles <list>    Comma-separated profiles (default: all)
+  --agents <list>      Comma-separated agents (default: claude)
   -n, --new            Start new session (skip resume)
   --rebuild            Force rebuild Docker image
   --skip-onboarding    Skip project onboarding tasks

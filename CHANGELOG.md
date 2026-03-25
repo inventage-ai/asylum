@@ -12,7 +12,9 @@
 - `profiles` config option (YAML and `--profiles` CLI flag) to select which profiles are active; `nil` = all (backwards compatible), `[]` = none
 - Hierarchical sub-profiles: `java/maven`, `java/gradle`, `python/uv`, `node/npm`, `node/pnpm`, `node/yarn`
 - Dockerfile and entrypoint split into core + profile snippets + tail, assembled at build time
-- Dynamic welcome banner showing versions only for active profiles
+- Dynamic welcome banner showing versions only for active profiles and installed agents
+- Configurable agent CLI installation via `agents` config and `--agents` CLI flag (default: claude only)
+- Opencode agent support (`agents: [opencode]`)
 - First-run onboarding: prompts to mount package manager credentials (Maven) on initial setup
 - Project onboarding framework: scans for setup tasks, prompts once, executes via `docker exec` with proper error handling
 - Node.js dependency auto-install as first onboarding task (disable with `onboarding: { npm: false }`)

@@ -4,9 +4,6 @@ if [ -t 0 ] && [ -t 1 ]; then
     echo "================================"
     echo "Workspace: $(pwd)"
 # PROFILE_BANNER_PLACEHOLDER
-    echo "Claude:    $(claude --version 2>/dev/null || echo 'not found')"
-    echo "Gemini:    $(gemini --version 2>/dev/null || echo 'not found')"
-    echo "Codex:     $(codex --version 2>/dev/null || echo 'not found')"
     echo "================================"
     echo ""
 fi
