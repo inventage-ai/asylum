@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/inventage-ai/asylum/internal/term"
 )
 
 func TestHashInputs(t *testing.T) {
@@ -94,27 +96,6 @@ func TestStatePersistsJSON(t *testing.T) {
 	}
 }
 
-func TestHashFile(t *testing.T) {
-	dir := t.TempDir()
-	f := filepath.Join(dir, "test.txt")
-	os.WriteFile(f, []byte("hello"), 0644)
-
-	h := hashFile(f)
-	if h == "" {
-		t.Fatal("expected non-empty hash")
-	}
-	if len(h) != 64 {
-		t.Errorf("expected 64-char hex hash, got %d chars", len(h))
-	}
-}
-
-func TestHashFileMissing(t *testing.T) {
-	h := hashFile("/nonexistent")
-	if h != "" {
-		t.Errorf("expected empty hash for missing file, got %q", h)
-	}
-}
-
 func TestShellQuote(t *testing.T) {
 	tests := []struct {
 		in, want string
@@ -125,9 +106,9 @@ func TestShellQuote(t *testing.T) {
 		{"a b c", "'a b c'"},
 	}
 	for _, tt := range tests {
-		got := shellQuote(tt.in)
+		got := term.ShellQuote(tt.in)
 		if got != tt.want {
-			t.Errorf("shellQuote(%q) = %q, want %q", tt.in, got, tt.want)
+			t.Errorf("ShellQuote(%q) = %q, want %q", tt.in, got, tt.want)
 		}
 	}
 }

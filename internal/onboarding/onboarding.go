@@ -84,15 +84,6 @@ func saveState(containerName string, s State) {
 	os.WriteFile(path, data, 0644)
 }
 
-func hashFile(path string) string {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return ""
-	}
-	h := sha256.Sum256(data)
-	return fmt.Sprintf("%x", h)
-}
-
 func hashInputs(paths []string) string {
 	h := sha256.New()
 	for _, p := range paths {
@@ -197,6 +188,3 @@ func execInContainer(opts Opts, w Workload) error {
 	return cmd.Run()
 }
 
-// shellQuote is a package-level alias for term.ShellQuote,
-// used by tests in this package.
-var shellQuote = term.ShellQuote
