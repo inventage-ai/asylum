@@ -584,13 +584,45 @@ func runCleanup() {
 		if err := os.RemoveAll(filepath.Join(home, ".asylum", "cache")); err != nil {
 			log.Error("remove cache: %v", err)
 		}
-		if err := os.RemoveAll(filepath.Join(home, ".asylum", "projects")); err != nil {
+		if err := removeProjectsDir(filepath.Join(home, ".asylum", "projects")); err != nil {
 			log.Error("remove projects: %v", err)
 		}
 		log.Success("cached data removed")
 	}
 
 	log.Info("agent config (~/.asylum/agents/) preserved — delete manually if needed")
+}
+
+// removeProjectsDir removes project data but skips directories with active
+// session counters to avoid killing running containers.
+func removeProjectsDir(dir string) error {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	var skipped int
+	for _, e := range entries {
+		if !e.IsDir() {
+			os.Remove(filepath.Join(dir, e.Name()))
+			continue
+		}
+		counter := filepath.Join(dir, e.Name(), "sessions")
+		if data, err := os.ReadFile(counter); err == nil {
+			if n := strings.TrimSpace(string(data)); n != "" && n != "0" {
+				log.Warn("skipping %s (active session)", e.Name())
+				skipped++
+				continue
+			}
+		}
+		os.RemoveAll(filepath.Join(dir, e.Name()))
+	}
+	if skipped == 0 {
+		return os.Remove(dir)
+	}
+	return nil
 }
 
 // resolveKitTiers splits allKits into global (for base image) and
