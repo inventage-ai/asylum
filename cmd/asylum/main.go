@@ -89,8 +89,9 @@ func main() {
 	if home, err := os.UserHomeDir(); err == nil {
 		cfgPath := filepath.Join(home, ".asylum", "config.yaml")
 		if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
-			os.MkdirAll(filepath.Dir(cfgPath), 0755)
-			if err := config.WriteDefaults(cfgPath); err != nil {
+			if err := os.MkdirAll(filepath.Dir(cfgPath), 0755); err != nil {
+				log.Error("create config directory: %v", err)
+			} else if err := config.WriteDefaults(cfgPath); err != nil {
 				log.Error("write default config: %v", err)
 			}
 		}
