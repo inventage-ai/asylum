@@ -3,6 +3,7 @@ package agent
 import (
 	"strings"
 
+	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/term"
 )
 
@@ -31,6 +32,9 @@ func (Opencode) EnvVars() map[string]string { return nil }
 func (Opencode) HasSession(_ string) bool { return false }
 
 func (Opencode) Command(resume bool, extraArgs []string) []string {
+	if resume {
+		log.Warn("opencode: resume not supported, starting fresh session")
+	}
 	parts := []string{"opencode"}
 	parts = append(parts, term.ShellQuoteArgs(extraArgs)...)
 	return wrapZsh(strings.Join(parts, " "))
