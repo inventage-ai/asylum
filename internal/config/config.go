@@ -357,6 +357,11 @@ func ParseVolume(raw string, homeDir string) (Volume, error) {
 		if parts[0] == "" || parts[1] == "" {
 			return Volume{}, fmt.Errorf("empty path in volume %q", raw)
 		}
+		for _, opt := range parts[2:] {
+			if !mountOptions[opt] {
+				return Volume{}, fmt.Errorf("invalid mount option %q in volume %q", opt, raw)
+			}
+		}
 		return Volume{Host: ExpandTilde(parts[0], homeDir), Container: parts[1], Options: strings.Join(parts[2:], ":")}, nil
 	}
 }
