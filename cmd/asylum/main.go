@@ -20,6 +20,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/ssh"
+	"github.com/inventage-ai/asylum/internal/term"
 )
 
 var version = "dev"
@@ -563,6 +564,11 @@ func runCleanup() {
 		log.Warn("partially cleaned up (see errors above)")
 	default:
 		log.Warn("cleanup failed (see errors above)")
+	}
+
+	if !term.IsTerminal() {
+		log.Warn("skipping cache removal prompt (not a terminal)")
+		return
 	}
 
 	fmt.Print("Remove cached data (~/.asylum/cache/ and ~/.asylum/projects/)? (y/N) ")
