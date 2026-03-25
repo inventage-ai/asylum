@@ -404,7 +404,6 @@ func resolveGitWorktree(projectDir string) (worktreeDir, commonDir string) {
 	return gitdir, common
 }
 
-
 // FindNodeModulesDirs returns absolute paths to node_modules directories
 // that should be shadowed. It finds every directory containing a
 // package.json and returns the node_modules path next to it, whether or

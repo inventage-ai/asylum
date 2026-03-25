@@ -194,9 +194,7 @@ func Load(projectDir string, flags CLIFlags) (Config, error) {
 		if cfg.Kits["java"] == nil {
 			cfg.Kits["java"] = &KitConfig{}
 		}
-		if cfg.Kits["java"].DefaultVersion == "" {
-			cfg.Kits["java"].DefaultVersion = java
-		}
+		cfg.Kits["java"].DefaultVersion = java
 	}
 
 	cfg = applyFlags(cfg, flags)
