@@ -10,6 +10,7 @@ import (
 )
 
 func init() {
+	agents["codex"] = Codex{}
 	RegisterInstall(&AgentInstall{
 		Name: "codex",
 		DockerSnippet: `# Install Codex

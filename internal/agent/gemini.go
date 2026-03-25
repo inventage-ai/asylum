@@ -9,6 +9,7 @@ import (
 )
 
 func init() {
+	agents["gemini"] = Gemini{}
 	RegisterInstall(&AgentInstall{
 		Name: "gemini",
 		DockerSnippet: `# Install Gemini CLI

@@ -9,6 +9,7 @@ import (
 )
 
 func init() {
+	agents["claude"] = Claude{}
 	RegisterInstall(&AgentInstall{
 		Name: "claude",
 		DockerSnippet: `# Install Claude Code

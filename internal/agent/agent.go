@@ -20,11 +20,7 @@ type Agent interface {
 	Command(resume bool, extraArgs []string) []string
 }
 
-var agents = map[string]Agent{
-	"claude": Claude{},
-	"gemini": Gemini{},
-	"codex":  Codex{},
-}
+var agents = map[string]Agent{}
 
 func Get(name string) (Agent, error) {
 	a, ok := agents[name]
