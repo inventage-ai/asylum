@@ -142,6 +142,10 @@ func Run(opts Opts) {
 	for _, p := range pending {
 		fmt.Printf("  - %s (%s)\n", p.workload.Label, strings.Join(p.workload.Command, " "))
 	}
+	if !term.IsTerminal() {
+		log.Warn("skipping onboarding (not a terminal)")
+		return
+	}
 	fmt.Print("Run setup tasks? [Y/n] ")
 	var answer string
 	fmt.Scanln(&answer)
