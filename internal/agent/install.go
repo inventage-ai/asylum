@@ -81,25 +81,22 @@ func ResolveInstalls(agents map[string]bool, activeKits []string) ([]*AgentInsta
 
 // AssembleAgentSnippets concatenates DockerSnippets from the given installs.
 func AssembleAgentSnippets(installs []*AgentInstall) string {
-	var b strings.Builder
-	for _, i := range installs {
-		if i.DockerSnippet != "" {
-			b.WriteString(i.DockerSnippet)
-			if !strings.HasSuffix(i.DockerSnippet, "\n") {
-				b.WriteByte('\n')
-			}
-		}
-	}
-	return b.String()
+	return joinFields(installs, func(i *AgentInstall) string { return i.DockerSnippet })
 }
 
 // AssembleAgentBannerLines concatenates BannerLines from the given installs.
 func AssembleAgentBannerLines(installs []*AgentInstall) string {
+	return joinFields(installs, func(i *AgentInstall) string { return i.BannerLine })
+}
+
+// joinFields concatenates non-empty field values, ensuring each ends with a newline.
+func joinFields(installs []*AgentInstall, field func(*AgentInstall) string) string {
 	var b strings.Builder
 	for _, i := range installs {
-		if i.BannerLine != "" {
-			b.WriteString(i.BannerLine)
-			if !strings.HasSuffix(i.BannerLine, "\n") {
+		s := field(i)
+		if s != "" {
+			b.WriteString(s)
+			if !strings.HasSuffix(s, "\n") {
 				b.WriteByte('\n')
 			}
 		}
