@@ -8,7 +8,7 @@ import (
 )
 
 func TestGet(t *testing.T) {
-	for _, name := range []string{"claude", "gemini", "codex"} {
+	for _, name := range []string{"claude", "codex", "echo", "gemini", "opencode"} {
 		a, err := Get(name)
 		if err != nil {
 			t.Errorf("Get(%q) error: %v", name, err)
@@ -221,6 +221,28 @@ func TestCodexHasSession(t *testing.T) {
 	if !a.HasSession("/some/project") {
 		t.Error("should be true when marker exists for this project")
 	}
+}
+
+func TestEchoCommand(t *testing.T) {
+	a := Echo{}
+	t.Run("with args", func(t *testing.T) {
+		cmd := a.Command(false, []string{"hello", "world"})
+		if len(cmd) != 2 || cmd[0] != "echo" || cmd[1] != "hello world" {
+			t.Errorf("got %v, want [echo, hello world]", cmd)
+		}
+	})
+	t.Run("without args", func(t *testing.T) {
+		cmd := a.Command(false, nil)
+		if len(cmd) != 1 || cmd[0] != "echo" {
+			t.Errorf("got %v, want [echo]", cmd)
+		}
+	})
+	t.Run("resume ignored", func(t *testing.T) {
+		cmd := a.Command(true, []string{"test"})
+		if len(cmd) != 2 || cmd[0] != "echo" {
+			t.Errorf("resume should be ignored, got %v", cmd)
+		}
+	})
 }
 
 func TestCodexWriteMarker(t *testing.T) {

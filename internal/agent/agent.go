@@ -27,7 +27,7 @@ var agents = map[string]Agent{
 func Get(name string) (Agent, error) {
 	a, ok := agents[name]
 	if !ok {
-		return nil, fmt.Errorf("unknown agent: %q (valid: claude, codex, gemini, opencode)", name)
+		return nil, fmt.Errorf("unknown agent: %q (valid: claude, codex, echo, gemini, opencode)", name)
 	}
 	return a, nil
 }

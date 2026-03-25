@@ -250,7 +250,12 @@ type ExecOpts struct {
 }
 
 func ExecArgs(opts ExecOpts) []string {
-	args := []string{"exec", "-it"}
+	args := []string{"exec"}
+	if isTerminal() {
+		args = append(args, "-it")
+	} else {
+		args = append(args, "-i")
+	}
 	if opts.Mode == ModeAdminShell {
 		args = append(args, "-u", "root")
 	}
@@ -455,6 +460,14 @@ func adjustCounter(path string, delta int) (int, error) {
 		n = 0
 	}
 	return n, os.WriteFile(path, []byte(strconv.Itoa(n)), 0644)
+}
+
+func isTerminal() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 func fileExists(path string) bool {

@@ -16,16 +16,28 @@ func boolPtr(b bool) *bool { return &b }
 
 // stubAgent satisfies agent.Agent for tests that need a minimal implementation.
 type stubAgent struct {
-	envVars    map[string]string
-	hasSession bool
-	command    []string
+	envVars         map[string]string
+	hasSession      bool
+	command         []string
+	asylumConfigDir string
+	nativeConfigDir string
 }
 
-func (s stubAgent) Name() string                          { return "stub" }
-func (s stubAgent) Binary() string                        { return "stub-bin" }
-func (s stubAgent) NativeConfigDir() string               { return "~/.stub" }
-func (s stubAgent) ContainerConfigDir() string            { return "/home/stub/.stub" }
-func (s stubAgent) AsylumConfigDir() string               { return "~/.asylum/agents/stub" }
+func (s stubAgent) Name() string    { return "stub" }
+func (s stubAgent) Binary() string  { return "stub-bin" }
+func (s stubAgent) NativeConfigDir() string {
+	if s.nativeConfigDir != "" {
+		return s.nativeConfigDir
+	}
+	return "~/.stub"
+}
+func (s stubAgent) ContainerConfigDir() string { return "/home/stub/.stub" }
+func (s stubAgent) AsylumConfigDir() string {
+	if s.asylumConfigDir != "" {
+		return s.asylumConfigDir
+	}
+	return "~/.asylum/agents/stub"
+}
 func (s stubAgent) EnvVars() map[string]string            { return s.envVars }
 func (s stubAgent) HasSession(projectPath string) bool    { return s.hasSession }
 func (s stubAgent) Command(resume bool, extra []string) []string {
@@ -838,4 +850,125 @@ func TestAppendVolumesNodeModulesDisabled(t *testing.T) {
 	}
 }
 
+func TestSessionCounter(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cname := "asylum-session-test"
+
+	// Increment from 0
+	n, err := IncrementSessions(cname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Errorf("first increment = %d, want 1", n)
+	}
+
+	// Increment again
+	n, err = IncrementSessions(cname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Errorf("second increment = %d, want 2", n)
+	}
+
+	// Decrement
+	n, err = DecrementSessions(cname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Errorf("first decrement = %d, want 1", n)
+	}
+
+	// Decrement to 0 removes file
+	n, err = DecrementSessions(cname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Errorf("second decrement = %d, want 0", n)
+	}
+
+	// File should be removed
+	path, _ := sessionCounterPath(cname)
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Error("session file should be removed at 0")
+	}
+}
+
+func TestSessionCounterNeverNegative(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	cname := "asylum-neg-test"
+
+	// Decrement from 0
+	n, err := DecrementSessions(cname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Errorf("decrement below 0 = %d, want 0", n)
+	}
+}
+
+func TestEnsureAgentConfig(t *testing.T) {
+	home := t.TempDir()
+	a := stubAgent{
+		asylumConfigDir: filepath.Join(home, ".asylum", "agents", "test"),
+		nativeConfigDir: "",
+	}
+
+	// First call: creates directory, returns true (seeded)
+	seeded, err := EnsureAgentConfig(home, a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !seeded {
+		t.Error("expected seeded=true on first call")
+	}
+
+	// Second call: directory exists, returns false
+	seeded, err = EnsureAgentConfig(home, a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seeded {
+		t.Error("expected seeded=false on second call")
+	}
+}
+
+func TestEnsureAgentConfigSeedsFromNative(t *testing.T) {
+	home := t.TempDir()
+
+	// Create a native config dir with a file
+	nativeDir := filepath.Join(home, ".test-agent")
+	os.MkdirAll(nativeDir, 0755)
+	os.WriteFile(filepath.Join(nativeDir, "config.json"), []byte(`{"key":"val"}`), 0644)
+
+	a := stubAgent{
+		asylumConfigDir: filepath.Join(home, ".asylum", "agents", "test"),
+		nativeConfigDir: nativeDir,
+	}
+
+	seeded, err := EnsureAgentConfig(home, a)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !seeded {
+		t.Error("expected seeded=true")
+	}
+
+	// Verify file was copied
+	data, err := os.ReadFile(filepath.Join(home, ".asylum", "agents", "test", "config.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(data) != `{"key":"val"}` {
+		t.Errorf("copied content = %q", string(data))
+	}
+}
 

@@ -4,7 +4,7 @@ LDFLAGS := -ldflags "-X main.version=$(VERSION) -X main.commit=$(COMMIT)"
 BINARY := asylum
 BUILD_DIR := build
 
-.PHONY: build build-all clean test test-integration
+.PHONY: build build-all clean test test-integration test-e2e
 
 build:
 	go build $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/asylum
@@ -23,3 +23,6 @@ test:
 
 test-integration:
 	go test -tags integration -v -timeout 30m ./integration/
+
+test-e2e:
+	go test -tags e2e -v -timeout 30m ./e2e/
