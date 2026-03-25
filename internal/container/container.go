@@ -415,12 +415,22 @@ func resolveGitWorktree(projectDir string) (worktreeDir, commonDir string) {
 	return gitdir, common
 }
 
+var nodeModulesCache struct {
+	dir     string
+	results []string
+}
+
 // FindNodeModulesDirs returns absolute paths to node_modules directories
 // that should be shadowed. It finds every directory containing a
 // package.json and returns the node_modules path next to it, whether or
 // not node_modules exists yet. This ensures fresh clones get shadow
 // volumes before npm install runs.
+//
+// Results are cached per projectDir for the lifetime of the process.
 func FindNodeModulesDirs(projectDir string) []string {
+	if nodeModulesCache.dir == projectDir {
+		return nodeModulesCache.results
+	}
 	// Directories that never contain relevant package.json files
 	skip := map[string]bool{
 		".git": true, ".venv": true, "__pycache__": true,
@@ -448,6 +458,8 @@ func FindNodeModulesDirs(projectDir string) []string {
 		return nil
 	})
 	slices.Sort(results)
+	nodeModulesCache.dir = projectDir
+	nodeModulesCache.results = results
 	return results
 }
 
