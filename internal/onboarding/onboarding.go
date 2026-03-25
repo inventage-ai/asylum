@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/inventage-ai/asylum/internal/log"
+	"github.com/inventage-ai/asylum/internal/term"
 )
 
 // Phase determines when a workload runs relative to the container lifecycle.
@@ -172,17 +173,14 @@ type pendingWorkload struct {
 
 func execInContainer(opts Opts, w Workload) error {
 	args := []string{"exec"}
-	if isTerminal() {
+	if term.IsTerminal() {
 		args = append(args, "-it")
 	}
 	args = append(args, "-w", w.Dir, opts.ContainerName)
 	if opts.ContainerPath != "" {
 		// Run through bash so PATH is applied before command lookup
-		quoted := make([]string, len(w.Command))
-		for i, arg := range w.Command {
-			quoted[i] = shellQuote(arg)
-		}
-		script := "export PATH=" + shellQuote(opts.ContainerPath) + "; " + strings.Join(quoted, " ")
+		quoted := term.ShellQuoteArgs(w.Command)
+		script := "export PATH=" + term.ShellQuote(opts.ContainerPath) + "; " + strings.Join(quoted, " ")
 		args = append(args, "bash", "-c", script)
 	} else {
 		args = append(args, w.Command...)
@@ -195,14 +193,6 @@ func execInContainer(opts Opts, w Workload) error {
 	return cmd.Run()
 }
 
-func isTerminal() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&os.ModeCharDevice != 0
-}
-
-func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
-}
+// shellQuote is a package-level alias for term.ShellQuote,
+// used by tests in this package.
+var shellQuote = term.ShellQuote

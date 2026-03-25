@@ -16,6 +16,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/config"
 	"github.com/inventage-ai/asylum/internal/log"
+	"github.com/inventage-ai/asylum/internal/term"
 )
 
 var invalidHostnameChars = regexp.MustCompile(`[^a-z0-9-]`)
@@ -255,7 +256,7 @@ type ExecOpts struct {
 
 func ExecArgs(opts ExecOpts) []string {
 	args := []string{"exec"}
-	if isTerminal() {
+	if term.IsTerminal() {
 		args = append(args, "-it")
 	} else {
 		args = append(args, "-i")
@@ -493,14 +494,6 @@ func adjustCounter(path string, delta int) (int, error) {
 		return n, fmt.Errorf("write counter: %w", err)
 	}
 	return n, nil
-}
-
-func isTerminal() bool {
-	fi, err := os.Stdin.Stat()
-	if err != nil {
-		return false
-	}
-	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 func fileExists(path string) bool {
