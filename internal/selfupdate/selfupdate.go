@@ -11,9 +11,12 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/inventage-ai/asylum/internal/log"
 )
+
+var httpClient = &http.Client{Timeout: 60 * time.Second}
 
 const repo = "inventage-ai/asylum"
 
@@ -120,7 +123,7 @@ func Run(currentVersion, currentCommit, channel, execPath string) error {
 
 func showChangelog(fromCommit, toCommit string) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/compare/%s...%s", repo, fromCommit, toCommit)
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		if resp != nil {
 			resp.Body.Close()
@@ -175,7 +178,7 @@ func fetchRelease(channel string) (release, error) {
 		url = fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
 	}
 
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return release{}, fmt.Errorf("fetch release: %w", err)
 	}
@@ -238,7 +241,7 @@ type downloadResult struct {
 const maxDownloadSize = 512 << 20
 
 func downloadToFile(w io.Writer, url string) (downloadResult, error) {
-	resp, err := http.Get(url)
+	resp, err := httpClient.Get(url)
 	if err != nil {
 		return downloadResult{}, fmt.Errorf("download: %w", err)
 	}
