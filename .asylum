@@ -1,6 +1,7 @@
-packages:
-  apt:
-    - golang
-
+kits:
+    apt:
+        packages:
+            - golang
+    docker: {}
 volumes:
-  - ~/.asylum/bin:/home/claude/.asylum/bin
+    - ~/.asylum/bin:/home/claude/.asylum/bin
