@@ -305,6 +305,19 @@ func EnsureAgentConfig(home string, a agent.Agent) (bool, error) {
 }
 
 func copyDir(src, dst string) error {
+	return copyDirVisited(src, dst, map[string]bool{})
+}
+
+func copyDirVisited(src, dst string, visited map[string]bool) error {
+	realSrc, err := filepath.EvalSymlinks(src)
+	if err != nil {
+		return err
+	}
+	if visited[realSrc] {
+		return nil
+	}
+	visited[realSrc] = true
+
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -325,7 +338,7 @@ func copyDir(src, dst string) error {
 				return nil
 			}
 			if ri.IsDir() {
-				return copyDir(resolved, target)
+				return copyDirVisited(resolved, target, visited)
 			}
 			data, err := os.ReadFile(resolved)
 			if err != nil {
