@@ -59,9 +59,12 @@ func MigrateV1ToV2(path string) error {
 		return err
 	}
 
-	// Create backup
-	if err := os.WriteFile(path+".backup", data, 0644); err != nil {
-		return err
+	// Create backup, but don't overwrite an existing one (preserves original v1 content)
+	backupPath := path + ".backup"
+	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
+		if err := os.WriteFile(backupPath, data, 0644); err != nil {
+			return err
+		}
 	}
 
 	kits := map[string]any{}
