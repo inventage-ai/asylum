@@ -59,8 +59,6 @@ kits:
   # shell:
   #   build:             # Custom commands run at image build time
   #     - "curl -fsSL https://example.com/install.sh | sh"
-  #   start:             # Custom commands run at container start
-  #     - 'echo "WELCOME TO THE ASYLUM!"'
 
 # Port forwarding (host:container or just port for same on both sides)
 # ports:

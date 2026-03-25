@@ -21,7 +21,6 @@ type KitConfig struct {
 	TabTitle            string   `yaml:"tab-title,omitempty"`
 	AllowAgentTermTitle *bool    `yaml:"allow-agent-terminal-title,omitempty"`
 	Build               []string `yaml:"build,omitempty"`
-	Start               []string `yaml:"start,omitempty"`
 }
 
 // AgentConfig holds per-agent configuration (empty for now, placeholder for future use).
