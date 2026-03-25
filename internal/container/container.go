@@ -178,7 +178,10 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	}
 
 	for _, v := range opts.Config.Volumes {
-		parsed := config.ParseVolume(v, home)
+		parsed, err := config.ParseVolume(v, home)
+		if err != nil {
+			return nil, fmt.Errorf("invalid volume %q: %w", v, err)
+		}
 		vol(parsed.Host, parsed.Container, parsed.Options)
 	}
 

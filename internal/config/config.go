@@ -333,20 +333,30 @@ func ExpandTilde(path, homeDir string) string {
 	return path
 }
 
-func ParseVolume(raw string, homeDir string) Volume {
+func ParseVolume(raw string, homeDir string) (Volume, error) {
+	if strings.TrimSpace(raw) == "" {
+		return Volume{}, fmt.Errorf("empty volume specification")
+	}
+
 	parts := strings.Split(raw, ":")
 
 	switch len(parts) {
 	case 1:
 		host := ExpandTilde(parts[0], homeDir)
-		return Volume{Host: host, Container: host}
+		return Volume{Host: host, Container: host}, nil
 	case 2:
 		if mountOptions[parts[1]] {
 			host := ExpandTilde(parts[0], homeDir)
-			return Volume{Host: host, Container: host, Options: parts[1]}
+			return Volume{Host: host, Container: host, Options: parts[1]}, nil
 		}
-		return Volume{Host: ExpandTilde(parts[0], homeDir), Container: parts[1]}
+		if parts[1] == "" {
+			return Volume{}, fmt.Errorf("empty container path in volume %q", raw)
+		}
+		return Volume{Host: ExpandTilde(parts[0], homeDir), Container: parts[1]}, nil
 	default:
-		return Volume{Host: ExpandTilde(parts[0], homeDir), Container: parts[1], Options: strings.Join(parts[2:], ":")}
+		if parts[0] == "" || parts[1] == "" {
+			return Volume{}, fmt.Errorf("empty path in volume %q", raw)
+		}
+		return Volume{Host: ExpandTilde(parts[0], homeDir), Container: parts[1], Options: strings.Join(parts[2:], ":")}, nil
 	}
 }

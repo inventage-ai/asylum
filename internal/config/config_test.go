@@ -181,12 +181,23 @@ func TestParseVolume(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ParseVolume(tt.raw, home)
+			got, err := ParseVolume(tt.raw, home)
+			if err != nil {
+				t.Fatalf("ParseVolume(%q) unexpected error: %v", tt.raw, err)
+			}
 			if got != tt.want {
 				t.Errorf("ParseVolume(%q) = %+v, want %+v", tt.raw, got, tt.want)
 			}
 		})
 	}
+
+	// Error cases
+	t.Run("empty string", func(t *testing.T) {
+		_, err := ParseVolume("", home)
+		if err == nil {
+			t.Error("ParseVolume(\"\") expected error, got nil")
+		}
+	})
 }
 
 func TestLoad(t *testing.T) {
