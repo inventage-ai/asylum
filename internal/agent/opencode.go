@@ -11,7 +11,7 @@ func init() {
 	RegisterInstall(&AgentInstall{
 		Name: "opencode",
 		DockerSnippet: `# Install Opencode
-RUN go install github.com/opencode-ai/opencode@latest
+RUN curl -fsSL https://opencode.ai/install | bash
 `,
 		BannerLine: `    echo "Opencode:  $(opencode --version 2>/dev/null || echo 'not found')"
 `,
