@@ -3,6 +3,7 @@ package container
 import (
 	"crypto/sha256"
 	"fmt"
+	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -476,7 +477,7 @@ func adjustCounter(path string, delta int) (int, error) {
 		return 0, fmt.Errorf("lock counter: %w", err)
 	}
 
-	data, _ := os.ReadFile(path)
+	data, _ := io.ReadAll(f)
 	n, _ := strconv.Atoi(strings.TrimSpace(string(data)))
 	n += delta
 	if n < 0 {
