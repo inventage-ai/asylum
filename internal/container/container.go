@@ -314,11 +314,25 @@ func copyDir(src, dst string) error {
 		target := filepath.Join(dst, rel)
 
 		if d.Type()&fs.ModeSymlink != 0 {
-			link, err := os.Readlink(path)
+			// Resolve the symlink and copy the target contents instead of
+			// recreating the symlink, which may dangle in the destination.
+			resolved, err := filepath.EvalSymlinks(path)
+			if err != nil {
+				// Dangling symlink — skip it.
+				return nil
+			}
+			ri, err := os.Stat(resolved)
+			if err != nil {
+				return nil
+			}
+			if ri.IsDir() {
+				return copyDir(resolved, target)
+			}
+			data, err := os.ReadFile(resolved)
 			if err != nil {
 				return err
 			}
-			return os.Symlink(link, target)
+			return os.WriteFile(target, data, ri.Mode())
 		}
 
 		info, err := d.Info()

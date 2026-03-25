@@ -3,6 +3,7 @@ package container
 import (
 	"crypto/sha256"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -89,7 +90,7 @@ func TestCopyDir(t *testing.T) {
 		}
 	})
 
-	t.Run("recreates symlinks", func(t *testing.T) {
+	t.Run("resolves symlinks to regular files", func(t *testing.T) {
 		src := t.TempDir()
 		dst := t.TempDir()
 
@@ -100,12 +101,35 @@ func TestCopyDir(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		linkTarget, err := os.Readlink(filepath.Join(dst, "link.txt"))
+		// Symlink should be resolved to a regular file copy
+		data, err := os.ReadFile(filepath.Join(dst, "link.txt"))
 		if err != nil {
-			t.Fatalf("Readlink: %v", err)
+			t.Fatalf("ReadFile: %v", err)
 		}
-		if linkTarget != "target.txt" {
-			t.Errorf("symlink target = %q, want %q", linkTarget, "target.txt")
+		if string(data) != "data" {
+			t.Errorf("content = %q, want %q", data, "data")
+		}
+		info, err := os.Lstat(filepath.Join(dst, "link.txt"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if info.Mode().Type() == fs.ModeSymlink {
+			t.Error("expected regular file, got symlink")
+		}
+	})
+
+	t.Run("skips dangling symlinks", func(t *testing.T) {
+		src := t.TempDir()
+		dst := t.TempDir()
+
+		os.Symlink("nonexistent", filepath.Join(src, "dangling.txt"))
+
+		if err := copyDir(src, dst); err != nil {
+			t.Fatal(err)
+		}
+
+		if _, err := os.Lstat(filepath.Join(dst, "dangling.txt")); !os.IsNotExist(err) {
+			t.Errorf("expected dangling symlink to be skipped, got err: %v", err)
 		}
 	})
 
