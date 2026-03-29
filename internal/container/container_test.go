@@ -902,6 +902,117 @@ func TestAppendVolumesCacheNamedVolumes(t *testing.T) {
 	}
 }
 
+func TestAppendVolumesCredentialMounts(t *testing.T) {
+	home := t.TempDir()
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
+	os.MkdirAll(agentConfigDir, 0755)
+
+	// Create a kit with a CredentialFunc that returns a mount
+	testKit := &kit.Kit{
+		Name: "java/maven",
+		CredentialFunc: func(opts kit.CredentialOpts) ([]kit.CredentialMount, error) {
+			return []kit.CredentialMount{
+				{
+					Content:     []byte("<settings><servers/></settings>"),
+					Destination: "~/.m2/settings.xml",
+				},
+			}, nil
+		},
+	}
+
+	creds := &config.Credentials{Auto: true}
+	opts := RunOpts{
+		Config: config.Config{Kits: map[string]*config.KitConfig{
+			"java": {Credentials: creds},
+		}},
+		Agent:      stubAgent{},
+		ProjectDir: projectDir,
+		CacheDirs:  map[string]string{"maven": "~/.m2"},
+		Kits:       []*kit.Kit{testKit},
+	}
+
+	args, err := appendVolumes([]string{}, home, cname, opts)
+	if err != nil {
+		t.Fatalf("appendVolumes: %v", err)
+	}
+
+	// Find cache mount and credential mount positions
+	cacheIdx := -1
+	credIdx := -1
+	for i, arg := range args {
+		if arg == "--mount" && i+1 < len(args) && strings.Contains(args[i+1], "-cache-maven") {
+			cacheIdx = i
+		}
+		if arg == "-v" && i+1 < len(args) && strings.Contains(args[i+1], "settings.xml") && strings.Contains(args[i+1], "credentials") {
+			credIdx = i
+		}
+	}
+
+	if cacheIdx == -1 {
+		t.Fatal("cache mount not found")
+	}
+	if credIdx == -1 {
+		t.Fatal("credential mount not found")
+	}
+	if credIdx <= cacheIdx {
+		t.Errorf("credential mount (idx %d) should come after cache mount (idx %d)", credIdx, cacheIdx)
+	}
+
+	// Verify credential file was written
+	credFile := filepath.Join(home, ".asylum", "projects", cname, "credentials", "settings.xml")
+	data, err := os.ReadFile(credFile)
+	if err != nil {
+		t.Fatalf("credential file not written: %v", err)
+	}
+	if string(data) != "<settings><servers/></settings>" {
+		t.Errorf("unexpected credential content: %q", data)
+	}
+
+	// Verify mount is read-only
+	for i, arg := range args {
+		if arg == "-v" && i+1 < len(args) && strings.Contains(args[i+1], "credentials") {
+			if !strings.HasSuffix(args[i+1], ":ro") {
+				t.Errorf("credential mount should be read-only, got: %s", args[i+1])
+			}
+		}
+	}
+}
+
+func TestAppendVolumesCredentialFuncError(t *testing.T) {
+	home := t.TempDir()
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
+	os.MkdirAll(agentConfigDir, 0755)
+
+	testKit := &kit.Kit{
+		Name: "java/maven",
+		CredentialFunc: func(opts kit.CredentialOpts) ([]kit.CredentialMount, error) {
+			return nil, fmt.Errorf("test error")
+		},
+	}
+
+	creds := &config.Credentials{Auto: true}
+	opts := RunOpts{
+		Config: config.Config{Kits: map[string]*config.KitConfig{
+			"java": {Credentials: creds},
+		}},
+		Agent:      stubAgent{},
+		ProjectDir: projectDir,
+		Kits:       []*kit.Kit{testKit},
+	}
+
+	// Should not fail — error is logged as warning
+	_, err := appendVolumes([]string{}, home, cname, opts)
+	if err != nil {
+		t.Fatalf("appendVolumes should not fail on credential error: %v", err)
+	}
+}
+
 func TestAppendVolumesNodeModulesShadowed(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()

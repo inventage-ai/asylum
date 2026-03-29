@@ -241,6 +241,49 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 		args = append(args, "--mount", "type=volume,src="+volName+",dst="+dst)
 	}
 
+	// Kit credentials — must come after cache volumes so bind mounts overlay named volumes
+	credDir := filepath.Join(home, ".asylum", "projects", cname, "credentials")
+	for _, k := range opts.Kits {
+		if k.CredentialFunc == nil {
+			continue
+		}
+		// Determine credential mode from the kit's config entry.
+		// Sub-kits (e.g. java/maven) check the parent kit's config.
+		kitName, _, _ := strings.Cut(k.Name, "/")
+		mode := opts.Config.KitCredentialMode(kitName)
+		if mode == "" {
+			continue
+		}
+		credMode := kit.CredentialAuto
+		var explicit []string
+		if mode == "explicit" {
+			credMode = kit.CredentialExplicit
+			explicit = opts.Config.KitCredentialExplicit(kitName)
+		}
+		mounts, err := k.CredentialFunc(kit.CredentialOpts{
+			ProjectDir: opts.ProjectDir,
+			HomeDir:    home,
+			Mode:       credMode,
+			Explicit:   explicit,
+		})
+		if err != nil {
+			log.Warn("credentials for %s: %v", k.Name, err)
+			continue
+		}
+		for _, m := range mounts {
+			if err := os.MkdirAll(credDir, 0755); err != nil {
+				return nil, fmt.Errorf("create credentials dir: %w", err)
+			}
+			filename := filepath.Base(config.ExpandTilde(m.Destination, home))
+			hostPath := filepath.Join(credDir, filename)
+			if err := os.WriteFile(hostPath, m.Content, 0600); err != nil {
+				return nil, fmt.Errorf("write credential file: %w", err)
+			}
+			dst := config.ExpandTilde(m.Destination, home)
+			vol(hostPath, dst, "ro")
+		}
+	}
+
 	// Shell history
 	histDir := filepath.Join(home, ".asylum", "projects", cname, "history")
 	if err := os.MkdirAll(histDir, 0755); err != nil {

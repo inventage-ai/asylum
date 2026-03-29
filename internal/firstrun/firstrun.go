@@ -1,89 +1,82 @@
 package firstrun
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/log"
-	"gopkg.in/yaml.v3"
+	"github.com/inventage-ai/asylum/internal/tui"
 )
 
-// credential is a host file that can be mounted into the container.
-type credential struct {
-	Path  string // relative to home, e.g. ".m2/settings.xml"
-	Label string // display name
-}
-
-var credentials = []credential{
-	{Path: ".m2/settings.xml", Label: "Maven settings.xml"},
-}
-
-// Run detects a first-run condition and prompts the user to mount
-// package manager credentials. It writes ~/.asylum/config.yaml if
-// the user accepts. Uses ~/.asylum/agents/ as the signal that asylum
-// has been used before (created by EnsureAgentConfig, not the installer).
+// Run detects a first-run condition and prompts the user to enable
+// kit credential support via a TUI multiselect. Selected kits get
+// `credentials: auto` written to ~/.asylum/config.yaml.
+// Uses ~/.asylum/agents/ as the signal that asylum has been used before.
 func Run(homeDir string) error {
 	agentsDir := filepath.Join(homeDir, ".asylum", "agents")
 	if _, err := os.Stat(agentsDir); err == nil {
 		return nil // existing user
 	}
 
-	found := detectCredentials(homeDir)
-	if len(found) == 0 {
+	kits := kit.CredentialCapableKits()
+	if len(kits) == 0 {
 		return nil
 	}
 
-	if accepted := prompt(found); accepted {
-		asylumDir := filepath.Join(homeDir, ".asylum")
-		if err := writeConfig(asylumDir, found); err != nil {
-			return fmt.Errorf("write config: %w", err)
-		}
-		log.Success("wrote %s", filepath.Join(asylumDir, "config.yaml"))
+	selected := promptCredentials(kits)
+	if len(selected) == 0 {
+		return nil
 	}
+
+	cfgPath := filepath.Join(homeDir, ".asylum", "config.yaml")
+	for _, k := range selected {
+		// Use the parent kit name for config (e.g. "java" not "java/maven")
+		kitName, _, _ := cutKitName(k.Name)
+		if err := SetKitCredentials(cfgPath, kitName, "auto"); err != nil {
+			return err
+		}
+	}
+	log.Success("credential support enabled in %s", cfgPath)
 	return nil
 }
 
-func detectCredentials(homeDir string) []credential {
-	var found []credential
-	for _, c := range credentials {
-		path := filepath.Join(homeDir, c.Path)
-		if fi, err := os.Stat(path); err == nil && !fi.IsDir() {
-			found = append(found, c)
+func promptCredentials(kits []*kit.Kit) []*kit.Kit {
+	options := make([]tui.Option, len(kits))
+	for i, k := range kits {
+		label := k.CredentialLabel
+		if label == "" {
+			label = k.Name
+		}
+		options[i] = tui.Option{
+			Label:       label,
+			Description: "Filters credentials by project needs",
 		}
 	}
-	return found
-}
 
-func prompt(found []credential) bool {
-	fmt.Println()
-	log.Info("Package manager credentials found:")
-	for _, c := range found {
-		fmt.Printf("  - %s (~/%s)\n", c.Label, c.Path)
+	// Default all selected
+	defaults := make([]int, len(kits))
+	for i := range defaults {
+		defaults[i] = i
 	}
-	fmt.Print("Mount these into the sandbox (read-only)? [Y/n] ")
-	var answer string
-	fmt.Scanln(&answer)
-	return !strings.HasPrefix(strings.ToLower(strings.TrimSpace(answer)), "n")
-}
 
-type configFile struct {
-	Volumes []string `yaml:"volumes"`
-}
-
-func writeConfig(asylumDir string, creds []credential) error {
-	if err := os.MkdirAll(asylumDir, 0755); err != nil {
-		return err
-	}
-	var volumes []string
-	for _, c := range creds {
-		volumes = append(volumes, "~/"+c.Path+":ro")
-	}
-	cfg := configFile{Volumes: volumes}
-	data, err := yaml.Marshal(cfg)
+	indices, err := tui.MultiSelect("Enable credential support for:", options, defaults)
 	if err != nil {
-		return err
+		return nil // cancelled
 	}
-	return os.WriteFile(filepath.Join(asylumDir, "config.yaml"), data, 0644)
+
+	var selected []*kit.Kit
+	for _, i := range indices {
+		selected = append(selected, kits[i])
+	}
+	return selected
+}
+
+func cutKitName(name string) (parent, child string, hasChild bool) {
+	for i, c := range name {
+		if c == '/' {
+			return name[:i], name[i+1:], true
+		}
+	}
+	return name, "", false
 }

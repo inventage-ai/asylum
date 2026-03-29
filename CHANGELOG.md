@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Kit credential system: kits can define credential providers that filter host credentials by project needs. Maven support included — auto-discovers server IDs from `pom.xml` and generates a scoped `settings.xml` with only matching entries from `~/.m2/settings.xml`
+- First-run credential onboarding: TUI multiselect prompt to enable credential support per kit, replacing the old Y/n prompt for raw `~/.m2/settings.xml` mounting
 - Claude config isolation: choose between `shared` (host config), `isolated` (current default), or `project` (per-project) via first-run TUI prompt or `agents.claude.config` in config
 - TUI prompt framework using Bubble Tea for interactive single-choice and multi-choice prompts
 

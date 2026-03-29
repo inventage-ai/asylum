@@ -40,9 +40,11 @@ fi
 `,
 		SubKits: map[string]*Kit{
 			"maven": {
-				Name:        "java/maven",
-				Description: "Maven with dependency caching",
-				Tools:       []string{"mvn"},
+				Name:            "java/maven",
+				Description:     "Maven with dependency caching",
+				Tools:           []string{"mvn"},
+				CredentialFunc:  mavenCredentialFunc,
+				CredentialLabel: "Java/Maven",
 				DockerSnippet: `# Install Maven
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends maven && rm -rf /var/lib/apt/lists/*

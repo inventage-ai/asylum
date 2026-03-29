@@ -1,15 +1,4 @@
-## ADDED Requirements
-
-### Requirement: First-run detection
-The system SHALL detect a first-run condition by checking whether `~/.asylum/agents/` directory exists. If it does not exist, the system SHALL trigger the first-run onboarding flow before loading config. The `agents/` directory is created by `EnsureAgentConfig` on the first actual run, making it a reliable signal that distinguishes fresh installs from existing users (since the installer only creates `~/.asylum/bin/`).
-
-#### Scenario: First run — agents directory does not exist
-- **WHEN** the user runs `asylum` and `~/.asylum/agents/` does not exist
-- **THEN** the system SHALL run the first-run onboarding flow before proceeding
-
-#### Scenario: Subsequent run — agents directory exists
-- **WHEN** the user runs `asylum` and `~/.asylum/agents/` already exists
-- **THEN** the system SHALL skip first-run onboarding and proceed normally
+## MODIFIED Requirements
 
 ### Requirement: Credential file detection
 The system SHALL present a TUI multiselect prompt listing all kits that provide credential support (non-nil CredentialFunc), regardless of whether credential files exist on the host. The prompt SHALL allow the user to select which kits should have credential support enabled.

@@ -11,6 +11,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// CredentialMode determines how a kit discovers credentials.
+type CredentialMode int
+
+const (
+	CredentialOff      CredentialMode = iota // credentials disabled (default)
+	CredentialAuto                           // discover from project files
+	CredentialExplicit                       // user-specified identifiers
+)
+
+// CredentialOpts is passed to a kit's CredentialFunc.
+type CredentialOpts struct {
+	ProjectDir string
+	HomeDir    string
+	Mode       CredentialMode
+	Explicit   []string // identifiers when Mode is CredentialExplicit
+}
+
+// CredentialMount describes a generated credential file to mount into the container.
+type CredentialMount struct {
+	Content     []byte // generated file content
+	Destination string // container path (e.g. ~/.m2/settings.xml)
+}
+
 // Tier controls how a kit is activated and presented in the config.
 type Tier int
 
@@ -35,6 +58,8 @@ type Kit struct {
 	SubKits           map[string]*Kit
 	Deps              []string // kit names this kit depends on
 	Tier              Tier              // activation tier (TierDefault, TierAlwaysOn, TierOptIn)
+	CredentialFunc    func(CredentialOpts) ([]CredentialMount, error) // optional credential provider
+	CredentialLabel   string            // display label for onboarding (e.g. "Java/Maven")
 	ConfigSnippet     string            // YAML snippet for default config (indented at 2 spaces under kits:)
 	ConfigNodes       []*yaml.Node      // structured key+value nodes for kits mapping (len 2: key, value)
 	ConfigComment     string            // comment text for opt-in/always-on kits shown in config
@@ -291,6 +316,25 @@ func IntNode(v int) *yaml.Node {
 // If content is nil, the value is an empty mapping (displayed as `name:`).
 func configNodes(name, comment string, content []*yaml.Node) []*yaml.Node {
 	return []*yaml.Node{ScalarNode(name, comment), MappingNode(content...)}
+}
+
+// CredentialCapableKits returns all registered kits (including sub-kits) that
+// have a non-nil CredentialFunc, in sorted order by name.
+func CredentialCapableKits() []*Kit {
+	var result []*Kit
+	for _, name := range All() {
+		k := registry[name]
+		if k.CredentialFunc != nil {
+			result = append(result, k)
+		}
+		for _, sub := range sortedSubKeys(k) {
+			sk := k.SubKits[sub]
+			if sk.CredentialFunc != nil {
+				result = append(result, sk)
+			}
+		}
+	}
+	return result
 }
 
 // AssembleConfigSnippets returns all registered kits' ConfigSnippets in sorted

@@ -11,18 +11,50 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Credentials supports three YAML forms: "auto" (string), false/absent (off),
+// or a list of kit-specific identifiers.
+type Credentials struct {
+	Auto     bool     // true when "auto"
+	Explicit []string // non-nil when a list is provided
+}
+
+func (c *Credentials) UnmarshalYAML(value *yaml.Node) error {
+	switch value.Kind {
+	case yaml.ScalarNode:
+		if value.Tag == "!!bool" {
+			// credentials: false → off (zero value)
+			return nil
+		}
+		if value.Value == "auto" {
+			c.Auto = true
+			return nil
+		}
+		return fmt.Errorf("credentials: unsupported value %q (use auto, false, or a list)", value.Value)
+	case yaml.SequenceNode:
+		var ids []string
+		if err := value.Decode(&ids); err != nil {
+			return err
+		}
+		c.Explicit = ids
+		return nil
+	default:
+		return fmt.Errorf("credentials: expected string, bool, or list")
+	}
+}
+
 // KitConfig holds per-kit configuration options.
 type KitConfig struct {
-	Disabled            *bool    `yaml:"disabled,omitempty"`
-	Versions            []string `yaml:"versions,omitempty"`
-	DefaultVersion      string   `yaml:"default-version,omitempty"`
-	Packages            []string `yaml:"packages,omitempty"`
-	ShadowNodeModules   *bool    `yaml:"shadow-node-modules,omitempty"`
-	Onboarding          *bool    `yaml:"onboarding,omitempty"`
-	TabTitle            string   `yaml:"tab-title,omitempty"`
-	AllowAgentTermTitle *bool    `yaml:"allow-agent-terminal-title,omitempty"`
-	Build               []string `yaml:"build,omitempty"`
-	Count               int      `yaml:"count,omitempty"`
+	Disabled            *bool        `yaml:"disabled,omitempty"`
+	Versions            []string     `yaml:"versions,omitempty"`
+	DefaultVersion      string       `yaml:"default-version,omitempty"`
+	Packages            []string     `yaml:"packages,omitempty"`
+	ShadowNodeModules   *bool        `yaml:"shadow-node-modules,omitempty"`
+	Onboarding          *bool        `yaml:"onboarding,omitempty"`
+	TabTitle            string       `yaml:"tab-title,omitempty"`
+	AllowAgentTermTitle *bool        `yaml:"allow-agent-terminal-title,omitempty"`
+	Build               []string     `yaml:"build,omitempty"`
+	Count               int          `yaml:"count,omitempty"`
+	Credentials         *Credentials `yaml:"credentials,omitempty"`
 }
 
 // AgentConfig holds per-agent configuration.
@@ -162,6 +194,30 @@ func (c Config) OnboardingEnabled(kitName string) bool {
 		return *kc.Onboarding
 	}
 	return false
+}
+
+// KitCredentialMode returns the credential mode for the named kit.
+func (c Config) KitCredentialMode(kitName string) string {
+	kc := c.KitOption(kitName)
+	if kc == nil || kc.Credentials == nil {
+		return ""
+	}
+	if kc.Credentials.Auto {
+		return "auto"
+	}
+	if kc.Credentials.Explicit != nil {
+		return "explicit"
+	}
+	return ""
+}
+
+// KitCredentialExplicit returns the explicit credential identifiers for the named kit.
+func (c Config) KitCredentialExplicit(kitName string) []string {
+	kc := c.KitOption(kitName)
+	if kc == nil || kc.Credentials == nil {
+		return nil
+	}
+	return kc.Credentials.Explicit
 }
 
 // Packages returns all packages for a given kit, or nil.
