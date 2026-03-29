@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -20,8 +21,18 @@ func SyncKitToConfig(path string, kitName string, nodes []*yaml.Node) error {
 		return nil
 	}
 
+	hadContent := len(kitsNode.Content) > 0
 	kitsNode.Content = append(kitsNode.Content, nodes...)
-	return writeConfigDoc(path, doc)
+
+	if err := writeConfigDoc(path, doc); err != nil {
+		return err
+	}
+
+	// Add blank line before the new kit entry for readability
+	if hadContent {
+		return spaceKitEntries(path)
+	}
+	return nil
 }
 
 // SyncKitCommentToConfig appends a commented-out kit block to the config
@@ -36,7 +47,7 @@ func SyncKitCommentToConfig(path string, comment string) error {
 
 	// Append as foot comment on the kits mapping node
 	if kitsNode.FootComment != "" {
-		kitsNode.FootComment += "\n" + comment
+		kitsNode.FootComment += "\n\n" + comment
 	} else {
 		kitsNode.FootComment = comment
 	}
@@ -63,6 +74,68 @@ func writeConfigDoc(path string, doc *yaml.Node) error {
 		return err
 	}
 	return os.WriteFile(path, data, 0644)
+}
+
+// spaceKitEntries reads the config file and inserts blank lines between
+// top-level entries in the kits mapping block.
+func spaceKitEntries(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	lines := bytes.Split(data, []byte("\n"))
+
+	// Find the "kits:" line
+	kitsIdx := -1
+	for i, line := range lines {
+		if bytes.HasPrefix(bytes.TrimLeft(line, " "), []byte("kits:")) {
+			kitsIdx = i
+			break
+		}
+	}
+	if kitsIdx < 0 || kitsIdx+1 >= len(lines) {
+		return nil
+	}
+
+	// Detect kit entry indent from the first entry after "kits:"
+	kitIndent := -1
+	for _, line := range lines[kitsIdx+1:] {
+		if len(bytes.TrimSpace(line)) > 0 {
+			kitIndent = len(line) - len(bytes.TrimLeft(line, " "))
+			break
+		}
+	}
+	if kitIndent < 0 {
+		return nil
+	}
+
+	kitsLineIndent := len(lines[kitsIdx]) - len(bytes.TrimLeft(lines[kitsIdx], " "))
+	var result [][]byte
+	firstKit := true
+
+	for i, line := range lines {
+		if i > kitsIdx && len(bytes.TrimSpace(line)) > 0 {
+			indent := len(line) - len(bytes.TrimLeft(line, " "))
+
+			// Past the kits block
+			if indent <= kitsLineIndent {
+				result = append(result, lines[i:]...)
+				return os.WriteFile(path, bytes.Join(result, []byte("\n")), 0644)
+			}
+
+			// Kit-level entry
+			if indent == kitIndent && bytes.Contains(line, []byte(":")) {
+				if !firstKit && len(result) > 0 && len(bytes.TrimSpace(result[len(result)-1])) > 0 {
+					result = append(result, []byte(""))
+				}
+				firstKit = false
+			}
+		}
+		result = append(result, line)
+	}
+
+	return os.WriteFile(path, bytes.Join(result, []byte("\n")), 0644)
 }
 
 // findOrCreateKitsMapping walks the document to find the "kits" mapping node.

@@ -33,9 +33,12 @@ func TestSyncKitToConfig_InsertsNewKit(t *testing.T) {
 	if !strings.Contains(text, "docker") {
 		t.Error("existing docker kit should be preserved")
 	}
-	// New kit added
+	// New kit added with blank line separator
 	if !strings.Contains(text, "rust") {
 		t.Error("rust kit should be inserted")
+	}
+	if !strings.Contains(text, "docker: {} # existing\n\n") {
+		t.Errorf("expected blank line between kits, got:\n%s", text)
 	}
 }
 
@@ -125,6 +128,65 @@ func TestSyncKitCommentToConfig(t *testing.T) {
 	text := string(data)
 	if !strings.Contains(text, "# apt:") {
 		t.Error("commented kit should appear in output")
+	}
+}
+
+func TestSyncKitCommentToConfig_BlankLineBetweenComments(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	initial := "version: \"0.2\"\nkits:\n  docker: {}\n"
+	os.WriteFile(path, []byte(initial), 0644)
+
+	// Add two comments in one call to test the \n\n separator
+	combined := "apt:                # System packages\n\nbrowser:            # Chromium browser"
+	if err := SyncKitCommentToConfig(path, combined); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(path)
+	text := string(data)
+	if !strings.Contains(text, "apt:") || !strings.Contains(text, "browser:") {
+		t.Errorf("expected both commented kits in output, got:\n%s", text)
+	}
+}
+
+func TestSyncKitToConfig_BlankLinesBetweenMultipleKits(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	initial := "version: \"0.2\"\nkits:\n  docker: {}\n"
+	os.WriteFile(path, []byte(initial), 0644)
+
+	// Add two kits sequentially (each call reads, modifies, writes)
+	nodes1 := []*yaml.Node{kit.ScalarNode("rust", ""), kit.MappingNode()}
+	if err := SyncKitToConfig(path, "rust", nodes1); err != nil {
+		t.Fatal(err)
+	}
+	nodes2 := []*yaml.Node{kit.ScalarNode("python", ""), kit.MappingNode()}
+	if err := SyncKitToConfig(path, "python", nodes2); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(path)
+	text := string(data)
+
+	// Each kit should be separated by a blank line
+	for _, name := range []string{"docker", "rust", "python"} {
+		if !strings.Contains(text, name) {
+			t.Errorf("expected %s in output", name)
+		}
+	}
+
+	// Count blank lines within the kits block — should have 2 (between 3 kits)
+	kitsIdx := strings.Index(text, "kits:")
+	if kitsIdx < 0 {
+		t.Fatal("kits: not found")
+	}
+	kitsBlock := text[kitsIdx:]
+	blankLines := strings.Count(kitsBlock, "\n\n")
+	if blankLines < 2 {
+		t.Errorf("expected at least 2 blank line separators between 3 kits, got %d in:\n%s", blankLines, text)
 	}
 }
 
