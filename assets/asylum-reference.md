@@ -133,6 +133,41 @@ kits:
     disabled: true
 ```
 
+## Installing Additional Tools
+
+To install additional tools in the container, prefer system packages over shell build commands. Packages are cached by Docker's layer system and install faster on rebuilds.
+
+**Preferred: apt packages**
+
+```yaml
+kits:
+  apt:
+    packages: [golang, postgresql-client, redis-tools]
+```
+
+**Also available: kit-specific packages**
+
+```yaml
+kits:
+  node:
+    packages: [turbo, nx]     # npm global packages
+  python:
+    packages: [ansible, aws-cli]  # uv tools
+```
+
+**Last resort: custom build commands**
+
+Use `shell.build` only for tools that aren't available as packages:
+
+```yaml
+kits:
+  shell:
+    build:
+      - "curl -fsSL https://example.com/install.sh | sh"
+```
+
+Build commands run during `docker build` (cached in the image layer), not on every container start.
+
 ## Port Forwarding
 
 ### Automatic Ports (ports kit)
