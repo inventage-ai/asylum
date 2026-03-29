@@ -2,7 +2,7 @@
 
 GitHub CLI (`gh`) for interacting with GitHub from within containers.
 
-**Default: On** — active unless explicitly disabled.
+**Activation: Default** — added to config on first detection; active when present.
 
 ## What's Included
 

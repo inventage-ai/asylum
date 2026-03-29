@@ -2,6 +2,8 @@
 
 Full Docker-in-Docker support with buildx and compose.
 
+**Activation: Default** — added to config on first detection; active when present.
+
 ## What's Included
 
 - **Docker CE** (full engine, not just CLI)

@@ -2,6 +2,8 @@
 
 Install extra system packages via apt in the project image.
 
+**Activation: Opt-in** — only active if explicitly enabled in your config.
+
 ## What's Included
 
 Nothing by default — this kit exists solely to install additional Debian packages you specify.

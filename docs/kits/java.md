@@ -2,6 +2,8 @@
 
 JDK 17, 21, and 25 via mise, with Maven and Gradle available as sub-kits.
 
+**Activation: Default** — added to config on first detection; active when present.
+
 ## What's Included
 
 - **JDK 17, 21, 25** installed via [mise](https://mise.jdx.dev/) (default: 21)

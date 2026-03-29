@@ -4,16 +4,29 @@ Kits are modular bundles that group everything needed for a language or tool: in
 
 ## Available Kits
 
-| Kit | Description | Default |
-|-----|-------------|---------|
-| [node](node.md) | Node.js LTS via fnm, global dev packages | Off |
-| [python](python.md) | Python 3 with uv, linters, formatters | Off |
-| [java](java.md) | JDK 17/21/25 via mise, Maven, Gradle | Off |
-| [docker](docker.md) | Docker-in-Docker with buildx and compose | Off |
-| [github](github.md) | GitHub CLI (gh) | **On** |
-| [openspec](openspec.md) | OpenSpec CLI | **On** |
-| [shell](shell.md) | oh-my-zsh, tmux, direnv | **On** |
-| [apt](apt.md) | Extra apt packages in the project image | Off |
+| Kit | Description | Activation |
+|-----|-------------|------------|
+| [node](node.md) | Node.js LTS via fnm, global dev packages | Always on |
+| [python](python.md) | Python 3 with uv, linters, formatters | Default |
+| [java](java.md) | JDK 17/21/25 via mise, Maven, Gradle | Default |
+| [docker](docker.md) | Docker-in-Docker with buildx and compose | Default |
+| [github](github.md) | GitHub CLI (gh) | Default |
+| [openspec](openspec.md) | OpenSpec CLI | Default |
+| [shell](shell.md) | oh-my-zsh, tmux, direnv | Always on |
+| [ports](ports.md) | Automatic port forwarding for web services | Always on |
+| [apt](apt.md) | Extra apt packages in the project image | Opt-in |
+
+## Activation Tiers
+
+Kits have three activation levels:
+
+| Tier | Behavior |
+|------|----------|
+| **Always on** | Active even if not mentioned in config. Cannot be disabled. |
+| **Default** | Added to your config automatically when first detected. Active when present in config. |
+| **Opt-in** | Only active if you explicitly enable it in your config. |
+
+When Asylum detects a new kit (e.g., after an update), it prompts you to activate **Default** kits and adds **Opt-in** kits as commented-out entries in your config.
 
 ## Enabling Kits
 
@@ -26,15 +39,17 @@ kits:
     versions: ["17", "21"]    # enable with options
 ```
 
-## Default-On Kits
+## Disabling Kits
 
-Kits marked **On** in the table above are active unless explicitly disabled:
+Default-tier kits can be disabled:
 
 ```yaml
 kits:
   github:
-    disabled: true     # disable a default-on kit
+    disabled: true
 ```
+
+Always-on kits (node, shell, ports) cannot be disabled.
 
 ## Kit Resolution
 
@@ -42,7 +57,7 @@ When kits are configured explicitly (via config or `--kits` flag):
 
 - **Full kit** (e.g., `java`) — activates the kit and all its sub-kits (maven, gradle)
 - **Specific sub-kit** (e.g., `java/maven`) — activates the parent kit and only that sub-kit
-- **Default-on kits** are added automatically unless disabled
+- **Always-on kits** are added automatically regardless of config
 
 ## Sub-Kits
 
@@ -58,4 +73,4 @@ When you enable a kit, all its sub-kits are included. To be selective, reference
 
 ## Dependencies
 
-Kits can depend on other kits. For example, `openspec` depends on `node`. If a dependency is missing, Asylum emits a warning but continues.
+Kits can depend on other kits. For example, `openspec` depends on `node`. Missing dependencies are auto-activated at resolve time.

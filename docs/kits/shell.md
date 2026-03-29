@@ -2,7 +2,7 @@
 
 Shell configuration: oh-my-zsh, tmux, and direnv.
 
-**Default: On** — active unless explicitly disabled.
+**Activation: Always on** — active in every container.
 
 ## What's Included
 

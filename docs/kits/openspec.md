@@ -2,7 +2,7 @@
 
 [OpenSpec](https://openspec.dev) CLI for structured change management.
 
-**Default: On** — active unless explicitly disabled. Depends on the [Node.js](node.md) kit.
+**Activation: Default** — added to config on first detection; active when present. Depends on the [Node.js](node.md) kit.
 
 ## What's Included
 
@@ -31,3 +31,7 @@ openspec list
 ```
 
 See the [OpenSpec documentation](https://openspec.dev) for full usage details.
+
+## Notes
+
+- OpenSpec telemetry is disabled inside containers (`OPENSPEC_TELEMETRY=0`).

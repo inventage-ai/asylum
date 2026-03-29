@@ -2,6 +2,8 @@
 
 Python 3 with uv for fast package management, plus pre-installed development tools.
 
+**Activation: Default** — added to config on first detection; active when present.
+
 ## What's Included
 
 - **Python 3** (system package)

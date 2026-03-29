@@ -2,6 +2,8 @@
 
 Node.js LTS via fnm with global development packages.
 
+**Activation: Always on** — active in every container.
+
 ## What's Included
 
 - **Node.js LTS** managed by [fnm](https://github.com/Schniz/fnm)

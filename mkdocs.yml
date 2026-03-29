@@ -61,6 +61,7 @@ nav:
     - GitHub CLI: kits/github.md
     - OpenSpec: kits/openspec.md
     - Shell: kits/shell.md
+    - Ports: kits/ports.md
     - APT Packages: kits/apt.md
   - Concepts:
     - Overview: concepts/index.md

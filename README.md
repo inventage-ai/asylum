@@ -108,16 +108,17 @@ Full reference: [Configuration documentation](https://asylum.inventage.ai/config
 
 Kits are modular bundles for languages and tools. Enable them in your config:
 
-| Kit | Description | Default |
-|-----|-------------|---------|
-| `node` | Node.js LTS + npm/pnpm/yarn | Off |
-| `python` | Python 3 + uv | Off |
-| `java` | JDK 17/21/25 + Maven/Gradle | Off |
-| `docker` | Docker-in-Docker | Off |
-| `github` | GitHub CLI | **On** |
-| `openspec` | OpenSpec CLI | **On** |
-| `shell` | oh-my-zsh, tmux, direnv | **On** |
-| `apt` | Extra system packages | Off |
+| Kit | Description | Activation |
+|-----|-------------|------------|
+| `node` | Node.js LTS + npm/pnpm/yarn | Always on |
+| `python` | Python 3 + uv | Default |
+| `java` | JDK 17/21/25 + Maven/Gradle | Default |
+| `docker` | Docker-in-Docker | Default |
+| `github` | GitHub CLI | Default |
+| `openspec` | OpenSpec CLI | Default |
+| `shell` | oh-my-zsh, tmux, direnv | Always on |
+| `ports` | Automatic port forwarding | Always on |
+| `apt` | Extra system packages | Opt-in |
 
 Full reference: [Kits documentation](https://asylum.inventage.ai/kits/)
 
