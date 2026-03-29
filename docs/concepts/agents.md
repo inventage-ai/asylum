@@ -6,9 +6,9 @@ Asylum supports three AI coding agents. Each runs in YOLO mode (auto-approve all
 
 | Agent | Binary | Default Mode | Config Dir |
 |-------|--------|-------------|------------|
-| [Claude Code](https://claude.ai) | `claude` | `--dangerously-skip-permissions` | `/home/claude/.claude` |
-| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `gemini` | `--yolo` | `/home/claude/.gemini` |
-| [Codex](https://github.com/openai/codex) | `codex` | `--yolo` | `/home/claude/.codex` |
+| [Claude Code](https://claude.ai) | `claude` | `--dangerously-skip-permissions` | `~/.claude` |
+| [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `gemini` | `--yolo` | `~/.gemini` |
+| [Codex](https://github.com/openai/codex) | `codex` | `--yolo` | `~/.codex` |
 
 ## Selecting an Agent
 

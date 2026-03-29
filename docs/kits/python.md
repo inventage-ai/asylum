@@ -31,7 +31,7 @@ kits:
 
 Included by default. Provides:
 
-- **Pip cache** persisted at `/home/claude/.cache/pip`
+- **Pip cache** persisted at `~/.cache/pip`
 - **Auto-venv**: automatically creates a `.venv/` virtual environment on container start if the project has `requirements.txt`, `pyproject.toml`, or `setup.py`
 
 ## Package Installation

@@ -10,7 +10,7 @@ asylum ssh-init
 
 ## Description
 
-Creates `~/.asylum/ssh/` with an Ed25519 key pair for use inside containers. The SSH directory is automatically mounted into every container at `/home/claude/.ssh/`.
+Creates `~/.asylum/ssh/` with an Ed25519 key pair for use inside containers. The SSH directory is automatically mounted into every container at `~/.ssh/`.
 
 Specifically, `ssh-init`:
 

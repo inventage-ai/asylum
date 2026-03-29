@@ -19,7 +19,7 @@ The `--admin` flag opens a root shell with a notice that you're running as root.
 
 | Flag | Description |
 |------|-------------|
-| `--admin` | Open a root shell instead of the default `claude` user shell |
+| `--admin` | Open a root shell instead of the default user shell |
 
 ## Examples
 

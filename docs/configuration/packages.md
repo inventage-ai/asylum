@@ -54,4 +54,4 @@ kits:
       - "go install golang.org/x/tools/gopls@latest"
 ```
 
-Each command is executed as the `claude` user. Commands must not contain newlines.
+Each command is executed as your host user. Commands must not contain newlines.

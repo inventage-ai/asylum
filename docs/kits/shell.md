@@ -48,4 +48,4 @@ kits:
       - "go install golang.org/x/tools/gopls@latest"
 ```
 
-Commands run as the `claude` user. See [Packages](../configuration/packages.md) for more details.
+Commands run as your host user. See [Packages](../configuration/packages.md) for more details.

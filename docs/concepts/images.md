@@ -44,7 +44,7 @@ Project images are also cached and only rebuild when the package configuration c
 
 Both tiers use hash-based detection:
 
-- **Base image**: SHA-256 of the Dockerfile, kit snippets, and agent install snippets. Stored as a Docker label (`asylum.hash`).
+- **Base image**: SHA-256 of the Dockerfile, kit snippets, agent install snippets, and host user identity (username, UID, GID, home directory). Stored as a Docker label (`asylum.hash`).
 - **Project image**: SHA-256 of the packages config. Stored as a Docker label (`asylum.packages.hash`).
 
 A base image rebuild invalidates all project images (they're built `FROM asylum:latest`).

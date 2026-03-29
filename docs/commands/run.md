@@ -31,6 +31,6 @@ asylum -p 8080 run python -m http.server
 
 ## Notes
 
-- The command runs as the `claude` user.
+- The command runs as your host user (same username, UID, and home directory).
 - The exit code from the command is forwarded to the host.
 - The container persists after the command finishes if other sessions are still attached. If this was the only session, the container is removed.

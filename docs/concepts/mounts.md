@@ -8,9 +8,9 @@ Asylum mounts your project, config, caches, and tools into the container. Your p
 |------|-----------|----------------|------|
 | Project directory | `$PWD` | `$PWD` | Read-write |
 | Git config | `~/.gitconfig` | `/tmp/host_gitconfig` | Read-only |
-| SSH keys | `~/.asylum/ssh/` | `/home/claude/.ssh/` | Read-write |
+| SSH keys | `~/.asylum/ssh/` | `~/.ssh/` | Read-write |
 | Agent config | `~/.asylum/agents/<agent>/` | Agent-specific path | Read-write |
-| Shell history | `~/.asylum/projects/<id>/history/` | `/home/claude/.shell_history/` | Read-write |
+| Shell history | `~/.asylum/projects/<id>/history/` | `~/.shell_history/` | Read-write |
 | Direnv approvals | `~/.local/share/direnv/allow` | Same path | Read-only |
 | `.env` file | `$PWD/.env` | Loaded as `--env-file` | — |
 
@@ -20,10 +20,10 @@ Package caches are stored in named Docker volumes (not host bind mounts), scoped
 
 | Cache | Container Path | Kit |
 |-------|---------------|-----|
-| npm | `/home/claude/.npm` | node/npm |
-| pip | `/home/claude/.cache/pip` | python/uv |
-| Maven | `/home/claude/.m2` | java/maven |
-| Gradle | `/home/claude/.gradle` | java/gradle |
+| npm | `~/.npm` | node/npm |
+| pip | `~/.cache/pip` | python/uv |
+| Maven | `~/.m2` | java/maven |
+| Gradle | `~/.gradle` | java/gradle |
 
 Named volumes persist across container restarts and are shared between sessions on the same project.
 

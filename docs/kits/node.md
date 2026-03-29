@@ -32,7 +32,7 @@ kits:
 
 ### node/npm
 
-Included by default. Provides npm cache persistence at `/home/claude/.npm` and the npm onboarding task.
+Included by default. Provides npm cache persistence at `~/.npm` and the npm onboarding task.
 
 ### node/pnpm
 

@@ -25,7 +25,7 @@ When the Docker kit is active:
 
 1. The container runs in **privileged mode** (required for Docker-in-Docker)
 2. The Docker daemon (`dockerd`) starts automatically inside the container
-3. The `claude` user is added to the `docker` group
+3. The container user is added to the `docker` group
 
 The daemon uses the `vfs` storage driver and waits up to 30 seconds to be ready before the agent or shell starts.
 

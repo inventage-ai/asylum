@@ -28,11 +28,11 @@ JDK 17, 21, and 25 are always pre-installed. You can install additional versions
 
 ### java/maven
 
-Installs Maven via apt. Dependency cache persisted at `/home/claude/.m2`.
+Installs Maven via apt. Dependency cache persisted at `~/.m2`.
 
 ### java/gradle
 
-Installs Gradle via mise. Dependency cache persisted at `/home/claude/.gradle`.
+Installs Gradle via mise. Dependency cache persisted at `~/.gradle`.
 
 ## Version Switching
 
