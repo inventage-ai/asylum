@@ -1,12 +1,16 @@
 ### Requirement: GitHub credential provider
-The GitHub kit SHALL provide a `CredentialFunc` that mounts the host's `~/.config/gh/` directory read-only into the container at `~/.config/gh/`.
+The GitHub kit SHALL provide a `CredentialFunc` that extracts the `gh` auth token from the host via `gh auth token` and generates a `hosts.yml` file for the container.
 
-#### Scenario: gh config directory exists on host
-- **WHEN** `credentials: auto` is set for the GitHub kit and `~/.config/gh/` exists on the host
-- **THEN** the credential func SHALL return a `CredentialMount` with `HostPath` pointing to the host directory and `Destination` set to `~/.config/gh/`
+#### Scenario: gh authenticated on host
+- **WHEN** `credentials: auto` is set for the GitHub kit and `gh auth token` returns a token
+- **THEN** the credential func SHALL return a `CredentialMount` with `Content` containing a valid `hosts.yml` and `Destination` set to `~/.config/gh/hosts.yml`
 
-#### Scenario: gh config directory does not exist
-- **WHEN** `credentials: auto` is set but `~/.config/gh/` does not exist on the host
+#### Scenario: gh not authenticated on host
+- **WHEN** `credentials: auto` is set but `gh auth token` fails or returns empty
+- **THEN** the credential func SHALL return an empty result without error
+
+#### Scenario: gh not installed on host
+- **WHEN** `credentials: auto` is set but `gh` is not available on the host
 - **THEN** the credential func SHALL return an empty result without error
 
 #### Scenario: Credentials not enabled

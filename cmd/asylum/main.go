@@ -966,7 +966,7 @@ func runOnboarding(cfg *config.Config, a agent.Agent, allKits []*kit.Kit, home s
 				desc = "Exposes matching server entries from ~/.m2/settings.xml"
 			}
 			if k.Name == "github" {
-				desc = "Mounts ~/.config/gh/ for gh CLI authentication"
+				desc = "Extracts gh auth token for CLI authentication"
 			}
 			options[i] = tui.Option{Label: label, Description: desc}
 			parent, _, _ := strings.Cut(k.Name, "/")

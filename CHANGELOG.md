@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- GitHub kit credential support: `credentials: auto` mounts host `~/.config/gh/` read-only for seamless `gh` authentication
+- GitHub kit credential support: `credentials: auto` extracts `gh` auth token from host (including system keyrings) for seamless authentication
 - Credential system supports direct host path mounting via `HostPath` (no content generation needed)
 - Rocket.Chat release notification via webhook after successful release and docs deployment
 - Kit credential system: kits can define credential providers that filter host credentials by project needs. Maven support included — auto-discovers server IDs from `pom.xml` and generates a scoped `settings.xml` with only matching entries from `~/.m2/settings.xml`

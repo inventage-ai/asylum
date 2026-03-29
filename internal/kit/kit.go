@@ -33,7 +33,9 @@ type CredentialOpts struct {
 type CredentialMount struct {
 	HostPath    string // host path to bind-mount directly (file or directory)
 	Content     []byte // generated file content (written to staging dir)
+	FileName    string // filename for Content within staging subdir (enables directory mounts)
 	Destination string // container path (e.g. ~/.m2/settings.xml)
+	Writable    bool   // mount read-write instead of read-only (for tools that modify their config)
 }
 
 // Tier controls how a kit is activated and presented in the config.

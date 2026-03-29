@@ -19,7 +19,7 @@ kits:
 
 ## Authentication
 
-Enable `credentials: auto` to mount your host's `~/.config/gh/` directory read-only into the container. This shares your `gh` authentication without copying tokens — changes on the host (e.g. `gh auth login`) are reflected immediately.
+Enable `credentials: auto` to extract your `gh` auth token from the host (including system keyrings) and generate a `hosts.yml` inside the container. This lets `gh` authenticate without requiring `gh auth login` in every new container.
 
 Without credentials enabled, `gh` auth is part of your agent config, which is seeded from your host on first run and persisted in `~/.asylum/agents/<agent>/`.
 

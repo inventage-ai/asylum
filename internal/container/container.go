@@ -272,19 +272,36 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 		}
 		for _, m := range mounts {
 			dst := config.ExpandTilde(m.Destination, home)
+			mode := "ro"
+			if m.Writable {
+				mode = ""
+			}
 			if m.HostPath != "" {
-				vol(m.HostPath, dst, "ro")
+				vol(m.HostPath, dst, mode)
 				continue
 			}
 			if err := os.MkdirAll(credDir, 0755); err != nil {
 				return nil, fmt.Errorf("create credentials dir: %w", err)
 			}
-			filename := filepath.Base(dst)
-			hostPath := filepath.Join(credDir, filename)
-			if err := os.WriteFile(hostPath, m.Content, 0600); err != nil {
-				return nil, fmt.Errorf("write credential file: %w", err)
+			if m.FileName != "" {
+				// Write content into a subdirectory, mount the directory
+				subDir := filepath.Join(credDir, filepath.Base(dst))
+				if err := os.MkdirAll(subDir, 0755); err != nil {
+					return nil, fmt.Errorf("create credential subdir: %w", err)
+				}
+				if err := os.WriteFile(filepath.Join(subDir, m.FileName), m.Content, 0600); err != nil {
+					return nil, fmt.Errorf("write credential file: %w", err)
+				}
+				vol(subDir, dst, mode)
+			} else {
+				// Write content as a single file, mount the file
+				filename := filepath.Base(dst)
+				hostPath := filepath.Join(credDir, filename)
+				if err := os.WriteFile(hostPath, m.Content, 0600); err != nil {
+					return nil, fmt.Errorf("write credential file: %w", err)
+				}
+				vol(hostPath, dst, mode)
 			}
-			vol(hostPath, dst, "ro")
 		}
 	}
 

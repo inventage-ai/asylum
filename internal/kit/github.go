@@ -1,8 +1,9 @@
 package kit
 
 import (
-	"os"
-	"path/filepath"
+	"fmt"
+	"os/exec"
+	"strings"
 )
 
 func init() {
@@ -32,15 +33,25 @@ USER ${USERNAME}
 	})
 }
 
+// githubCredentialFunc extracts the gh auth token from the host (which may
+// be in the system keyring) and generates a hosts.yml for the container.
 func githubCredentialFunc(opts CredentialOpts) ([]CredentialMount, error) {
-	ghDir := filepath.Join(opts.HomeDir, ".config", "gh")
-	if _, err := os.Stat(ghDir); err != nil {
+	out, err := exec.Command("gh", "auth", "token").Output()
+	if err != nil {
+		return nil, nil // gh not installed or not authenticated
+	}
+	token := strings.TrimSpace(string(out))
+	if token == "" {
 		return nil, nil
 	}
+
+	hostsYAML := fmt.Sprintf("github.com:\n    oauth_token: %s\n    git_protocol: https\n", token)
 	return []CredentialMount{
 		{
-			HostPath:    ghDir,
+			Content:     []byte(hostsYAML),
+			FileName:    "hosts.yml",
 			Destination: "~/.config/gh",
+			Writable:    true, // gh writes config.yml and migrates hosts.yml
 		},
 	}, nil
 }
