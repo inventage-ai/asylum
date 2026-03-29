@@ -11,6 +11,9 @@
 - `cleanup --all` for global cleanup (all images, volumes, cached data) with a confirmation prompt showing exactly what will be deleted
 - Documentation site built with MkDocs Material, deployed to GitHub Pages via `.github/workflows/docs.yml`
 - Structured docs pages for commands, configuration, kits, concepts, and development
+- New `ast-grep` kit: installs ast-grep (`sg`) via npm for AST-based code search, linting, and rewriting
+- New `browser` kit: installs Chromium via Playwright for browser automation, with persistent cache volume
+- New `cx` kit: installs cx for semantic code navigation (file overviews, symbol search, definitions, references) with configurable language grammars via `packages`
 - New `ports` kit (default-on): automatically allocates and forwards a range of high ports per project, with global tracking to prevent collisions
 - Kit config sync: new kits are detected on startup and inserted into existing `config.yaml` via `yaml.Node` tree manipulation (preserving comments and user edits)
 - Kit state tracking: `~/.asylum/state.json` tracks known kits; new kits trigger activation prompts in interactive mode

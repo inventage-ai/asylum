@@ -169,7 +169,7 @@ func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, jav
 }
 
 var knownPackageTypes = map[string]bool{
-	"apt": true, "npm": true, "pip": true, "run": true,
+	"apt": true, "npm": true, "pip": true, "run": true, "cx-lang": true,
 }
 
 var validPackageName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9+\-.@:/~_]*$`)
@@ -187,10 +187,10 @@ func validatePackageNames(pkgType string, names []string) error {
 func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string) (string, error) {
 	for k := range packages {
 		if !knownPackageTypes[k] {
-			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, run)", k)
+			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, cx-lang, run)", k)
 		}
 	}
-	for _, pkgType := range []string{"apt", "npm", "pip"} {
+	for _, pkgType := range []string{"apt", "npm", "pip", "cx-lang"} {
 		if err := validatePackageNames(pkgType, packages[pkgType]); err != nil {
 			return "", err
 		}
@@ -241,6 +241,7 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 	}
 
 	writeUserRuns("$HOME/.local/bin/uv tool install ", packages["pip"])
+	writeUserRuns("cx lang add ", packages["cx-lang"])
 	writeUserRuns("", packages["run"])
 
 	if javaVersion != "" && !preinstalledJava[javaVersion] {

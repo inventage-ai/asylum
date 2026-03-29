@@ -826,7 +826,7 @@ func agentConfigToMap(agents map[string]*config.AgentConfig) map[string]bool {
 func collectPackages(cfg config.Config) map[string][]string {
 	pkgs := map[string][]string{}
 	// kit name → output key
-	for kit, key := range map[string]string{"apt": "apt", "node": "npm", "python": "pip"} {
+	for kit, key := range map[string]string{"apt": "apt", "node": "npm", "python": "pip", "cx": "cx-lang"} {
 		if p := cfg.KitPackages(kit); len(p) > 0 {
 			pkgs[key] = p
 		}
