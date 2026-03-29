@@ -13,6 +13,9 @@
 - Python build deps (`python3-dev`, `libssl-dev`, etc.) moved to `python` kit
 - `self-update` accepts an optional version argument to install a specific release (e.g., `asylum self-update 0.4.0`)
 - `selfupdate` accepted as alias for `self-update`
+
+### Fixed
+- Crash with "unknown kit apt" when config contains apt packages or tab-title settings
 - E2e test suite with echo agent for full binary lifecycle testing
 - `internal/term` package consolidating shared `ShellQuote` and `IsTerminal` helpers
 
