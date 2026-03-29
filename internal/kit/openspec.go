@@ -10,6 +10,7 @@ func init() {
 `,
 		DockerSnippet: `# Install OpenSpec CLI
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @fission-ai/openspec@latest'
+ENV OPENSPEC_TELEMETRY=0
 `,
 	})
 }
