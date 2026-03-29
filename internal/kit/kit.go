@@ -28,9 +28,11 @@ type CredentialOpts struct {
 	Explicit   []string // identifiers when Mode is CredentialExplicit
 }
 
-// CredentialMount describes a generated credential file to mount into the container.
+// CredentialMount describes a credential to mount into the container.
+// Use either HostPath (direct bind mount) or Content (generated file), not both.
 type CredentialMount struct {
-	Content     []byte // generated file content
+	HostPath    string // host path to bind-mount directly (file or directory)
+	Content     []byte // generated file content (written to staging dir)
 	Destination string // container path (e.g. ~/.m2/settings.xml)
 }
 

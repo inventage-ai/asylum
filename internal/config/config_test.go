@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -273,6 +274,86 @@ func TestSetAgentIsolation_CreatesAgent(t *testing.T) {
 	}
 	if cfg.AgentIsolation("claude") != "project" {
 		t.Errorf("isolation = %q, want project", cfg.AgentIsolation("claude"))
+	}
+}
+
+func TestSetKitCredentials(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	initial := "version: \"2\"\nkits:\n  java:\n    versions:\n      - 17\n      - 21\n"
+	os.WriteFile(cfgPath, []byte(initial), 0644)
+
+	if err := SetKitCredentials(cfgPath, "java", "auto"); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(cfgPath)
+	content := string(data)
+	if !strings.Contains(content, "credentials: auto") {
+		t.Errorf("expected 'credentials: auto' in config, got:\n%s", content)
+	}
+	if !strings.Contains(content, "versions:") {
+		t.Errorf("existing content should be preserved, got:\n%s", content)
+	}
+}
+
+func TestSetKitCredentials_NewKit(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	initial := "version: \"2\"\nkits:\n  node:\n"
+	os.WriteFile(cfgPath, []byte(initial), 0644)
+
+	if err := SetKitCredentials(cfgPath, "java", "auto"); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(cfgPath)
+	content := string(data)
+	if !strings.Contains(content, "java:") {
+		t.Errorf("expected java kit added, got:\n%s", content)
+	}
+	if !strings.Contains(content, "credentials: auto") {
+		t.Errorf("expected credentials: auto, got:\n%s", content)
+	}
+}
+
+func TestSetKitCredentials_NoKitsSection(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	initial := "version: \"2\"\n"
+	os.WriteFile(cfgPath, []byte(initial), 0644)
+
+	if err := SetKitCredentials(cfgPath, "java", "auto"); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(cfgPath)
+	content := string(data)
+	if !strings.Contains(content, "kits:") {
+		t.Errorf("expected kits section added, got:\n%s", content)
+	}
+	if !strings.Contains(content, "credentials: auto") {
+		t.Errorf("expected credentials: auto, got:\n%s", content)
+	}
+}
+
+func TestSetAgentIsolation_PreservesBlankLines(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	initial := "version: \"0.2\"\n\n# Comment\nagent: claude\n\nagents:\n  claude:\n  # gemini:\n"
+	os.WriteFile(path, []byte(initial), 0644)
+
+	if err := SetAgentIsolation(path, "claude", "isolated"); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(path)
+	content := string(data)
+	if !strings.Contains(content, "\n\n# Comment") {
+		t.Errorf("blank line before comment should be preserved, got:\n%s", content)
+	}
+	if !strings.Contains(content, "  # gemini:") {
+		t.Errorf("comment should remain at original indentation, got:\n%s", content)
 	}
 }
 

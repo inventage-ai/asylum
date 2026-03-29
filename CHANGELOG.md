@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- GitHub kit credential support: `credentials: auto` mounts host `~/.config/gh/` read-only for seamless `gh` authentication
+- Credential system supports direct host path mounting via `HostPath` (no content generation needed)
 - Rocket.Chat release notification via webhook after successful release and docs deployment
 - Kit credential system: kits can define credential providers that filter host credentials by project needs. Maven support included — auto-discovers server IDs from `pom.xml` and generates a scoped `settings.xml` with only matching entries from `~/.m2/settings.xml`
 - Onboarding wizard: config isolation and credential prompts are now grouped into a single multi-step TUI wizard with a tab bar showing progress — fires for any unconfigured option, including v1 migrations
@@ -49,6 +51,8 @@
 - `docker exec` only uses `-t` flag when stdin is a TTY (fixes non-interactive environments)
 
 ### Fixed
+- Onboarding wizard now shows already-configured credentials as pre-selected when prompting for new credential kits
+- Config file edits (isolation, credentials) no longer strip blank lines and comments via yaml round-tripping
 - Global config migration now produces full documented default config with all kits
 - Docker kit no longer duplicates GPG key setup already done by core Dockerfile
 - Crash with "unknown kit apt" when config contains apt packages or tab-title settings

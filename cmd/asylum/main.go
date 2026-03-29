@@ -939,19 +939,23 @@ func runOnboarding(cfg *config.Config, a agent.Agent, allKits []*kit.Kit, home s
 		})
 	}
 
-	// Step: kit credentials (if any active kit has CredentialFunc but no credentials config)
+	// Step: kit credentials — show all credential-capable kits, pre-select configured ones.
+	// Only show the step if at least one kit is unconfigured.
 	var credKits []*kit.Kit
+	hasUnconfigured := false
 	for _, k := range allKits {
 		if k.CredentialFunc == nil {
 			continue
 		}
+		credKits = append(credKits, k)
 		parent, _, _ := strings.Cut(k.Name, "/")
 		if cfg.KitCredentialMode(parent) == "" {
-			credKits = append(credKits, k)
+			hasUnconfigured = true
 		}
 	}
-	if len(credKits) > 0 {
+	if hasUnconfigured {
 		options := make([]tui.Option, len(credKits))
+		var preSelected []int
 		for i, k := range credKits {
 			label := k.CredentialLabel
 			if label == "" {
@@ -961,19 +965,27 @@ func runOnboarding(cfg *config.Config, a agent.Agent, allKits []*kit.Kit, home s
 			if k.Name == "java/maven" {
 				desc = "Exposes matching server entries from ~/.m2/settings.xml"
 			}
+			if k.Name == "github" {
+				desc = "Mounts ~/.config/gh/ for gh CLI authentication"
+			}
 			options[i] = tui.Option{Label: label, Description: desc}
+			parent, _, _ := strings.Cut(k.Name, "/")
+			if cfg.KitCredentialMode(parent) != "" {
+				preSelected = append(preSelected, i)
+			}
 		}
 		steps = append(steps, tui.WizardStep{
 			Title:       "Credentials",
 			Description: "Allow the sandbox to access host credentials for private registries and repositories (read-only, scoped to what the project needs).",
-			Kind:    tui.StepMultiSelect,
-			Options: options,
+			Kind:       tui.StepMultiSelect,
+			Options:    options,
+			DefaultSel: preSelected,
 		})
 		appliers = append(appliers, func(result tui.StepResult) {
 			cfgPath := filepath.Join(home, ".asylum", "config.yaml")
 			for _, idx := range result.MultiIdx {
 				parent, _, _ := strings.Cut(credKits[idx].Name, "/")
-				if err := firstrun.SetKitCredentials(cfgPath, parent, "auto"); err != nil {
+				if err := config.SetKitCredentials(cfgPath, parent, "auto"); err != nil {
 					log.Error("save credential config: %v", err)
 				}
 			}

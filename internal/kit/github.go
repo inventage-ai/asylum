@@ -1,10 +1,17 @@
 package kit
 
+import (
+	"os"
+	"path/filepath"
+)
+
 func init() {
 	Register(&Kit{
-		Name:        "github",
-		Description: "GitHub CLI",
-		Tools:       []string{"gh"},
+		Name:            "github",
+		Description:     "GitHub CLI",
+		Tools:           []string{"gh"},
+		CredentialFunc:  githubCredentialFunc,
+		CredentialLabel: "GitHub",
 		ConfigSnippet: `  github:               # GitHub CLI (gh)
 `,
 		ConfigNodes:   configNodes("github", "GitHub CLI (gh)", nil),
@@ -23,4 +30,17 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
 USER ${USERNAME}
 `,
 	})
+}
+
+func githubCredentialFunc(opts CredentialOpts) ([]CredentialMount, error) {
+	ghDir := filepath.Join(opts.HomeDir, ".config", "gh")
+	if _, err := os.Stat(ghDir); err != nil {
+		return nil, nil
+	}
+	return []CredentialMount{
+		{
+			HostPath:    ghDir,
+			Destination: "~/.config/gh",
+		},
+	}, nil
 }

@@ -981,6 +981,63 @@ func TestAppendVolumesCredentialMounts(t *testing.T) {
 	}
 }
 
+func TestAppendVolumesCredentialHostPath(t *testing.T) {
+	home := t.TempDir()
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
+	os.MkdirAll(agentConfigDir, 0755)
+
+	// Create a host directory to mount
+	ghDir := filepath.Join(home, ".config", "gh")
+	os.MkdirAll(ghDir, 0755)
+
+	testKit := &kit.Kit{
+		Name: "github",
+		CredentialFunc: func(opts kit.CredentialOpts) ([]kit.CredentialMount, error) {
+			return []kit.CredentialMount{
+				{
+					HostPath:    ghDir,
+					Destination: "~/.config/gh",
+				},
+			}, nil
+		},
+	}
+
+	creds := &config.Credentials{Auto: true}
+	opts := RunOpts{
+		Config: config.Config{Kits: map[string]*config.KitConfig{
+			"github": {Credentials: creds},
+		}},
+		Agent:      stubAgent{},
+		ProjectDir: projectDir,
+		Kits:       []*kit.Kit{testKit},
+	}
+
+	args, err := appendVolumes([]string{}, home, cname, opts)
+	if err != nil {
+		t.Fatalf("appendVolumes: %v", err)
+	}
+
+	// Verify HostPath is bind-mounted directly (not via staging dir)
+	found := false
+	for i, arg := range args {
+		if arg == "-v" && i+1 < len(args) && strings.Contains(args[i+1], ghDir) {
+			found = true
+			if !strings.HasSuffix(args[i+1], ":ro") {
+				t.Errorf("host path mount should be read-only, got: %s", args[i+1])
+			}
+			if strings.Contains(args[i+1], "credentials") {
+				t.Errorf("host path mount should not go through staging dir, got: %s", args[i+1])
+			}
+		}
+	}
+	if !found {
+		t.Fatal("host path credential mount not found")
+	}
+}
+
 func TestAppendVolumesCredentialFuncError(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()

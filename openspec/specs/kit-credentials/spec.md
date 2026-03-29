@@ -25,10 +25,14 @@ KitConfig SHALL support a `credentials` field that accepts three forms: the stri
 - **THEN** the kit's CredentialFunc SHALL NOT be called
 
 ### Requirement: Credential mount generation
-When a kit's CredentialFunc returns CredentialMount entries, the system SHALL write each mount's content to `~/.asylum/projects/<container-name>/credentials/` and bind-mount it read-only into the container at the specified destination path.
+When a kit's CredentialFunc returns CredentialMount entries, the system SHALL process each mount based on its type: if `HostPath` is set, the system SHALL bind-mount the host path directly into the container read-only at the specified `Destination`; if `Content` is set, the system SHALL write the content to `~/.asylum/projects/<container-name>/credentials/` and bind-mount it read-only at the specified `Destination`.
 
-#### Scenario: Credential file written and mounted
-- **WHEN** CredentialFunc returns a mount with content and destination `~/.m2/settings.xml`
+#### Scenario: Host path mount
+- **WHEN** CredentialFunc returns a mount with `HostPath` set and `Destination` set to `~/.config/gh/`
+- **THEN** the system SHALL bind-mount the host path directly at `~/.config/gh/` with mode `ro`
+
+#### Scenario: Content-based mount (existing behavior)
+- **WHEN** CredentialFunc returns a mount with `Content` set and `Destination` set to `~/.m2/settings.xml`
 - **THEN** the system SHALL write the content to `~/.asylum/projects/<cname>/credentials/settings.xml` and bind-mount it at `~/.m2/settings.xml` with mode `ro`
 
 #### Scenario: Credential mount ordering

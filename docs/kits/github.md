@@ -13,12 +13,15 @@ GitHub CLI (`gh`) for interacting with GitHub from within containers.
 ```yaml
 kits:
   github:
-    disabled: true    # disable this default-on kit
+    credentials: auto   # mount host gh config (read-only)
+    disabled: true       # disable this default-on kit
 ```
 
 ## Authentication
 
-`gh` auth is part of your agent config, which is seeded from your host on first run and persisted in `~/.asylum/agents/<agent>/`. If you're already authenticated with `gh` on your host, it should work inside the container.
+Enable `credentials: auto` to mount your host's `~/.config/gh/` directory read-only into the container. This shares your `gh` authentication without copying tokens — changes on the host (e.g. `gh auth login`) are reflected immediately.
+
+Without credentials enabled, `gh` auth is part of your agent config, which is seeded from your host on first run and persisted in `~/.asylum/agents/<agent>/`.
 
 To authenticate manually inside a container:
 

@@ -2,87 +2,119 @@ package config
 
 import (
 	"os"
-
-	"gopkg.in/yaml.v3"
+	"strings"
 )
 
 // SetAgentIsolation writes the config isolation level for an agent to the
-// given config file. Uses yaml.Node to preserve comments and formatting.
+// given config file. Uses text-based editing to preserve blank lines and comments.
 func SetAgentIsolation(path, agentName, level string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
+	lines := strings.Split(string(data), "\n")
 
-	var doc yaml.Node
-	if err := yaml.Unmarshal(data, &doc); err != nil {
-		return err
+	agentsIdx := findSection(lines, "agents")
+	if agentsIdx == -1 {
+		lines = append(lines, "", "agents:", "  "+agentName+":", "    config: "+level)
+		return writeLines(path, lines)
 	}
 
-	// doc is a Document node; its first child is the mapping
-	if doc.Kind != yaml.DocumentNode || len(doc.Content) == 0 {
-		return nil
-	}
-	root := doc.Content[0]
-	if root.Kind != yaml.MappingNode {
-		return nil
-	}
-
-	// Find or create "agents" key
-	agentsNode := findMapValue(root, "agents")
-	if agentsNode == nil {
-		root.Content = append(root.Content,
-			&yaml.Node{Kind: yaml.ScalarNode, Value: "agents"},
-			&yaml.Node{Kind: yaml.MappingNode},
-		)
-		agentsNode = root.Content[len(root.Content)-1]
+	agentIdx := findKey(lines, agentsIdx, agentName)
+	if agentIdx == -1 {
+		lines = insertAfter(lines, agentsIdx, 2, agentName+":")
+		agentIdx = agentsIdx + 1
+		lines = insertAfter(lines, agentIdx, 4, "config: "+level)
+		return writeLines(path, lines)
 	}
 
-	// Find or create the agent entry
-	agentNode := findMapValue(agentsNode, agentName)
-	if agentNode == nil {
-		agentsNode.Content = append(agentsNode.Content,
-			&yaml.Node{Kind: yaml.ScalarNode, Value: agentName},
-			&yaml.Node{Kind: yaml.MappingNode},
-		)
-		agentNode = agentsNode.Content[len(agentsNode.Content)-1]
-	}
-
-	// If the agent node is null/empty scalar, convert to mapping
-	if agentNode.Kind == yaml.ScalarNode {
-		agentNode.Kind = yaml.MappingNode
-		agentNode.Value = ""
-		agentNode.Tag = ""
-		agentNode.Content = nil
-	}
-
-	// Find or create "config" key inside the agent
-	configNode := findMapValue(agentNode, "config")
-	if configNode == nil {
-		agentNode.Content = append(agentNode.Content,
-			&yaml.Node{Kind: yaml.ScalarNode, Value: "config"},
-			&yaml.Node{Kind: yaml.ScalarNode, Value: level},
-		)
+	configIdx := findKey(lines, agentIdx, "config")
+	if configIdx != -1 {
+		indent := leadingSpaces(lines[configIdx])
+		lines[configIdx] = strings.Repeat(" ", indent) + "config: " + level
 	} else {
-		configNode.Value = level
+		parentIndent := leadingSpaces(lines[agentIdx])
+		lines = insertAfter(lines, agentIdx, parentIndent+2, "config: "+level)
 	}
 
-	out, err := yaml.Marshal(&doc)
+	return writeLines(path, lines)
+}
+
+// SetKitCredentials writes `credentials: <value>` under the named kit in a
+// config file. Uses text-based editing to preserve blank lines and comments.
+func SetKitCredentials(path, kitName, value string) error {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, out, 0644)
+	lines := strings.Split(string(data), "\n")
+
+	kitsIdx := findSection(lines, "kits")
+	if kitsIdx == -1 {
+		lines = append(lines, "", "kits:", "  "+kitName+":", "    credentials: "+value)
+		return writeLines(path, lines)
+	}
+
+	kitIdx := findKey(lines, kitsIdx, kitName)
+	if kitIdx == -1 {
+		lines = insertAfter(lines, kitsIdx, 2, kitName+":")
+		kitIdx = kitsIdx + 1
+		lines = insertAfter(lines, kitIdx, 4, "credentials: "+value)
+		return writeLines(path, lines)
+	}
+
+	credIdx := findKey(lines, kitIdx, "credentials")
+	if credIdx != -1 {
+		indent := leadingSpaces(lines[credIdx])
+		lines[credIdx] = strings.Repeat(" ", indent) + "credentials: " + value
+	} else {
+		parentIndent := leadingSpaces(lines[kitIdx])
+		lines = insertAfter(lines, kitIdx, parentIndent+2, "credentials: "+value)
+	}
+
+	return writeLines(path, lines)
 }
 
-// findMapValue finds the value node for a key in a mapping node.
-func findMapValue(mapping *yaml.Node, key string) *yaml.Node {
-	if mapping.Kind != yaml.MappingNode {
-		return nil
-	}
-	for i := 0; i+1 < len(mapping.Content); i += 2 {
-		if mapping.Content[i].Value == key {
-			return mapping.Content[i+1]
+// findSection returns the line index of a top-level key (e.g. "agents:").
+func findSection(lines []string, key string) int {
+	for i, line := range lines {
+		if strings.TrimSpace(line) == key+":" && leadingSpaces(line) == 0 {
+			return i
 		}
 	}
-	return nil
+	return -1
+}
+
+// findKey returns the line index of a key nested under parentIdx.
+// Searches only within the parent's indented block.
+func findKey(lines []string, parentIdx int, key string) int {
+	parentIndent := leadingSpaces(lines[parentIdx])
+	for i := parentIdx + 1; i < len(lines); i++ {
+		trimmed := strings.TrimSpace(lines[i])
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		indent := leadingSpaces(lines[i])
+		if indent <= parentIndent {
+			break
+		}
+		if strings.HasPrefix(trimmed, key+":") && indent == parentIndent+2 {
+			return i
+		}
+	}
+	return -1
+}
+
+// insertAfter inserts a line with the given indent after idx.
+func insertAfter(lines []string, idx, indent int, content string) []string {
+	line := strings.Repeat(" ", indent) + content
+	return append(lines[:idx+1], append([]string{line}, lines[idx+1:]...)...)
+}
+
+func leadingSpaces(s string) int {
+	return len(s) - len(strings.TrimLeft(s, " "))
+}
+
+func writeLines(path string, lines []string) error {
+	return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644)
 }

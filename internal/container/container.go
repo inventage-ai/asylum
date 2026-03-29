@@ -271,15 +271,19 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 			continue
 		}
 		for _, m := range mounts {
+			dst := config.ExpandTilde(m.Destination, home)
+			if m.HostPath != "" {
+				vol(m.HostPath, dst, "ro")
+				continue
+			}
 			if err := os.MkdirAll(credDir, 0755); err != nil {
 				return nil, fmt.Errorf("create credentials dir: %w", err)
 			}
-			filename := filepath.Base(config.ExpandTilde(m.Destination, home))
+			filename := filepath.Base(dst)
 			hostPath := filepath.Join(credDir, filename)
 			if err := os.WriteFile(hostPath, m.Content, 0600); err != nil {
 				return nil, fmt.Errorf("write credential file: %w", err)
 			}
-			dst := config.ExpandTilde(m.Destination, home)
 			vol(hostPath, dst, "ro")
 		}
 	}
