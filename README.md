@@ -42,6 +42,8 @@ asylum [flags] -- [args]      Start agent with extra args
 asylum [flags] shell          Interactive zsh shell
 asylum [flags] shell --admin  Admin shell with sudo notice
 asylum [flags] run <cmd>      Run command in container
+asylum cleanup                Remove Asylum images and cached data
+asylum version [--short]      Show version
 asylum ssh-init               Set up SSH keys for containers
 asylum self-update [version]  Update to latest (or specific) version
 ```
@@ -58,8 +60,8 @@ asylum self-update [version]  Update to latest (or specific) version
 | `-n`, `--new` | Start a fresh session (skip auto-resume) |
 | `--rebuild` | Force rebuild the Docker image |
 | `--skip-onboarding` | Skip project onboarding tasks for this run |
-| `--cleanup` | Remove Asylum images and cached data |
-| `--version` | Show version |
+| `--cleanup` | Alias for `cleanup` command |
+| `--version` | Alias for `version` command |
 
 Use `--` to pass extra flags to the agent (e.g. `asylum -- --verbose`). Use `run` to execute commands in the container (e.g. `asylum run python test.py`).
 

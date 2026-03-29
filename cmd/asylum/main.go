@@ -42,17 +42,22 @@ func main() {
 		return
 	}
 
+	// Flag aliases for subcommands
 	if flags.Version {
+		subcommand = "version"
+	}
+	if flags.Cleanup {
+		subcommand = "cleanup"
+	}
+
+	switch subcommand {
+	case "version":
 		fmt.Print(versionString(flags.Short))
 		return
-	}
-
-	if flags.Cleanup {
+	case "cleanup":
 		runCleanup()
 		return
-	}
-
-	if subcommand == "ssh-init" {
+	case "ssh-init":
 		if err := ssh.Init(); err != nil {
 			die("%v", err)
 		}
@@ -394,6 +399,23 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 		case arg == "-h" || arg == "--help":
 			flags.Help = true
 			i++
+		case arg == "version":
+			subcommand = "version"
+			i++
+			for i < len(args) {
+				if args[i] == "--short" {
+					flags.Short = true
+				} else {
+					return cliFlags{}, "", nil, fmt.Errorf("unknown flag %q for version", args[i])
+				}
+				i++
+			}
+		case arg == "cleanup":
+			subcommand = "cleanup"
+			i++
+			if i < len(args) {
+				return cliFlags{}, "", nil, fmt.Errorf("unexpected argument %q after cleanup", args[i])
+			}
 		case arg == "shell":
 			subcommand = "shell"
 			i++
@@ -718,6 +740,8 @@ Usage:
   asylum [flags] shell          Interactive zsh shell
   asylum [flags] shell --admin  Admin shell with sudo notice
   asylum [flags] run <cmd>      Run command in container
+  asylum cleanup                Remove Asylum images and cached data
+  asylum version [--short]      Show version
   asylum ssh-init               Initialize SSH directory
   asylum self-update [version]  Update to latest (or specific) version
   asylum self-update --dev      Update to latest dev build
@@ -734,8 +758,8 @@ Flags:
   -n, --new            Start new session (skip resume)
   --rebuild            Force rebuild Docker image
   --skip-onboarding    Skip project onboarding tasks
-  --cleanup            Remove Asylum images and cached data
-  --version            Show version
+  --cleanup            Alias for cleanup command
+  --version            Alias for version command
   -h, --help           Show this help
 `, version)
 }

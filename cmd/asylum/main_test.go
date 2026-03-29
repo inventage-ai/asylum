@@ -130,6 +130,36 @@ func TestParseArgs(t *testing.T) {
 			wantErr: true,
 		},
 
+		// version subcommand
+		{
+			name:    "version command",
+			args:    []string{"version"},
+			wantSub: "version",
+		},
+		{
+			name:      "version command with short",
+			args:      []string{"version", "--short"},
+			wantSub:   "version",
+			wantFlags: cliFlags{Short: true},
+		},
+		{
+			name:    "version command unknown flag errors",
+			args:    []string{"version", "--verbose"},
+			wantErr: true,
+		},
+
+		// cleanup subcommand
+		{
+			name:    "cleanup command",
+			args:    []string{"cleanup"},
+			wantSub: "cleanup",
+		},
+		{
+			name:    "cleanup command extra arg errors",
+			args:    []string{"cleanup", "extra"},
+			wantErr: true,
+		},
+
 		// -- separator
 		{
 			name:      "double dash passes args to agent",
