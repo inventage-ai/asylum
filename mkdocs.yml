@@ -1,0 +1,72 @@
+site_name: Asylum
+site_description: Docker sandbox for AI coding agents
+site_url: https://asylum.inventage.ai/
+repo_url: https://github.com/inventage-ai/asylum
+repo_name: inventage-ai/asylum
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Commands:
+    - Overview: commands/index.md
+    - shell: commands/shell.md
+    - run: commands/run.md
+    - cleanup: commands/cleanup.md
+    - version: commands/version.md
+    - ssh-init: commands/ssh-init.md
+    - self-update: commands/self-update.md
+  - Configuration:
+    - Overview: configuration/index.md
+    - CLI Flags: configuration/flags.md
+    - Packages: configuration/packages.md
+  - Kits:
+    - Overview: kits/index.md
+    - Node.js: kits/node.md
+    - Python: kits/python.md
+    - Java: kits/java.md
+    - Docker: kits/docker.md
+    - GitHub CLI: kits/github.md
+    - OpenSpec: kits/openspec.md
+    - Shell: kits/shell.md
+    - APT Packages: kits/apt.md
+  - Concepts:
+    - Overview: concepts/index.md
+    - Images: concepts/images.md
+    - Mounts: concepts/mounts.md
+    - Sessions: concepts/sessions.md
+    - Agents: concepts/agents.md
+  - Development:
+    - Building from Source: development/building-from-source.md

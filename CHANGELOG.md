@@ -7,6 +7,8 @@
 - Kit activation tiers: `TierAlwaysOn` (shell, node, title), `TierDefault` (docker, java, etc.), `TierOptIn` (apt) replace the boolean `DefaultOn`
 
 ### Added
+- Documentation site built with MkDocs Material, deployed to GitHub Pages via `.github/workflows/docs.yml`
+- Structured docs pages for commands, configuration, kits, concepts, and development
 - New `ports` kit (default-on): automatically allocates and forwards a range of high ports per project, with global tracking to prevent collisions
 - Kit config sync: new kits are detected on startup and inserted into existing `config.yaml` via `yaml.Node` tree manipulation (preserving comments and user edits)
 - Kit state tracking: `~/.asylum/state.json` tracks known kits; new kits trigger activation prompts in interactive mode

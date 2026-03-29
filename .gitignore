@@ -1,5 +1,6 @@
 .agentbox
 build/
+site/
 .asylum.local
 
 # Compiled class file
