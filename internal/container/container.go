@@ -109,7 +109,7 @@ func RunArgs(opts RunOpts) ([]string, error) {
 		if err != nil {
 			log.Warn("could not generate sandbox rules: %v", err)
 		} else {
-			containerClaude := opts.Agent.ContainerConfigDir()
+			containerClaude := config.ExpandTilde(opts.Agent.ContainerConfigDir(), home)
 			args = append(args,
 				"-v", filepath.Join(rulesDir, "asylum-sandbox.md")+":"+filepath.Join(containerClaude, "rules", "asylum-sandbox.md")+":ro",
 				"-v", filepath.Join(rulesDir, "asylum-reference.md")+":"+filepath.Join(containerClaude, "asylum-reference.md")+":ro",
