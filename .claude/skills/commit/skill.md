@@ -39,7 +39,25 @@ Create a commit from the current working tree changes.
    c. **Archive the change**:
       - Use the Skill tool to invoke `opsx:archive` for the change
 
-3. **Update CHANGELOG.md**
+3. **Update documentation**
+
+   If the changes being committed affect user-facing behavior (new features, new kits, changed config options, new commands, changed behavior), check whether the `docs/` directory needs updating.
+
+   Relevant docs areas:
+   - `docs/kits/` — one page per kit, plus `index.md` with the kit table
+   - `docs/configuration/` — config file format, options, flags
+   - `docs/commands/` — CLI commands and subcommands
+   - `docs/concepts/` — architecture concepts (agents, images, sessions, mounts)
+
+   Read the relevant existing doc pages and update them to reflect the changes. For new kits, create a new kit page following the style of existing ones and add a row to `docs/kits/index.md`. Stage any doc changes.
+
+   Skip doc updates for:
+   - Pure refactoring with no behavior change
+   - Test-only changes
+   - Internal implementation details not visible to users
+   - OpenSpec artifact files
+
+4. **Update CHANGELOG.md**
 
    Read `CHANGELOG.md` and the `## Unreleased` section.
 
@@ -56,7 +74,7 @@ Create a commit from the current working tree changes.
    - Documentation/comment updates
    - OpenSpec artifact files
 
-4. **Stage and commit**
+5. **Stage and commit**
 
    - Stage all relevant changed files (modified + new files related to the work)
    - Do NOT stage files that look like secrets (`.env`, credentials, etc.)
@@ -64,12 +82,13 @@ Create a commit from the current working tree changes.
    - Draft a concise commit message (1-2 sentences) that focuses on "why" not "what"
    - Create the commit
 
-5. **Show summary**
+6. **Show summary**
 
    Display:
    - Commit hash and message
    - Files included
    - Whether a change was archived
+   - Whether documentation was updated
    - Whether CHANGELOG was updated
    - `git status` after commit to confirm clean state
 
