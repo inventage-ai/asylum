@@ -21,19 +21,15 @@ The kit package SHALL provide an `AssembleRulesSnippets` function that concatena
 - **THEN** the assembled output SHALL be an empty string
 
 ### Requirement: Sandbox rules file generation
-The system SHALL generate a markdown rules file at `~/.asylum/projects/<container-name>/sandbox-rules.md` each time a new container is started. The file SHALL contain a core section followed by assembled kit rules snippets.
+The system SHALL generate a markdown rules file at `~/.asylum/projects/<container-name>/sandbox-rules.md` each time a new container is started. The file SHALL contain a core section, kit tools, kit snippets, and a section showing the project's allocated port range.
 
-#### Scenario: Container start with active kits
-- **WHEN** a container is started with java and node kits active
-- **THEN** the rules file SHALL contain the core sandbox context section AND the rules snippets from both kits
+#### Scenario: Container start with allocated ports
+- **WHEN** a container is started with ports 10000-10004 allocated
+- **THEN** the rules file SHALL contain a "Forwarded Ports" section listing the ports and explaining they are accessible from the host at `http://localhost:<port>`
 
-#### Scenario: Container start with no kits
-- **WHEN** a container is started with an empty kit list
-- **THEN** the rules file SHALL contain only the core sandbox context section
-
-#### Scenario: Container restart with changed kits
-- **WHEN** a container's config changes to add a new kit and the container is restarted
-- **THEN** the regenerated rules file SHALL reflect the updated kit set
+#### Scenario: Container start without ports kit
+- **WHEN** the ports kit is disabled
+- **THEN** the rules file SHALL NOT contain a "Forwarded Ports" section
 
 ### Requirement: Kit tools field
 The `Kit` struct SHALL have a `Tools []string` field. Kits that make commands available (but don't need prose to explain) SHALL populate it with command names. The kit package SHALL provide an `AggregateTools` function that collects tools from all kits into a deduplicated list of `"tool (kit-name)"` strings.

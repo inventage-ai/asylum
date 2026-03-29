@@ -114,6 +114,7 @@ Kits are modular bundles of tools, language runtimes, and configuration. A kit i
 | `node/npm` | npm caching and onboarding | No (activated with node) |
 | `node/pnpm` | pnpm package manager | No (activated with node) |
 | `node/yarn` | yarn package manager | No (activated with node) |
+| `ports` | Automatic port forwarding for web services | Yes |
 | `github` | GitHub CLI (gh) | Yes |
 | `openspec` | OpenSpec CLI | Yes |
 | `shell` | oh-my-zsh, tmux, direnv hooks | Yes |
@@ -124,13 +125,48 @@ Top-level kits like `java` automatically activate all their sub-kits (`java/mave
 
 ### Default-On Kits
 
-Some kits (`github`, `openspec`, `shell`) are active by default even without explicit config. To disable them:
+Some kits (`ports`, `github`, `openspec`, `shell`) are active by default even without explicit config. To disable them:
 
 ```yaml
 kits:
   github:
     disabled: true
 ```
+
+## Port Forwarding
+
+### Automatic Ports (ports kit)
+
+The `ports` kit (default-on) automatically allocates a range of high host ports per project and forwards them into the container. This allows agents to start web servers without manual port configuration.
+
+- **Default count**: 5 ports per project (configurable via `kits: { ports: { count: 10 } }`)
+- **Starting port**: 10000, allocated sequentially
+- **Persistence**: Port assignments are stored in `~/.asylum/ports.json` and reused across container restarts
+- **No collisions**: Each project gets a unique, non-overlapping range
+
+The allocated ports appear in the sandbox rules file so the agent knows which ports are available.
+
+To disable automatic port allocation:
+
+```yaml
+kits:
+  ports:
+    disabled: true
+```
+
+### Manual Ports
+
+In addition to (or instead of) automatic ports, you can manually forward specific ports:
+
+```yaml
+ports:
+  - "3000"        # same port on host and container
+  - "8080:80"     # host:container
+```
+
+Or via CLI: `asylum -p 3000 -p 8080:80`
+
+Manual ports and automatic ports work independently — both are forwarded.
 
 ## Volume Mounting
 

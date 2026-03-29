@@ -22,6 +22,7 @@ type KitConfig struct {
 	TabTitle            string   `yaml:"tab-title,omitempty"`
 	AllowAgentTermTitle *bool    `yaml:"allow-agent-terminal-title,omitempty"`
 	Build               []string `yaml:"build,omitempty"`
+	Count               int      `yaml:"count,omitempty"`
 }
 
 // AgentConfig holds per-agent configuration (empty for now, placeholder for future use).
@@ -149,6 +150,14 @@ func (c Config) KitPackages(kitName string) []string {
 		return kc.Packages
 	}
 	return nil
+}
+
+// PortCount returns the number of ports to allocate from the ports kit, default 5.
+func (c Config) PortCount() int {
+	if kc := c.KitOption("ports"); kc != nil && kc.Count > 0 {
+		return kc.Count
+	}
+	return 5
 }
 
 type CLIFlags struct {

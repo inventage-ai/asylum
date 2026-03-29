@@ -6,6 +6,7 @@
 - `cleanup` and `version` are now proper subcommands (`asylum cleanup`, `asylum version`); `--cleanup` and `--version` flags kept as aliases
 
 ### Added
+- New `ports` kit (default-on): automatically allocates and forwards a range of high ports per project, with global tracking to prevent collisions
 - Sandbox rules file injected into containers via `.claude/rules/asylum-sandbox.md`, giving Claude awareness of available tools, kits, sandbox constraints, and Asylum version
 - Detailed Asylum reference doc mounted at `.claude/asylum-reference.md` for on-demand troubleshooting and config guidance
 - Host IP accessible inside containers via `host.docker.internal` (`--add-host`)

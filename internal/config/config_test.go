@@ -165,6 +165,26 @@ func TestKitHelpers(t *testing.T) {
 	}
 }
 
+func TestPortCount(t *testing.T) {
+	// Default
+	cfg := Config{}
+	if got := cfg.PortCount(); got != 5 {
+		t.Errorf("default PortCount() = %d, want 5", got)
+	}
+
+	// Explicit
+	cfg = Config{Kits: map[string]*KitConfig{"ports": {Count: 10}}}
+	if got := cfg.PortCount(); got != 10 {
+		t.Errorf("explicit PortCount() = %d, want 10", got)
+	}
+
+	// Zero means default
+	cfg = Config{Kits: map[string]*KitConfig{"ports": {Count: 0}}}
+	if got := cfg.PortCount(); got != 5 {
+		t.Errorf("zero PortCount() = %d, want 5", got)
+	}
+}
+
 func TestParseVolume(t *testing.T) {
 	home := "/home/user"
 	tests := []struct {

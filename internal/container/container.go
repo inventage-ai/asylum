@@ -39,8 +39,9 @@ type RunOpts struct {
 	ImageTag   string
 	ProjectDir string
 	CacheDirs  map[string]string // tool name → container path
-	Kits       []*kit.Kit
-	Version    string
+	Kits           []*kit.Kit
+	Version        string
+	AllocatedPorts []int
 }
 
 func RunArgs(opts RunOpts) ([]string, error) {
@@ -75,6 +76,10 @@ func RunArgs(opts RunOpts) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	for _, p := range opts.AllocatedPorts {
+		ps := strconv.Itoa(p)
+		args = append(args, "-p", ps+":"+ps)
+	}
 
 	if envFile := filepath.Join(opts.ProjectDir, ".env"); fileExists(envFile) {
 		args = append(args, "--env-file", envFile)
@@ -82,7 +87,7 @@ func RunArgs(opts RunOpts) ([]string, error) {
 
 	// Generate and mount sandbox rules for Claude
 	if opts.Agent.Name() == "claude" {
-		rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Version)
+		rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Version, opts.AllocatedPorts)
 		if err != nil {
 			log.Warn("could not generate sandbox rules: %v", err)
 		} else {
@@ -282,7 +287,7 @@ git, docker (CLI), curl, wget, jq, yq, ripgrep (rg), fd, make, cmake, gcc/g++, v
 
 // generateSandboxRules writes the rules file and reference doc to
 // ~/.asylum/projects/<container>/ and returns the directory path.
-func generateSandboxRules(home, containerName string, kits []*kit.Kit, version string) (string, error) {
+func generateSandboxRules(home, containerName string, kits []*kit.Kit, version string, allocatedPorts []int) (string, error) {
 	dir := filepath.Join(home, ".asylum", "projects", containerName)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("create rules dir: %w", err)
@@ -295,6 +300,15 @@ func generateSandboxRules(home, containerName string, kits []*kit.Kit, version s
 		b.WriteString("\n## Kit Tools\n")
 		b.WriteString(strings.Join(tools, ", "))
 		b.WriteByte('\n')
+	}
+
+	if len(allocatedPorts) > 0 {
+		b.WriteString("\n## Forwarded Ports\n")
+		b.WriteString("These ports are forwarded from the container to the host. ")
+		b.WriteString("Start web servers on any of these ports and the user can access them at http://localhost:<port>\n")
+		for _, p := range allocatedPorts {
+			fmt.Fprintf(&b, "- %d\n", p)
+		}
 	}
 
 	if kitSnippets := kit.AssembleRulesSnippets(kits); kitSnippets != "" {

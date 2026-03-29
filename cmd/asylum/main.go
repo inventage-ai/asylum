@@ -18,6 +18,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/onboarding"
 	"github.com/inventage-ai/asylum/internal/kit"
+	"github.com/inventage-ai/asylum/internal/ports"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/ssh"
 	"github.com/inventage-ai/asylum/internal/term"
@@ -187,14 +188,25 @@ func main() {
 			die("%v", err)
 		}
 
+		var allocatedPorts []int
+		if cfg.KitActive("ports") {
+			pr, err := ports.Allocate(projectDir, cname, cfg.PortCount())
+			if err != nil {
+				log.Warn("port allocation: %v", err)
+			} else {
+				allocatedPorts = pr.Ports()
+			}
+		}
+
 		runArgs, err := container.RunArgs(container.RunOpts{
-			Config:     cfg,
-			Agent:      a,
-			ImageTag:   imageTag,
-			ProjectDir: projectDir,
-			CacheDirs:  cacheDirs,
-			Kits:       allKits,
-			Version:    version,
+			Config:         cfg,
+			Agent:          a,
+			ImageTag:       imageTag,
+			ProjectDir:     projectDir,
+			CacheDirs:      cacheDirs,
+			Kits:           allKits,
+			Version:        version,
+			AllocatedPorts: allocatedPorts,
 		})
 		if err != nil {
 			die("%v", err)
@@ -654,6 +666,7 @@ func removeProjectsDir(dir string) error {
 				continue
 			}
 		}
+		ports.ReleaseContainer(e.Name())
 		os.RemoveAll(filepath.Join(dir, e.Name()))
 	}
 	if skipped == 0 {

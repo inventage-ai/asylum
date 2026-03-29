@@ -1041,7 +1041,7 @@ func TestGenerateSandboxRules(t *testing.T) {
 		{Name: "python"}, // no snippet, no tools
 	}
 
-	dir, err := generateSandboxRules(home, cname, kits, "1.2.3")
+	dir, err := generateSandboxRules(home, cname, kits, "1.2.3", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1100,7 +1100,7 @@ func TestGenerateSandboxRules_NoKits(t *testing.T) {
 	home := t.TempDir()
 	cname := "asylum-rules-nokits"
 
-	dir, err := generateSandboxRules(home, cname, nil, "dev")
+	dir, err := generateSandboxRules(home, cname, nil, "dev", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1166,6 +1166,88 @@ func TestRunArgsSandboxRulesMount(t *testing.T) {
 	}
 	if !foundRef {
 		t.Errorf("reference doc mount not found in args: %v", args)
+	}
+}
+
+func TestGenerateSandboxRules_WithPorts(t *testing.T) {
+	home := t.TempDir()
+	cname := "asylum-ports-test"
+
+	dir, err := generateSandboxRules(home, cname, nil, "dev", []int{10000, 10001, 10002})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "sandbox-rules.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+
+	if !strings.Contains(content, "## Forwarded Ports") {
+		t.Error("missing Forwarded Ports section")
+	}
+	if !strings.Contains(content, "- 10000") {
+		t.Error("missing port 10000")
+	}
+	if !strings.Contains(content, "- 10002") {
+		t.Error("missing port 10002")
+	}
+	if !strings.Contains(content, "http://localhost:<port>") {
+		t.Error("missing localhost instructions")
+	}
+}
+
+func TestGenerateSandboxRules_WithoutPorts(t *testing.T) {
+	home := t.TempDir()
+	cname := "asylum-noports-test"
+
+	dir, err := generateSandboxRules(home, cname, nil, "dev", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "sandbox-rules.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(data), "Forwarded Ports") {
+		t.Error("should not have Forwarded Ports section when no ports allocated")
+	}
+}
+
+func TestRunArgsAllocatedPorts(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	projectDir := t.TempDir()
+	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
+	os.MkdirAll(agentConfigDir, 0755)
+
+	opts := RunOpts{
+		Config:         config.Config{},
+		Agent:          stubAgent{},
+		ImageTag:       "asylum:test",
+		ProjectDir:     projectDir,
+		AllocatedPorts: []int{10000, 10001, 10002},
+	}
+
+	args, err := RunArgs(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	found := 0
+	for i, arg := range args {
+		if arg == "-p" && i+1 < len(args) {
+			next := args[i+1]
+			if next == "10000:10000" || next == "10001:10001" || next == "10002:10002" {
+				found++
+			}
+		}
+	}
+	if found != 3 {
+		t.Errorf("expected 3 allocated port mappings, found %d in args: %v", found, args)
 	}
 }
 
