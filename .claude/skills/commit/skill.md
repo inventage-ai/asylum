@@ -61,11 +61,16 @@ Create a commit from the current working tree changes.
 
    Read `CHANGELOG.md` and the `## Unreleased` section.
 
-   Review the changes being committed. If they represent a user-facing change (new feature, bug fix, behavior change), check whether the Unreleased section already mentions it.
+   Review the changes being committed. If they represent a user-facing change (new feature, bug fix, behavior change), update the Unreleased section following these rules:
+
+   - **Merge, don't duplicate**: If an existing entry covers the same feature or area, update that entry to reflect the new state rather than adding a separate line. For example, if "Added: Kit credential system" already exists and this commit enhances it, update that entry — don't add a second one.
+   - **Don't log fixes for unreleased features**: If the commit fixes a bug in something that was added since the last release (i.e., users on the last release never saw the bug), don't add a Fixed entry. Instead, update the relevant Added/Changed entry to describe the correct behavior, or simply omit it if the Added entry already implies correct behavior.
+   - **Don't log intermediate changes**: If the commit changes how an unreleased feature works, update the original Added entry rather than adding a Changed entry. The changelog should describe the final state, not the development history.
+   - **Order by importance**: When adding new entries, place them by user impact — breaking changes and major features first within each category.
 
    If a significant change is missing:
    - Add a concise entry under the appropriate category (Added/Changed/Fixed/Removed)
-   - Show the user what was added
+   - Show the user what was added or updated
    - Stage `CHANGELOG.md`
 
    Skip CHANGELOG updates for:
