@@ -29,7 +29,7 @@ func (Opencode) AsylumConfigDir() string    { return "~/.asylum/agents/opencode"
 
 func (Opencode) EnvVars() map[string]string { return nil }
 
-func (Opencode) HasSession(_ string) bool { return false }
+func (Opencode) HasSession(_, _ string) bool { return false }
 
 func (Opencode) Command(resume bool, extraArgs []string) []string {
 	if resume {

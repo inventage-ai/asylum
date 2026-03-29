@@ -41,7 +41,7 @@ func (s stubAgent) AsylumConfigDir() string {
 	return "~/.asylum/agents/stub"
 }
 func (s stubAgent) EnvVars() map[string]string            { return s.envVars }
-func (s stubAgent) HasSession(projectPath string) bool    { return s.hasSession }
+func (s stubAgent) HasSession(_, _ string) bool            { return s.hasSession }
 func (s stubAgent) Command(resume bool, extra []string) []string {
 	if resume {
 		return append([]string{"stub-resume"}, extra...)

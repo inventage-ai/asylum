@@ -8,7 +8,7 @@
 - Rocket.Chat release notification via webhook after successful release and docs deployment
 - Kit credential system: kits can define credential providers that filter host credentials by project needs. Maven support included — auto-discovers server IDs from `pom.xml` and generates a scoped `settings.xml` with only matching entries from `~/.m2/settings.xml`
 - Onboarding wizard: config isolation and credential prompts are now grouped into a single multi-step TUI wizard with a tab bar showing progress — fires for any unconfigured option, including v1 migrations
-- Claude config isolation: choose between `shared` (host config), `isolated` (current default), or `project` (per-project) via onboarding wizard or `agents.claude.config` in config
+- Claude config isolation: choose between `shared` (host config), `isolated` (current default), or `project` (per-project) via onboarding wizard or `agents.claude.config` in config. Session detection (`--continue`) works correctly across all isolation modes
 - TUI prompt framework using Bubble Tea for interactive single-choice, multi-choice, and wizard prompts
 - `cleanup --all` for global cleanup (all images, volumes, cached data) with a confirmation prompt showing exactly what will be deleted
 - Documentation site built with MkDocs Material, deployed to GitHub Pages via `.github/workflows/docs.yml`

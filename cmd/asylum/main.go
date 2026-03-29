@@ -299,9 +299,12 @@ func main() {
 
 	// Write session marker for agent mode
 	if containerMode == container.ModeAgent {
-		if c, ok := a.(interface{ WriteMarker(string) error }); ok {
-			if err := c.WriteMarker(projectDir); err != nil {
-				log.Error("write session marker: %v", err)
+		if c, ok := a.(interface{ WriteMarker(string, string) error }); ok {
+			configDir, err := agent.ResolveConfigDir(a, cfg.AgentIsolation(a.Name()), cname)
+			if err == nil {
+				if err := c.WriteMarker(configDir, projectDir); err != nil {
+					log.Error("write session marker: %v", err)
+				}
 			}
 		}
 	}

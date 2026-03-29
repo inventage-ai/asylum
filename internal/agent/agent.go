@@ -3,6 +3,7 @@ package agent
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -16,7 +17,7 @@ type Agent interface {
 	ContainerConfigDir() string
 	AsylumConfigDir() string
 	EnvVars() map[string]string
-	HasSession(projectPath string) bool
+	HasSession(configDir, projectPath string) bool
 	Command(resume bool, extraArgs []string) []string
 }
 
@@ -39,12 +40,21 @@ func wrapZsh(cmd string) []string {
 	return []string{"zsh", "-c", "source ~/.zshrc && exec " + cmd}
 }
 
-// resolveConfigDir expands the agent's AsylumConfigDir (which uses ~ prefix)
-// to an absolute path.
-func resolveConfigDir(a Agent) (string, error) {
+// ResolveConfigDir returns the host-side directory that backs the agent's
+// config inside the container. Which directory is used depends on the
+// isolation mode: "shared" → native config dir, "project" → per-project
+// dir, default ("isolated") → asylum agents dir.
+func ResolveConfigDir(a Agent, isolation, containerName string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return config.ExpandTilde(a.AsylumConfigDir(), home), nil
+	switch isolation {
+	case "shared":
+		return config.ExpandTilde(a.NativeConfigDir(), home), nil
+	case "project":
+		return filepath.Join(home, ".asylum", "projects", containerName, a.Name()+"-config"), nil
+	default:
+		return config.ExpandTilde(a.AsylumConfigDir(), home), nil
+	}
 }

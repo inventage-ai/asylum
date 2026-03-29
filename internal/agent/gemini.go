@@ -31,11 +31,7 @@ func (Gemini) AsylumConfigDir() string    { return "~/.asylum/agents/gemini" }
 
 func (Gemini) EnvVars() map[string]string { return nil }
 
-func (g Gemini) HasSession(projectPath string) bool {
-	configDir, err := resolveConfigDir(g)
-	if err != nil {
-		return false
-	}
+func (Gemini) HasSession(configDir, projectPath string) bool {
 	tmpDir := filepath.Join(configDir, "tmp")
 	entries, err := os.ReadDir(tmpDir)
 	if err != nil {

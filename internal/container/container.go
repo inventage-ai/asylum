@@ -314,18 +314,16 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 
 	// Agent config — mount depends on isolation level
 	containerConfigDir := config.ExpandTilde(opts.Agent.ContainerConfigDir(), home)
-	switch opts.Config.AgentIsolation(opts.Agent.Name()) {
-	case "shared":
-		nativeDir := config.ExpandTilde(opts.Agent.NativeConfigDir(), home)
-		vol(nativeDir, containerConfigDir, "")
-	case "project":
-		projConfigDir := filepath.Join(home, ".asylum", "projects", cname, opts.Agent.Name()+"-config")
-		os.MkdirAll(projConfigDir, 0755)
-		vol(projConfigDir, containerConfigDir, "")
-	default: // "isolated" or empty
-		agentDir := config.ExpandTilde(opts.Agent.AsylumConfigDir(), home)
-		vol(agentDir, containerConfigDir, "")
+	hostConfigDir, err := agent.ResolveConfigDir(
+		opts.Agent,
+		opts.Config.AgentIsolation(opts.Agent.Name()),
+		cname,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("resolve agent config dir: %w", err)
 	}
+	os.MkdirAll(hostConfigDir, 0755)
+	vol(hostConfigDir, containerConfigDir, "")
 
 	// Direnv
 	envrc := filepath.Join(opts.ProjectDir, ".envrc")
@@ -506,7 +504,12 @@ func ExecArgs(opts ExecOpts) []string {
 }
 
 func agentCommand(opts ExecOpts) []string {
-	resume := !opts.NewSession && opts.Agent.HasSession(opts.ProjectDir)
+	configDir, err := agent.ResolveConfigDir(
+		opts.Agent,
+		opts.Config.AgentIsolation(opts.Agent.Name()),
+		opts.ContainerName,
+	)
+	resume := err == nil && !opts.NewSession && opts.Agent.HasSession(configDir, opts.ProjectDir)
 	extra := opts.ExtraArgs
 	if opts.Config.KitActive("title") && opts.Agent.Name() == "claude" && !resume {
 		extra = append([]string{"--name", filepath.Base(opts.ProjectDir)}, extra...)

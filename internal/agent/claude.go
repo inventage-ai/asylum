@@ -36,11 +36,7 @@ func (Claude) EnvVars() map[string]string {
 	}
 }
 
-func (c Claude) HasSession(projectPath string) bool {
-	configDir, err := resolveConfigDir(c)
-	if err != nil {
-		return false
-	}
+func (Claude) HasSession(configDir, projectPath string) bool {
 	// Claude encodes project paths by replacing "/" with "-"
 	encoded := strings.ReplaceAll(projectPath, "/", "-")
 	projDir := filepath.Join(configDir, "projects", encoded)

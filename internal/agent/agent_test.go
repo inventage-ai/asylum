@@ -7,6 +7,34 @@ import (
 	"testing"
 )
 
+func TestResolveConfigDir(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("HOME", dir)
+
+	a := Claude{}
+	tests := []struct {
+		isolation string
+		cname     string
+		want      string
+	}{
+		{"shared", "asylum-abc123-proj", filepath.Join(dir, ".claude")},
+		{"project", "asylum-abc123-proj", filepath.Join(dir, ".asylum", "projects", "asylum-abc123-proj", "claude-config")},
+		{"isolated", "asylum-abc123-proj", filepath.Join(dir, ".asylum", "agents", "claude")},
+		{"", "asylum-abc123-proj", filepath.Join(dir, ".asylum", "agents", "claude")},
+	}
+	for _, tt := range tests {
+		t.Run("isolation="+tt.isolation, func(t *testing.T) {
+			got, err := ResolveConfigDir(a, tt.isolation, tt.cname)
+			if err != nil {
+				t.Fatalf("ResolveConfigDir: %v", err)
+			}
+			if got != tt.want {
+				t.Errorf("got %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGet(t *testing.T) {
 	for _, name := range []string{"claude", "codex", "echo", "gemini", "opencode"} {
 		a, err := Get(name)
@@ -104,44 +132,45 @@ func assertZshWrapped(t *testing.T, cmd []string, wantParts []string) {
 
 func TestClaudeHasSession(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HOME", dir)
 
 	a := Claude{}
-	projectsDir := filepath.Join(dir, ".asylum", "agents", "claude", "projects")
+	configDir := filepath.Join(dir, "config")
 
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Error("should be false when projects dir doesn't exist")
 	}
+
+	projectsDir := filepath.Join(configDir, "projects")
 
 	// Directory for a different project — should not match
 	os.MkdirAll(filepath.Join(projectsDir, "-other-project"), 0755)
 	os.WriteFile(filepath.Join(projectsDir, "-other-project", "session.jsonl"), []byte("data"), 0644)
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Error("should be false when only a different project has sessions")
 	}
 
 	// Matching project directory but no .jsonl files
 	matchDir := filepath.Join(projectsDir, "-some-project")
 	os.MkdirAll(matchDir, 0755)
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Error("should be false when matching project dir has no .jsonl files")
 	}
 
 	// Matching project with a .jsonl file
 	os.WriteFile(filepath.Join(matchDir, "abc123.jsonl"), []byte("data"), 0644)
-	if !a.HasSession("/some/project") {
+	if !a.HasSession(configDir, "/some/project") {
 		t.Error("should be true when matching project dir has .jsonl files")
 	}
 }
 
 func TestGeminiHasSession(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HOME", dir)
 
 	a := Gemini{}
-	tmpDir := filepath.Join(dir, ".asylum", "agents", "gemini", "tmp")
+	configDir := filepath.Join(dir, "config")
+	tmpDir := filepath.Join(configDir, "tmp")
 
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Error("should be false when tmp dir doesn't exist")
 	}
 
@@ -150,7 +179,7 @@ func TestGeminiHasSession(t *testing.T) {
 	os.MkdirAll(filepath.Join(otherDir, "chats"), 0755)
 	os.WriteFile(filepath.Join(otherDir, ".project_root"), []byte("/other/project\n"), 0644)
 	os.WriteFile(filepath.Join(otherDir, "chats", "session.json"), []byte("{}"), 0644)
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Error("should be false when .project_root points elsewhere")
 	}
 
@@ -158,13 +187,13 @@ func TestGeminiHasSession(t *testing.T) {
 	matchDir := filepath.Join(tmpDir, "project")
 	os.MkdirAll(filepath.Join(matchDir, "chats"), 0755)
 	os.WriteFile(filepath.Join(matchDir, ".project_root"), []byte("/some/project\n"), 0644)
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Error("should be false when chats dir is empty")
 	}
 
 	// Matching .project_root with chat files
 	os.WriteFile(filepath.Join(matchDir, "chats", "session.json"), []byte("{}"), 0644)
-	if !a.HasSession("/some/project") {
+	if !a.HasSession(configDir, "/some/project") {
 		t.Error("should be true when matching project has chat files")
 	}
 }
@@ -174,10 +203,10 @@ func TestGeminiHasSessionContinuesAfterReadDirError(t *testing.T) {
 		t.Skip("root ignores permission bits")
 	}
 	dir := t.TempDir()
-	t.Setenv("HOME", dir)
 
 	a := Gemini{}
-	tmpDir := filepath.Join(dir, ".asylum", "agents", "gemini", "tmp")
+	configDir := filepath.Join(dir, "config")
+	tmpDir := filepath.Join(configDir, "tmp")
 
 	// First dir: matches project but chats/ is unreadable
 	badDir := filepath.Join(tmpDir, "bad")
@@ -192,33 +221,33 @@ func TestGeminiHasSessionContinuesAfterReadDirError(t *testing.T) {
 	os.WriteFile(filepath.Join(goodDir, ".project_root"), []byte("/some/project\n"), 0644)
 	os.WriteFile(filepath.Join(goodDir, "chats", "session.json"), []byte("{}"), 0644)
 
-	if !a.HasSession("/some/project") {
+	if !a.HasSession(configDir, "/some/project") {
 		t.Error("should be true: ReadDir error on first match should not stop scan")
 	}
 }
 
 func TestCodexHasSession(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HOME", dir)
 
 	a := Codex{}
-	projectsDir := filepath.Join(dir, ".asylum", "agents", "codex", "projects")
+	configDir := filepath.Join(dir, "config")
+	projectsDir := filepath.Join(configDir, "projects")
 
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Error("should be false when marker does not exist")
 	}
 
 	// Marker for a different project — should not match
 	os.MkdirAll(filepath.Join(projectsDir, "-other-project"), 0755)
 	os.WriteFile(filepath.Join(projectsDir, "-other-project", ".has_session"), []byte(""), 0644)
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Error("should be false when only a different project has a marker")
 	}
 
 	// Marker for this project
 	os.MkdirAll(filepath.Join(projectsDir, "-some-project"), 0755)
 	os.WriteFile(filepath.Join(projectsDir, "-some-project", ".has_session"), []byte(""), 0644)
-	if !a.HasSession("/some/project") {
+	if !a.HasSession(configDir, "/some/project") {
 		t.Error("should be true when marker exists for this project")
 	}
 }
@@ -247,24 +276,24 @@ func TestEchoCommand(t *testing.T) {
 
 func TestCodexWriteMarker(t *testing.T) {
 	dir := t.TempDir()
-	t.Setenv("HOME", dir)
 
 	a := Codex{}
+	configDir := filepath.Join(dir, "config")
 
-	if a.HasSession("/some/project") {
+	if a.HasSession(configDir, "/some/project") {
 		t.Fatal("precondition: should be false before WriteMarker")
 	}
 
-	if err := a.WriteMarker("/some/project"); err != nil {
+	if err := a.WriteMarker(configDir, "/some/project"); err != nil {
 		t.Fatalf("WriteMarker: %v", err)
 	}
 
-	if !a.HasSession("/some/project") {
+	if !a.HasSession(configDir, "/some/project") {
 		t.Error("should be true after WriteMarker")
 	}
 
 	// Writing again should be idempotent
-	if err := a.WriteMarker("/some/project"); err != nil {
+	if err := a.WriteMarker(configDir, "/some/project"); err != nil {
 		t.Errorf("WriteMarker second call: %v", err)
 	}
 }
