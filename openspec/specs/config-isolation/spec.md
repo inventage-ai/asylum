@@ -16,15 +16,15 @@ The system SHALL support three agent config isolation levels: `shared` (host con
 - **THEN** `~/.asylum/projects/<container>/claude-config/` is mounted into the container
 
 ### Requirement: First-run isolation prompt
-When the isolation level is not configured for Claude, the system SHALL prompt the user to select one before the first container start.
+When the isolation level is not configured for Claude, the system SHALL include an isolation selection step in the onboarding wizard instead of showing a standalone prompt. The step SHALL present the same three options (shared, isolated, project) with "isolated" as the default.
 
 #### Scenario: First run with no config
 - **WHEN** asylum starts with Claude agent and no `agents.claude.config` value
-- **THEN** a TUI select prompt appears with the three isolation options, defaulting to "isolated"
+- **THEN** an isolation step appears in the onboarding wizard with the three isolation options, defaulting to "isolated"
 
 #### Scenario: Config already set
 - **WHEN** `agents.claude.config` is already set to a valid value
-- **THEN** no prompt is shown
+- **THEN** no isolation step appears in the wizard
 
 #### Scenario: Non-interactive first run
 - **WHEN** asylum starts non-interactively with no config value

@@ -1,15 +1,4 @@
-## ADDED Requirements
-
-### Requirement: First-run detection
-The system SHALL detect a first-run condition by checking whether `~/.asylum/agents/` directory exists. If it does not exist, the system SHALL trigger the first-run onboarding flow before loading config. The `agents/` directory is created by `EnsureAgentConfig` on the first actual run, making it a reliable signal that distinguishes fresh installs from existing users (since the installer only creates `~/.asylum/bin/`).
-
-#### Scenario: First run — agents directory does not exist
-- **WHEN** the user runs `asylum` and `~/.asylum/agents/` does not exist
-- **THEN** the system SHALL run the first-run onboarding flow before proceeding
-
-#### Scenario: Subsequent run — agents directory exists
-- **WHEN** the user runs `asylum` and `~/.asylum/agents/` already exists
-- **THEN** the system SHALL skip first-run onboarding and proceed normally
+## MODIFIED Requirements
 
 ### Requirement: Credential file detection
 The system SHALL include a credentials step in the onboarding wizard when any active kit has credential support (non-nil CredentialFunc) but no `credentials` config is set. The step SHALL be a multiselect listing all credential-capable kits. Detection is based on "not configured" status, not first-run detection.
@@ -45,9 +34,13 @@ When the user selects kits in the credential wizard step, the system SHALL write
 - **WHEN** the user cancels the wizard before the credential step
 - **THEN** the system SHALL not write any credential config
 
-### Requirement: Config file generation
-When the user accepts credential support for kits, the system SHALL write `credentials: auto` under each selected kit in `~/.asylum/config.yaml`, using yaml.Node manipulation to preserve existing config formatting and comments.
+### Requirement: First-run detection
+The system SHALL detect a first-run condition by checking whether `~/.asylum/agents/` directory exists. If it does not exist, the system SHALL trigger the first-run onboarding flow before loading config. The `agents/` directory is created by `EnsureAgentConfig` on the first actual run, making it a reliable signal that distinguishes fresh installs from existing users (since the installer only creates `~/.asylum/bin/`).
 
-#### Scenario: Config updated for selected kits
-- **WHEN** the user selects Java/Maven for credential support
-- **THEN** `~/.asylum/config.yaml` SHALL contain `credentials: auto` under the java kit entry
+#### Scenario: First run — agents directory does not exist
+- **WHEN** the user runs `asylum` and `~/.asylum/agents/` does not exist
+- **THEN** the system SHALL run the first-run onboarding flow before proceeding
+
+#### Scenario: Subsequent run — agents directory exists
+- **WHEN** the user runs `asylum` and `~/.asylum/agents/` already exists
+- **THEN** the system SHALL skip first-run onboarding and proceed normally

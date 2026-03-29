@@ -108,22 +108,11 @@ func TestSetKitCredentials_NoKitsSection(t *testing.T) {
 	}
 }
 
-func TestCutKitName(t *testing.T) {
-	tests := []struct {
-		name     string
-		parent   string
-		child    string
-		hasChild bool
-	}{
-		{"java", "java", "", false},
-		{"java/maven", "java", "maven", true},
-		{"node/npm", "node", "npm", true},
-	}
-	for _, tt := range tests {
-		parent, child, hasChild := cutKitName(tt.name)
-		if parent != tt.parent || child != tt.child || hasChild != tt.hasChild {
-			t.Errorf("cutKitName(%q) = (%q, %q, %v), want (%q, %q, %v)",
-				tt.name, parent, child, hasChild, tt.parent, tt.child, tt.hasChild)
-		}
+func TestRunNewUser(t *testing.T) {
+	home := t.TempDir()
+	// No agents dir — this is a new user, but Run should succeed
+	// (credential prompting moved to onboarding wizard)
+	if err := Run(home); err != nil {
+		t.Fatal(err)
 	}
 }

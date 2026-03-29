@@ -204,22 +204,8 @@ func main() {
 
 	// If no container running, build images and start one detached
 	if !docker.IsRunning(cname) {
-		// Prompt for config isolation if not set (Claude agent only for now)
-		if cfg.AgentIsolation(a.Name()) == "" && a.Name() == "claude" {
-			level := promptConfigIsolation()
-			cfgPath := filepath.Join(home, ".asylum", "config.yaml")
-			if err := config.SetAgentIsolation(cfgPath, a.Name(), level); err != nil {
-				log.Error("save isolation config: %v", err)
-			}
-			// Apply to current config
-			if cfg.Agents == nil {
-				cfg.Agents = map[string]*config.AgentConfig{}
-			}
-			if cfg.Agents[a.Name()] == nil {
-				cfg.Agents[a.Name()] = &config.AgentConfig{}
-			}
-			cfg.Agents[a.Name()].Config = level
-		}
+		// Onboarding wizard: prompt for any unconfigured options (isolation, credentials)
+		runOnboarding(&cfg, a, allKits, home)
 
 		// Ensure agent config exists — behavior depends on isolation level
 		switch cfg.AgentIsolation(a.Name()) {
@@ -916,18 +902,106 @@ func collectOnboarding(cfg config.Config) map[string]bool {
 	return m
 }
 
-func promptConfigIsolation() string {
-	options := []tui.Option{
-		{Label: "Shared with host", Description: "Use your host ~/.claude directly. Changes sync both ways."},
-		{Label: "Isolated (recommended)", Description: "Separate from host, shared across projects. This is the current default."},
-		{Label: "Project-isolated", Description: "Separate config per project. No state shared between projects."},
+// runOnboarding collects all pending onboarding steps and presents them
+// as a single wizard flow. Each step fires when its config is not yet set.
+func runOnboarding(cfg *config.Config, a agent.Agent, allKits []*kit.Kit, home string) {
+	type applyFunc func(result tui.StepResult)
+	var steps []tui.WizardStep
+	var appliers []applyFunc
+
+	// Step: config isolation (if not set for Claude)
+	if a.Name() == "claude" && cfg.AgentIsolation(a.Name()) == "" {
+		steps = append(steps, tui.WizardStep{
+			Title: "Config Isolation",
+			Kind:  tui.StepSelect,
+			Options: []tui.Option{
+				{Label: "Shared with host", Description: "Use your host ~/.claude directly. Changes sync both ways."},
+				{Label: "Isolated (recommended)", Description: "Separate from host, shared across projects. This is the current default."},
+				{Label: "Project-isolated", Description: "Separate config per project. No state shared between projects."},
+			},
+			DefaultIdx: 1,
+		})
+		appliers = append(appliers, func(result tui.StepResult) {
+			levels := []string{"shared", "isolated", "project"}
+			level := levels[result.SelectIdx]
+			cfgPath := filepath.Join(home, ".asylum", "config.yaml")
+			if err := config.SetAgentIsolation(cfgPath, a.Name(), level); err != nil {
+				log.Error("save isolation config: %v", err)
+			}
+			if cfg.Agents == nil {
+				cfg.Agents = map[string]*config.AgentConfig{}
+			}
+			if cfg.Agents[a.Name()] == nil {
+				cfg.Agents[a.Name()] = &config.AgentConfig{}
+			}
+			cfg.Agents[a.Name()].Config = level
+		})
 	}
-	idx, err := tui.Select("How should Claude's config be managed?", options, 1)
+
+	// Step: kit credentials (if any active kit has CredentialFunc but no credentials config)
+	var credKits []*kit.Kit
+	for _, k := range allKits {
+		if k.CredentialFunc == nil {
+			continue
+		}
+		parent, _, _ := strings.Cut(k.Name, "/")
+		if cfg.KitCredentialMode(parent) == "" {
+			credKits = append(credKits, k)
+		}
+	}
+	if len(credKits) > 0 {
+		options := make([]tui.Option, len(credKits))
+		defaults := make([]int, len(credKits))
+		for i, k := range credKits {
+			label := k.CredentialLabel
+			if label == "" {
+				label = k.Name
+			}
+			options[i] = tui.Option{Label: label, Description: "Filters credentials by project needs"}
+			defaults[i] = i
+		}
+		steps = append(steps, tui.WizardStep{
+			Title:      "Credentials",
+			Kind:       tui.StepMultiSelect,
+			Options:    options,
+			DefaultSel: defaults,
+		})
+		appliers = append(appliers, func(result tui.StepResult) {
+			cfgPath := filepath.Join(home, ".asylum", "config.yaml")
+			for _, idx := range result.MultiIdx {
+				parent, _, _ := strings.Cut(credKits[idx].Name, "/")
+				if err := firstrun.SetKitCredentials(cfgPath, parent, "auto"); err != nil {
+					log.Error("save credential config: %v", err)
+				}
+			}
+			// Reload the credentials into in-memory config
+			for _, idx := range result.MultiIdx {
+				parent, _, _ := strings.Cut(credKits[idx].Name, "/")
+				if cfg.Kits == nil {
+					cfg.Kits = map[string]*config.KitConfig{}
+				}
+				if cfg.Kits[parent] == nil {
+					cfg.Kits[parent] = &config.KitConfig{}
+				}
+				cfg.Kits[parent].Credentials = &config.Credentials{Auto: true}
+			}
+		})
+	}
+
+	if len(steps) == 0 {
+		return
+	}
+
+	results, err := tui.Wizard(steps)
 	if err != nil {
 		die("aborted")
 	}
-	levels := []string{"shared", "isolated", "project"}
-	return levels[idx]
+
+	for i, r := range results {
+		if r.Completed {
+			appliers[i](r)
+		}
+	}
 }
 
 func printUsage() {
