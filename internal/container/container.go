@@ -85,16 +85,24 @@ func RunArgs(opts RunOpts) ([]string, error) {
 		args = append(args, "--env-file", envFile)
 	}
 
-	// Generate and mount sandbox rules for Claude
+	// Generate and mount sandbox rules for Claude.
+	// Mount into ~/.claude/rules/ (user-level rules) rather than <project>/.claude/rules/
+	// because the project dir is bind-mounted from the host and Docker creates a directory
+	// (not a file) when the target parent doesn't exist in the mount namespace.
+	// The agent config dir (~/.asylum/agents/claude/) is already mounted at ~/.claude/,
+	// so we ensure rules/ exists there and the file mount layers on top.
 	if opts.Agent.Name() == "claude" {
+		agentDir := config.ExpandTilde(opts.Agent.AsylumConfigDir(), home)
+		os.MkdirAll(filepath.Join(agentDir, "rules"), 0755)
+
 		rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Version, opts.AllocatedPorts)
 		if err != nil {
 			log.Warn("could not generate sandbox rules: %v", err)
 		} else {
-			clDir := filepath.Join(opts.ProjectDir, ".claude")
+			containerClaude := opts.Agent.ContainerConfigDir()
 			args = append(args,
-				"-v", filepath.Join(rulesDir, "asylum-sandbox.md")+":"+filepath.Join(clDir, "rules", "asylum-sandbox.md")+":ro",
-				"-v", filepath.Join(rulesDir, "asylum-reference.md")+":"+filepath.Join(clDir, "asylum-reference.md")+":ro",
+				"-v", filepath.Join(rulesDir, "asylum-sandbox.md")+":"+filepath.Join(containerClaude, "rules", "asylum-sandbox.md")+":ro",
+				"-v", filepath.Join(rulesDir, "asylum-reference.md")+":"+filepath.Join(containerClaude, "asylum-reference.md")+":ro",
 			)
 		}
 	}
@@ -268,7 +276,7 @@ const sandboxRulesTemplate = `# Asylum Sandbox (v%s)
 
 You are running inside an Asylum Docker container (Debian). Do not attempt to install system packages or tools that are already available.
 
-For detailed documentation, troubleshooting, and config reference, read .claude/asylum-reference.md in the project directory.
+For detailed documentation, troubleshooting, and config reference, read ~/.claude/asylum-reference.md
 Changelog: https://github.com/inventage-ai/asylum/blob/main/CHANGELOG.md
 
 ## Environment

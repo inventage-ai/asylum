@@ -1149,8 +1149,9 @@ func TestRunArgsSandboxRulesMount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rulesTarget := filepath.Join(projectDir, ".claude", "rules", "asylum-sandbox.md")
-	refTarget := filepath.Join(projectDir, ".claude", "asylum-reference.md")
+	// Mount targets use ContainerConfigDir() (/home/stub/.stub for claudeStubAgent)
+	rulesTarget := "/home/stub/.stub/rules/asylum-sandbox.md"
+	refTarget := "/home/stub/.stub/asylum-reference.md"
 
 	foundRules, foundRef := false, false
 	for _, arg := range args {
