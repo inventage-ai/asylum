@@ -1,37 +1,60 @@
 # cleanup
 
-Remove Asylum Docker images and cached data.
+Remove Asylum containers, volumes, and cached data.
 
 ## Usage
 
 ```
-asylum cleanup
-asylum --cleanup    # flag alias
+asylum cleanup          # current project only
+asylum cleanup --all    # everything
+asylum --cleanup        # flag alias (current project)
 ```
 
 ## Description
 
-Removes all Asylum Docker images (base and project images) and named Docker volumes (shadow `node_modules` and package caches). Optionally removes host-side cached data.
+By default, `cleanup` scopes to the **current project**: it removes the project's container, its Docker volumes, and its project data directory. Other projects and the base image are untouched.
+
+Use `--all` for a global cleanup that removes all Asylum images, volumes, and optionally host-side cached data.
 
 Agent configuration (`~/.asylum/agents/`) is always preserved since it contains auth tokens and session data.
 
-## What Gets Removed
+## Project Cleanup (default)
+
+Running `asylum cleanup` from a project directory removes:
 
 | Resource | Removed |
 |----------|---------|
-| Base image (`asylum:latest`) | Yes |
-| Project images (`asylum:proj-*`) | Yes |
-| Named Docker volumes (`asylum-*`) | Yes |
-| Host cache (`~/.asylum/cache/`) | Only if confirmed |
-| Host project data (`~/.asylum/projects/`) | Only if confirmed (skips active sessions) |
-| Agent config (`~/.asylum/agents/`) | Never |
+| Project container | Yes |
+| Project volumes (`<container>-*`) | Yes |
+| Project data (`~/.asylum/projects/<container>/`) | Yes |
+| Port allocation for project | Yes |
+| Base image | No |
+| Other projects | No |
 
-## Interactive Prompt
+If run outside a project directory, Asylum suggests using `--all` instead.
 
-After removing images and volumes, Asylum asks whether to also remove host-side cached data:
+## Global Cleanup (`--all`)
+
+Running `asylum cleanup --all` shows all resources that will be removed and asks for confirmation before proceeding:
+
+```
+The following resources will be removed:
+
+  Images:
+    asylum:latest
+    asylum:proj-abc123def456
+
+  Volumes:
+    asylum-7a3f2b-myapp-npm
+    asylum-7a3f2b-myapp-pip
+
+Proceed? (y/N)
+```
+
+After removing images and volumes, a second prompt offers to remove host-side cached data:
 
 ```
 Remove cached data (~/.asylum/cache/ and ~/.asylum/projects/)? (y/N)
 ```
 
-If running in a non-interactive terminal (e.g., a script), the prompt is skipped and host caches are preserved.
+Global cleanup requires an interactive terminal — it won't run in scripts or CI.

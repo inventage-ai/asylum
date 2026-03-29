@@ -14,6 +14,9 @@ Kits are modular bundles that group everything needed for a language or tool: in
 | [openspec](openspec.md) | OpenSpec CLI | Default |
 | [shell](shell.md) | oh-my-zsh, tmux, direnv | Always on |
 | [ports](ports.md) | Automatic port forwarding for web services | Always on |
+| [ast-grep](ast-grep.md) | AST-based code search, lint, and rewrite (`sg`) | Opt-in |
+| [browser](browser.md) | Chromium browser via Playwright | Opt-in |
+| [cx](cx.md) | Semantic code navigation for AI agents | Opt-in |
 | [apt](apt.md) | Extra apt packages in the project image | Opt-in |
 
 ## Activation Tiers

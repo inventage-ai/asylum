@@ -72,7 +72,7 @@ On first run, Asylum builds a Docker image (~5 min) and seeds agent config from 
 | `asylum` | Start the default agent |
 | `asylum shell` | Interactive zsh shell |
 | `asylum run <cmd>` | Run a command in the container |
-| `asylum cleanup` | Remove images and cached data |
+| `asylum cleanup` | Clean up current project (or `--all` for everything) |
 | `asylum version` | Show version |
 | `asylum ssh-init` | Set up SSH keys |
 | `asylum self-update` | Update to latest version |
@@ -118,6 +118,9 @@ Kits are modular bundles for languages and tools. Enable them in your config:
 | `openspec` | OpenSpec CLI | Default |
 | `shell` | oh-my-zsh, tmux, direnv | Always on |
 | `ports` | Automatic port forwarding | Always on |
+| `ast-grep` | AST-based code search (`sg`) | Opt-in |
+| `browser` | Chromium via Playwright | Opt-in |
+| `cx` | Semantic code navigation | Opt-in |
 | `apt` | Extra system packages | Opt-in |
 
 Full reference: [Kits documentation](https://asylum.inventage.ai/kits/)
