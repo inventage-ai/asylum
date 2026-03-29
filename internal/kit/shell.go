@@ -5,6 +5,7 @@ func init() {
 		Name:        "shell",
 		Description: "Shell configuration (oh-my-zsh, tmux, direnv hooks)",
 		DefaultOn:   true,
+		Tools:       []string{"tmux"},
 		DockerSnippet: `# Install oh-my-zsh and setup PATH/fnm/mise for zsh
 # oh-my-zsh replaces .zshrc, so PATH must be re-added after install
 RUN sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \

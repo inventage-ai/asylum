@@ -5,6 +5,7 @@ func init() {
 		Name:        "github",
 		Description: "GitHub CLI",
 		DefaultOn:   true,
+		Tools:       []string{"gh"},
 		DockerSnippet: `# Install GitHub CLI
 USER root
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \

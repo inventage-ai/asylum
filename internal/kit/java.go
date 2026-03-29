@@ -8,6 +8,9 @@ func init() {
 RUN ~/.local/bin/mise install java@17 java@21 java@25 && \
     ~/.local/bin/mise use --global java@21
 `,
+		RulesSnippet: `### Java (java kit)
+JDK 17, 21, and 25 are installed via mise. The default is 21. Switch versions with ` + "`mise use java@<version>`" + `.
+`,
 		EntrypointSnippet: `# Activate mise for Java/Gradle
 if command -v mise >/dev/null 2>&1; then
     eval "$(mise activate bash)"
@@ -23,6 +26,7 @@ fi
 			"maven": {
 				Name:        "java/maven",
 				Description: "Maven with dependency caching",
+				Tools:       []string{"mvn"},
 				DockerSnippet: `# Install Maven
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends maven && rm -rf /var/lib/apt/lists/*
@@ -33,6 +37,10 @@ USER claude
 			"gradle": {
 				Name:        "java/gradle",
 				Description: "Gradle via mise with dependency caching",
+				Tools:       []string{"gradle"},
+				RulesSnippet: `### Gradle (java/gradle kit)
+Gradle is installed via mise. Dependencies are cached across container restarts.
+`,
 				DockerSnippet: `# Install Gradle via mise
 RUN ~/.local/bin/mise install gradle@latest && \
     ~/.local/bin/mise use --global gradle@latest

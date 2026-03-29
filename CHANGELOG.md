@@ -3,6 +3,9 @@
 ## Unreleased
 
 ### Added
+- Sandbox rules file injected into containers via `.claude/rules/asylum-sandbox.md`, giving Claude awareness of available tools, kits, sandbox constraints, and Asylum version
+- Detailed Asylum reference doc mounted at `.claude/asylum-reference.md` for on-demand troubleshooting and config guidance
+- Host IP accessible inside containers via `host.docker.internal` (`--add-host`)
 - Kit dependencies: kits can declare `Deps` on other kits (validated with warnings at resolve time)
 - Default-on kits: `github`, `openspec`, and `shell` are active unless explicitly disabled with `disabled: true`
 - New `github` kit: GitHub CLI (gh) extracted from core Dockerfile

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/inventage-ai/asylum/internal/config"
+	"github.com/inventage-ai/asylum/internal/kit"
 )
 
 func boolPtr(b bool) *bool { return &b }
@@ -47,6 +48,11 @@ func (s stubAgent) Command(resume bool, extra []string) []string {
 	}
 	return append([]string{"stub"}, extra...)
 }
+
+// claudeStubAgent wraps stubAgent but returns "claude" for Name().
+type claudeStubAgent struct{ stubAgent }
+
+func (claudeStubAgent) Name() string { return "claude" }
 
 func TestCopyDir(t *testing.T) {
 	t.Run("copies files and nested directories", func(t *testing.T) {
@@ -1020,6 +1026,146 @@ func TestEnsureAgentConfigSeedsFromNative(t *testing.T) {
 	}
 	if string(data) != `{"key":"val"}` {
 		t.Errorf("copied content = %q", string(data))
+	}
+}
+
+func TestGenerateSandboxRules(t *testing.T) {
+	home := t.TempDir()
+	cname := "asylum-rules-test"
+
+	kits := []*kit.Kit{
+		{Name: "github", Tools: []string{"gh"}},
+		{Name: "java", RulesSnippet: "### Java\nJDK 17/21/25 via mise.\n"},
+		{Name: "java/maven", Tools: []string{"mvn"}},
+		{Name: "node", RulesSnippet: "### Node.js\nLTS via fnm.\n"},
+		{Name: "python"}, // no snippet, no tools
+	}
+
+	dir, err := generateSandboxRules(home, cname, kits, "1.2.3")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "sandbox-rules.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+
+	// Version
+	if !strings.Contains(content, "v1.2.3") {
+		t.Error("missing version")
+	}
+
+	// Core content
+	if !strings.Contains(content, "Asylum Docker container") {
+		t.Error("missing core sandbox identity")
+	}
+	if !strings.Contains(content, "host.docker.internal") {
+		t.Error("missing host connectivity info")
+	}
+
+	// Reference link
+	if !strings.Contains(content, "asylum-reference.md") {
+		t.Error("missing reference doc link")
+	}
+
+	// Kit tools
+	if !strings.Contains(content, "gh (github)") {
+		t.Error("missing gh in kit tools")
+	}
+	if !strings.Contains(content, "mvn (java/maven)") {
+		t.Error("missing mvn in kit tools")
+	}
+
+	// Kit snippets
+	if !strings.Contains(content, "### Java") {
+		t.Error("missing java kit snippet")
+	}
+	if !strings.Contains(content, "### Node.js") {
+		t.Error("missing node kit snippet")
+	}
+
+	// Reference doc written
+	refData, err := os.ReadFile(filepath.Join(dir, "asylum-reference.md"))
+	if err != nil {
+		t.Fatal("reference doc not written")
+	}
+	if !strings.Contains(string(refData), "Asylum Reference") {
+		t.Error("reference doc has unexpected content")
+	}
+}
+
+func TestGenerateSandboxRules_NoKits(t *testing.T) {
+	home := t.TempDir()
+	cname := "asylum-rules-nokits"
+
+	dir, err := generateSandboxRules(home, cname, nil, "dev")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dir, "sandbox-rules.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(data)
+
+	if !strings.Contains(content, "Asylum Docker container") {
+		t.Error("missing core content")
+	}
+	if strings.Contains(content, "## Kit Tools") {
+		t.Error("should not have Kit Tools section with no kits")
+	}
+	if strings.Contains(content, "## Active Kits") {
+		t.Error("should not have Active Kits section with no kit snippets")
+	}
+}
+
+func TestRunArgsSandboxRulesMount(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	projectDir := t.TempDir()
+	agentConfigDir := filepath.Join(home, ".asylum", "agents", "claude")
+	os.MkdirAll(agentConfigDir, 0755)
+
+	// stubAgent with Name()=="claude" to trigger rules mount
+	a := stubAgent{
+		asylumConfigDir: agentConfigDir,
+	}
+	// Override Name to return "claude"
+	opts := RunOpts{
+		Config:     config.Config{},
+		Agent:      claudeStubAgent{stubAgent: a},
+		ImageTag:   "asylum:test",
+		ProjectDir: projectDir,
+		Kits:       []*kit.Kit{{Name: "java", RulesSnippet: "### Java\n"}},
+		Version:    "1.0.0",
+	}
+
+	args, err := RunArgs(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rulesTarget := filepath.Join(projectDir, ".claude", "rules", "asylum-sandbox.md")
+	refTarget := filepath.Join(projectDir, ".claude", "asylum-reference.md")
+
+	foundRules, foundRef := false, false
+	for _, arg := range args {
+		if strings.Contains(arg, rulesTarget) && strings.HasSuffix(arg, ":ro") {
+			foundRules = true
+		}
+		if strings.Contains(arg, refTarget) && strings.HasSuffix(arg, ":ro") {
+			foundRef = true
+		}
+	}
+	if !foundRules {
+		t.Errorf("sandbox rules mount not found in args: %v", args)
+	}
+	if !foundRef {
+		t.Errorf("reference doc mount not found in args: %v", args)
 	}
 }
 

@@ -16,6 +16,9 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg | \
     rm -rf /var/lib/apt/lists/* && \
     usermod -aG docker claude
 `,
+		RulesSnippet: `### Docker (docker kit)
+Full Docker Engine is available (not just CLI). The container runs in privileged mode with dockerd started automatically. You can build and run containers directly.
+`,
 		EntrypointSnippet: `# Start Docker daemon if enabled and running privileged
 if [ "${ASYLUM_DOCKER:-}" = "1" ]; then
     if [ -S /var/run/docker.sock ] && docker info >/dev/null 2>&1; then

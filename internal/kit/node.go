@@ -16,6 +16,9 @@ RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && 
         prettier \
         nodemon'
 `,
+		RulesSnippet: `### Node.js (node kit)
+Node.js LTS is installed via fnm. Global packages: typescript, @types/node, ts-node, eslint, prettier, nodemon. Switch Node versions with ` + "`fnm use <version>`" + `.
+`,
 		BannerLines: `    echo "Node.js:   $(node --version 2>/dev/null || echo 'not found')"
 `,
 		SubKits: map[string]*Kit{
@@ -28,6 +31,7 @@ RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && 
 			"pnpm": {
 				Name:        "node/pnpm",
 				Description: "pnpm global install",
+				Tools:       []string{"pnpm"},
 				DockerSnippet: `# Install pnpm
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g pnpm'
 `,
@@ -35,6 +39,7 @@ RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && 
 			"yarn": {
 				Name:        "node/yarn",
 				Description: "yarn global install",
+				Tools:       []string{"yarn"},
 				DockerSnippet: `# Install yarn
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g yarn'
 `,

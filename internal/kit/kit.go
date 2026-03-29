@@ -17,6 +17,8 @@ type Kit struct {
 	DockerSnippet     string
 	EntrypointSnippet string
 	BannerLines       string            // shell commands for welcome banner version lines
+	RulesSnippet      string            // markdown fragment for sandbox rules file
+	Tools             []string          // commands this kit makes available
 	CacheDirs         map[string]string  // name → container path
 	OnboardingTasks   []onboarding.Task
 	SubKits           map[string]*Kit
@@ -156,6 +158,22 @@ func sortedSubKeys(k *Kit) []string {
 	return keys
 }
 
+// AggregateTools collects Tools from all provided kits into a deduplicated,
+// sorted list of "tool (kit-name)" strings.
+func AggregateTools(kits []*Kit) []string {
+	seen := map[string]bool{}
+	var result []string
+	for _, k := range kits {
+		for _, tool := range k.Tools {
+			if !seen[tool] {
+				seen[tool] = true
+				result = append(result, tool+" ("+k.Name+")")
+			}
+		}
+	}
+	return result
+}
+
 // AggregateCacheDirs collects CacheDirs from all provided kits.
 func AggregateCacheDirs(kits []*Kit) map[string]string {
 	dirs := map[string]string{}
@@ -197,6 +215,20 @@ func AssembleBannerLines(kits []*Kit) string {
 		if k.BannerLines != "" {
 			b.WriteString(k.BannerLines)
 			if !strings.HasSuffix(k.BannerLines, "\n") {
+				b.WriteByte('\n')
+			}
+		}
+	}
+	return b.String()
+}
+
+// AssembleRulesSnippets concatenates RulesSnippets from all provided kits.
+func AssembleRulesSnippets(kits []*Kit) string {
+	var b strings.Builder
+	for _, k := range kits {
+		if k.RulesSnippet != "" {
+			b.WriteString(k.RulesSnippet)
+			if !strings.HasSuffix(k.RulesSnippet, "\n") {
 				b.WriteByte('\n')
 			}
 		}

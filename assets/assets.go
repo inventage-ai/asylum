@@ -13,3 +13,6 @@ var EntrypointCore []byte
 
 //go:embed entrypoint.tail
 var EntrypointTail []byte
+
+//go:embed asylum-reference.md
+var AsylumReference []byte

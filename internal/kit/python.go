@@ -20,6 +20,9 @@ RUN $HOME/.local/bin/uv tool install black && \
     $HOME/.local/bin/uv tool install poetry && \
     $HOME/.local/bin/uv tool install pipenv
 `,
+		RulesSnippet: `### Python (python kit)
+Python 3 with uv package manager. Pre-installed tools: black, ruff, mypy, pytest, ipython, poetry, pipenv. Use ` + "`uv`" + ` for fast package installation and virtual environment management.
+`,
 		BannerLines: `    echo "Python:    $(python3 --version 2>&1 | cut -d' ' -f2) (uv available)"
 `,
 		SubKits: map[string]*Kit{

@@ -186,6 +186,8 @@ func main() {
 			ImageTag:   imageTag,
 			ProjectDir: projectDir,
 			CacheDirs:  cacheDirs,
+			Kits:       allKits,
+			Version:    version,
 		})
 		if err != nil {
 			die("%v", err)

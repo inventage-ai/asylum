@@ -14,8 +14,10 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/inventage-ai/asylum/assets"
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/config"
+	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/term"
 )
@@ -37,6 +39,8 @@ type RunOpts struct {
 	ImageTag   string
 	ProjectDir string
 	CacheDirs  map[string]string // tool name → container path
+	Kits       []*kit.Kit
+	Version    string
 }
 
 func RunArgs(opts RunOpts) ([]string, error) {
@@ -52,6 +56,7 @@ func RunArgs(opts RunOpts) ([]string, error) {
 		"run", "-d", "--rm", "--init",
 		"--name", containerName,
 		"--hostname", hostname,
+		"--add-host=host.docker.internal:host-gateway",
 		"-w", opts.ProjectDir,
 	}
 	if opts.Config.KitActive("docker") {
@@ -73,6 +78,20 @@ func RunArgs(opts RunOpts) ([]string, error) {
 
 	if envFile := filepath.Join(opts.ProjectDir, ".env"); fileExists(envFile) {
 		args = append(args, "--env-file", envFile)
+	}
+
+	// Generate and mount sandbox rules for Claude
+	if opts.Agent.Name() == "claude" {
+		rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Version)
+		if err != nil {
+			log.Warn("could not generate sandbox rules: %v", err)
+		} else {
+			clDir := filepath.Join(opts.ProjectDir, ".claude")
+			args = append(args,
+				"-v", filepath.Join(rulesDir, "asylum-sandbox.md")+":"+filepath.Join(clDir, "rules", "asylum-sandbox.md")+":ro",
+				"-v", filepath.Join(rulesDir, "asylum-reference.md")+":"+filepath.Join(clDir, "asylum-reference.md")+":ro",
+			)
+		}
 	}
 
 	args = append(args, opts.ImageTag)
@@ -238,6 +257,58 @@ func appendPorts(args []string, ports []string) ([]string, error) {
 		}
 	}
 	return args, nil
+}
+
+const sandboxRulesTemplate = `# Asylum Sandbox (v%s)
+
+You are running inside an Asylum Docker container (Debian). Do not attempt to install system packages or tools that are already available.
+
+For detailed documentation, troubleshooting, and config reference, read .claude/asylum-reference.md in the project directory.
+Changelog: https://github.com/inventage-ai/asylum/blob/main/CHANGELOG.md
+
+## Environment
+- User: claude (with passwordless sudo)
+- Host machine: reachable at host.docker.internal
+- Project directory: mounted from the host at its real path
+
+## Base Tools (always available)
+git, docker (CLI), curl, wget, jq, yq, ripgrep (rg), fd, make, cmake, gcc/g++, vim, nano, htop, zip/unzip, ssh
+
+## Language Managers
+- Node.js: fnm (Fast Node Manager) — switch versions with fnm use <version>
+- Python: uv — fast package installer and venv manager
+- Java: mise — switch versions with mise use java@<version>
+`
+
+// generateSandboxRules writes the rules file and reference doc to
+// ~/.asylum/projects/<container>/ and returns the directory path.
+func generateSandboxRules(home, containerName string, kits []*kit.Kit, version string) (string, error) {
+	dir := filepath.Join(home, ".asylum", "projects", containerName)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", fmt.Errorf("create rules dir: %w", err)
+	}
+
+	var b strings.Builder
+	fmt.Fprintf(&b, sandboxRulesTemplate, version)
+
+	if tools := kit.AggregateTools(kits); len(tools) > 0 {
+		b.WriteString("\n## Kit Tools\n")
+		b.WriteString(strings.Join(tools, ", "))
+		b.WriteByte('\n')
+	}
+
+	if kitSnippets := kit.AssembleRulesSnippets(kits); kitSnippets != "" {
+		b.WriteString("\n## Active Kits\n\n")
+		b.WriteString(kitSnippets)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "sandbox-rules.md"), []byte(b.String()), 0644); err != nil {
+		return "", fmt.Errorf("write rules: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "asylum-reference.md"), assets.AsylumReference, 0644); err != nil {
+		return "", fmt.Errorf("write reference: %w", err)
+	}
+	return dir, nil
 }
 
 type ExecOpts struct {

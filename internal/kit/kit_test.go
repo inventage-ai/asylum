@@ -191,6 +191,52 @@ func TestAggregateCacheDirs_Empty(t *testing.T) {
 	}
 }
 
+func TestAssembleRulesSnippets(t *testing.T) {
+	kits := []*Kit{
+		{Name: "a", RulesSnippet: "## A\nTools from A.\n"},
+		{Name: "b", RulesSnippet: ""},
+		{Name: "c", RulesSnippet: "## C\nTools from C."},
+	}
+	got := AssembleRulesSnippets(kits)
+	want := "## A\nTools from A.\n## C\nTools from C.\n"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestAssembleRulesSnippets_Empty(t *testing.T) {
+	got := AssembleRulesSnippets(nil)
+	if got != "" {
+		t.Errorf("expected empty string, got %q", got)
+	}
+}
+
+func TestAggregateTools(t *testing.T) {
+	kits := []*Kit{
+		{Name: "github", Tools: []string{"gh"}},
+		{Name: "java"},
+		{Name: "java/maven", Tools: []string{"mvn"}},
+		{Name: "node/pnpm", Tools: []string{"pnpm"}},
+	}
+	got := AggregateTools(kits)
+	want := []string{"gh (github)", "mvn (java/maven)", "pnpm (node/pnpm)"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("got[%d] = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestAggregateTools_Empty(t *testing.T) {
+	got := AggregateTools(nil)
+	if len(got) != 0 {
+		t.Errorf("expected empty, got %v", got)
+	}
+}
+
 func TestResolve_UnknownSubProfile(t *testing.T) {
 	cleanup := setupTestRegistry()
 	defer cleanup()
