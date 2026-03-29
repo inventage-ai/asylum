@@ -1046,7 +1046,7 @@ func TestGenerateSandboxRules(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "sandbox-rules.md"))
+	data, err := os.ReadFile(filepath.Join(dir, "asylum-sandbox.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1105,7 +1105,7 @@ func TestGenerateSandboxRules_NoKits(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "sandbox-rules.md"))
+	data, err := os.ReadFile(filepath.Join(dir, "asylum-sandbox.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1179,7 +1179,7 @@ func TestGenerateSandboxRules_WithPorts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "sandbox-rules.md"))
+	data, err := os.ReadFile(filepath.Join(dir, "asylum-sandbox.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1208,7 +1208,7 @@ func TestGenerateSandboxRules_WithoutPorts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := os.ReadFile(filepath.Join(dir, "sandbox-rules.md"))
+	data, err := os.ReadFile(filepath.Join(dir, "asylum-sandbox.md"))
 	if err != nil {
 		t.Fatal(err)
 	}

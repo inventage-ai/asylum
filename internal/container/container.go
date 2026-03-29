@@ -332,7 +332,7 @@ func generateSandboxRules(home, containerName string, kits []*kit.Kit, version s
 		b.WriteString(kitSnippets)
 	}
 
-	if err := os.WriteFile(filepath.Join(dir, "sandbox-rules.md"), []byte(b.String()), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "asylum-sandbox.md"), []byte(b.String()), 0644); err != nil {
 		return "", fmt.Errorf("write rules: %w", err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "asylum-reference.md"), assets.AsylumReference, 0644); err != nil {
