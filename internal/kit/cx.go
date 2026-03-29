@@ -6,7 +6,7 @@ func init() {
 		Description: "Semantic code navigation for AI agents",
 		Tier:        TierOptIn,
 		Tools:       []string{"cx"},
-		ConfigSnippet: `  # cx:                # Semantic code navigation
+		ConfigSnippet: `  # cx:                 # Semantic code navigation
   #   packages:        # tree-sitter language grammars
   #     - python
   #     - typescript

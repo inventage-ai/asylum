@@ -10,6 +10,6 @@ func init() {
   #     - imagemagick
   #     - ffmpeg
 `,
-		ConfigComment: "apt:                # System packages installed via apt-get\n  packages:\n    - imagemagick\n    - ffmpeg",
+		ConfigComment: "apt:                  # System packages installed via apt-get\n  packages:\n    - imagemagick\n    - ffmpeg",
 	})
 }

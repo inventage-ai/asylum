@@ -5,10 +5,10 @@ func init() {
 		Name:        "github",
 		Description: "GitHub CLI",
 		Tools:       []string{"gh"},
-		ConfigSnippet: `  github:              # GitHub CLI (gh)
+		ConfigSnippet: `  github:               # GitHub CLI (gh)
 `,
 		ConfigNodes:   configNodes("github", "GitHub CLI (gh)", nil),
-		ConfigComment: "github:              # GitHub CLI (gh)",
+		ConfigComment: "github:               # GitHub CLI (gh)",
 		DockerSnippet: `# Install GitHub CLI
 USER root
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \

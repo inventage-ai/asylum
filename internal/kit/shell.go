@@ -12,7 +12,7 @@ func init() {
   #   entrypoint:        # Commands run at container start
   #     - "source ~/.nvm/nvm.sh"
 `,
-		ConfigComment: "shell:              # Custom Dockerfile/entrypoint steps (on by default)\n  build:             # Commands run at image build time\n    - \"curl -fsSL https://example.com/install.sh | sh\"\n  entrypoint:        # Commands run at container start\n    - \"source ~/.nvm/nvm.sh\"",
+		ConfigComment: "shell:                # Custom Dockerfile/entrypoint steps (on by default)\n  build:              # Commands run at image build time\n    - \"curl -fsSL https://example.com/install.sh | sh\"\n  entrypoint:         # Commands run at container start\n    - \"source ~/.nvm/nvm.sh\"",
 		DockerSnippet: `# Install oh-my-zsh and setup PATH/fnm/mise for zsh
 # oh-my-zsh replaces .zshrc, so PATH must be re-added after install
 RUN sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended && \

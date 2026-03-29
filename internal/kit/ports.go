@@ -8,6 +8,6 @@ func init() {
 		ConfigSnippet: `  # ports:              # Automatic port forwarding (on by default)
   #   count: 5          # Number of ports to allocate
 `,
-		ConfigComment: "ports:              # Automatic port forwarding (on by default)\n  count: 5          # Number of ports to allocate",
+		ConfigComment: "ports:                # Automatic port forwarding (on by default)\n  count: 5            # Number of ports to allocate",
 	})
 }

@@ -8,10 +8,10 @@ func init() {
 		Deps:        []string{"node"},
 		Tools:       []string{"playwright"},
 		CacheDirs:   map[string]string{"playwright": "/home/claude/.cache/ms-playwright"},
-		ConfigSnippet: `  # browser:           # Chromium browser via Playwright
+		ConfigSnippet: `  # browser:            # Chromium browser via Playwright
 `,
 		ConfigNodes:   configNodes("browser", "Chromium browser via Playwright", nil),
-		ConfigComment: "browser:             # Chromium browser via Playwright",
+		ConfigComment: "browser:              # Chromium browser via Playwright",
 		DockerSnippet: `# Install Playwright and Chromium
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && \
     npm install -g playwright'

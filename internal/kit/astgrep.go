@@ -7,10 +7,10 @@ func init() {
 		Tier:        TierOptIn,
 		Deps:        []string{"node"},
 		Tools:       []string{"sg"},
-		ConfigSnippet: `  # ast-grep:          # AST-based code search (sg)
+		ConfigSnippet: `  # ast-grep:           # AST-based code search (sg)
 `,
 		ConfigNodes:   configNodes("ast-grep", "AST-based code search (sg)", nil),
-		ConfigComment: "ast-grep:            # AST-based code search (sg)",
+		ConfigComment: "ast-grep:             # AST-based code search (sg)",
 		DockerSnippet: `# Install ast-grep
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && \
     npm install -g @ast-grep/cli'

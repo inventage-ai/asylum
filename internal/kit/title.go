@@ -10,6 +10,6 @@ func init() {
   #   tab-title: "🤖 {project}"
   #   allow-agent-terminal-title: false
 `,
-		ConfigComment: "title:              # Terminal tab title configuration (on by default)\n  # Placeholders: {project}, {agent}, {mode}\n  tab-title: \"🤖 {project}\"\n  allow-agent-terminal-title: false",
+		ConfigComment: "title:                # Terminal tab title configuration (on by default)\n  # Placeholders: {project}, {agent}, {mode}\n  tab-title: \"🤖 {project}\"\n  allow-agent-terminal-title: false",
 	})
 }
