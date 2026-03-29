@@ -8,16 +8,6 @@
 - Onboarding wizard: config isolation and credential prompts are now grouped into a single multi-step TUI wizard with a tab bar showing progress — fires for any unconfigured option, including v1 migrations
 - Claude config isolation: choose between `shared` (host config), `isolated` (current default), or `project` (per-project) via onboarding wizard or `agents.claude.config` in config
 - TUI prompt framework using Bubble Tea for interactive single-choice, multi-choice, and wizard prompts
-
-### Changed
-- **BREAKING**: Config `kits` and `agents` maps now deep-merge across layers instead of replacing entirely — project `.asylum` kits supplement global kits instead of overriding them; use `disabled: true` to suppress a global kit per-project
-- Container user now matches host user (username, UID, GID, home directory) instead of hardcoded `claude:1000:/home/claude` — fixes absolute symlink resolution and removes path mismatches
-- Container names now include the project name: `asylum-<hash>-<project>` (e.g., `asylum-7a3f2b1c9e04-myapp`). Existing project data is migrated automatically on first run.
-- `cleanup` now scopes to the current project by default (removes container, volumes, and project data for the current directory only)
-- `cleanup` and `version` are now proper subcommands (`asylum cleanup`, `asylum version`); `--cleanup` and `--version` flags kept as aliases
-- Kit activation tiers: `TierAlwaysOn` (shell, node, title), `TierDefault` (docker, java, etc.), `TierOptIn` (apt) replace the boolean `DefaultOn`
-
-### Added
 - `cleanup --all` for global cleanup (all images, volumes, cached data) with a confirmation prompt showing exactly what will be deleted
 - Documentation site built with MkDocs Material, deployed to GitHub Pages via `.github/workflows/docs.yml`
 - Versioned docs with mike: version selector dropdown, `dev` channel updated on push to main, stable versions deployed on release tags with `latest` alias
@@ -41,15 +31,16 @@
 - Python build deps (`python3-dev`, `libssl-dev`, etc.) moved to `python` kit
 - `self-update` accepts an optional version argument to install a specific release (e.g., `asylum self-update 0.4.0`)
 - `selfupdate` accepted as alias for `self-update`
-
-### Fixed
-- Global config migration now produces full documented default config with all kits
-- Docker kit no longer duplicates GPG key setup already done by core Dockerfile
-- Crash with "unknown kit apt" when config contains apt packages or tab-title settings
 - E2e test suite with echo agent for full binary lifecycle testing
 - `internal/term` package consolidating shared `ShellQuote` and `IsTerminal` helpers
 
 ### Changed
+- **BREAKING**: Config `kits` and `agents` maps now deep-merge across layers instead of replacing entirely — project `.asylum` kits supplement global kits instead of overriding them; use `disabled: true` to suppress a global kit per-project
+- Container user now matches host user (username, UID, GID, home directory) instead of hardcoded `claude:1000:/home/claude` — fixes absolute symlink resolution and removes path mismatches
+- Container names now include the project name: `asylum-<hash>-<project>` (e.g., `asylum-7a3f2b1c9e04-myapp`). Existing project data is migrated automatically on first run.
+- `cleanup` now scopes to the current project by default (removes container, volumes, and project data for the current directory only)
+- `cleanup` and `version` are now proper subcommands (`asylum cleanup`, `asylum version`); `--cleanup` and `--version` flags kept as aliases
+- Kit activation tiers: `TierAlwaysOn` (shell, node, title), `TierDefault` (docker, java, etc.), `TierOptIn` (apt) replace the boolean `DefaultOn`
 - Opencode installed via curl instead of `go install`
 - Agent env vars emitted before hardcoded container env vars (Docker last-wins ensures correct precedence)
 - Cleanup prompt skipped in non-interactive mode with a warning
@@ -58,6 +49,9 @@
 - `docker exec` only uses `-t` flag when stdin is a TTY (fixes non-interactive environments)
 
 ### Fixed
+- Global config migration now produces full documented default config with all kits
+- Docker kit no longer duplicates GPG key setup already done by core Dockerfile
+- Crash with "unknown kit apt" when config contains apt packages or tab-title settings
 - Broken terminal colors in macOS Terminal.app caused by hardcoded `COLORTERM=truecolor`; now inherited from host
 - `.tool-versions` Java version now correctly overrides global config but not project-local config
 - `ParseVolume` rejects empty host/container paths in all volume spec formats
