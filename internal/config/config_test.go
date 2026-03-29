@@ -202,6 +202,8 @@ func TestParseVolume(t *testing.T) {
 		{"empty string", ""},
 		{"invalid option in third part", "/host:/container:bogus"},
 		{"invalid option in fourth part", "/host:/container:ro:bogus"},
+		{"empty host in two-part", ":/container"},
+		{"empty container in two-part", "/host:"},
 		{"empty host in multi-part", ":/container:ro"},
 		{"empty container in multi-part", "/host::ro"},
 	}
@@ -273,6 +275,35 @@ func TestToolVersionsJava(t *testing.T) {
 		}
 		if cfg.JavaVersion() != "25" {
 			t.Errorf("java = %q, want %q", cfg.JavaVersion(), "25")
+		}
+	})
+
+	t.Run("project config overrides tool-versions", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".tool-versions"), []byte("java 21.0.2\n"), 0644)
+		os.WriteFile(filepath.Join(dir, ".asylum"), []byte("kits:\n  java:\n    default-version: \"17\"\n"), 0644)
+		cfg, err := Load(dir, CLIFlags{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.JavaVersion() != "17" {
+			t.Errorf("java = %q, want %q (project config should override .tool-versions)", cfg.JavaVersion(), "17")
+		}
+	})
+
+	t.Run("tool-versions overrides global config", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".tool-versions"), []byte("java 21.0.2\n"), 0644)
+		// Set global config with java 11
+		os.MkdirAll(filepath.Join(homeDir, ".asylum"), 0755)
+		os.WriteFile(filepath.Join(homeDir, ".asylum", "config.yaml"), []byte("version: \"0.2\"\nkits:\n  java:\n    default-version: \"11\"\n"), 0644)
+		defer os.Remove(filepath.Join(homeDir, ".asylum", "config.yaml"))
+		cfg, err := Load(dir, CLIFlags{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if cfg.JavaVersion() != "21.0.2" {
+			t.Errorf("java = %q, want %q (.tool-versions should override global config)", cfg.JavaVersion(), "21.0.2")
 		}
 	})
 }

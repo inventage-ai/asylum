@@ -4,6 +4,8 @@
 
 ### Fixed
 - Broken terminal colors in macOS Terminal.app caused by hardcoded `COLORTERM=truecolor`; now inherited from host
+- `.tool-versions` Java version now correctly overrides global config but not project-local config
+- `ParseVolume` now rejects empty host path in two-part volume specs (e.g., `":container"`)
 
 ## 0.5.0 — 2026-03-24
 

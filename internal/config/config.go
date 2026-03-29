@@ -150,8 +150,28 @@ func Load(projectDir string, flags CLIFlags) (Config, error) {
 	}
 
 	var cfg Config
+
+	// Load global config
+	globalPath := filepath.Join(home, ".asylum", "config.yaml")
+	if NeedsMigration(globalPath) {
+		if err := MigrateV1ToV2(globalPath); err != nil {
+			return Config{}, fmt.Errorf("migrate %s: %w", globalPath, err)
+		}
+	}
+	if layer, err := LoadFile(globalPath); err != nil {
+		return Config{}, fmt.Errorf("%s: %w", globalPath, err)
+	} else {
+		cfg = Merge(cfg, layer)
+	}
+
+	// Apply .tool-versions after global config but before project config,
+	// so project-local .asylum can override it.
+	if java := readToolVersionsJava(projectDir); java != "" {
+		setJavaVersion(&cfg, java)
+	}
+
+	// Load project configs (override .tool-versions)
 	for _, path := range []string{
-		filepath.Join(home, ".asylum", "config.yaml"),
 		filepath.Join(projectDir, ".asylum"),
 		filepath.Join(projectDir, ".asylum.local"),
 	} {
@@ -165,11 +185,6 @@ func Load(projectDir string, flags CLIFlags) (Config, error) {
 			return Config{}, fmt.Errorf("%s: %w", path, err)
 		}
 		cfg = Merge(cfg, layer)
-	}
-
-	// Read Java version from .tool-versions if not already set
-	if java := readToolVersionsJava(projectDir); java != "" && cfg.JavaVersion() == "" {
-		setJavaVersion(&cfg, java)
 	}
 
 	cfg = applyFlags(cfg, flags)
@@ -327,8 +342,8 @@ func ParseVolume(raw string, homeDir string) (Volume, error) {
 			host := ExpandTilde(parts[0], homeDir)
 			return Volume{Host: host, Container: host, Options: parts[1]}, nil
 		}
-		if parts[1] == "" {
-			return Volume{}, fmt.Errorf("empty container path in volume %q", raw)
+		if parts[0] == "" || parts[1] == "" {
+			return Volume{}, fmt.Errorf("empty path in volume %q", raw)
 		}
 		return Volume{Host: ExpandTilde(parts[0], homeDir), Container: parts[1]}, nil
 	default:
