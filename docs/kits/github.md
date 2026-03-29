@@ -13,7 +13,7 @@ GitHub CLI (`gh`) for interacting with GitHub from within containers.
 ```yaml
 kits:
   github:
-    credentials: auto   # mount host gh config (read-only)
+    credentials: auto   # share gh authentication from host
     disabled: true       # disable this default-on kit
 ```
 
