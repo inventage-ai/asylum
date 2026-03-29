@@ -19,6 +19,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/config"
 	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/log"
+	"github.com/inventage-ai/asylum/internal/ports"
 	"github.com/inventage-ai/asylum/internal/term"
 )
 
@@ -123,20 +124,69 @@ func RunArgs(opts RunOpts) ([]string, error) {
 
 func ContainerName(projectDir string) string {
 	h := sha256.Sum256([]byte(projectDir))
+	return fmt.Sprintf("asylum-%x-%s", h[:6], sanitizeProject(projectDir))
+}
+
+// OldContainerName returns the pre-migration container name format (hash only,
+// no project suffix). Used during migration to find old project directories.
+func OldContainerName(projectDir string) string {
+	h := sha256.Sum256([]byte(projectDir))
 	return fmt.Sprintf("asylum-%x", h[:6])
 }
 
-func safeHostname(projectDir string) string {
+func sanitizeProject(projectDir string) string {
 	base := strings.ToLower(filepath.Base(projectDir))
 	safe := invalidHostnameChars.ReplaceAllString(base, "-")
-	if len(safe) > 56 { // leave room for "asylum-" prefix (7 chars) within 63 total
+	if len(safe) > 56 {
 		safe = safe[:56]
 	}
 	safe = strings.Trim(safe, "-")
 	if safe == "" {
 		safe = "project"
 	}
+	return safe
+}
+
+func safeHostname(projectDir string) string {
+	safe := sanitizeProject(projectDir)
 	return "asylum-" + safe
+}
+
+// MigrateProjectDir renames old-format project directories
+// (asylum-<hash>) to the new format (asylum-<hash>-<project>).
+func MigrateProjectDir(projectDir string) error {
+	oldName := OldContainerName(projectDir)
+	newName := ContainerName(projectDir)
+	if oldName == newName {
+		return nil
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+
+	projectsDir := filepath.Join(home, ".asylum", "projects")
+	oldDir := filepath.Join(projectsDir, oldName)
+	newDir := filepath.Join(projectsDir, newName)
+
+	if _, err := os.Stat(oldDir); err != nil {
+		return nil // no old directory to migrate
+	}
+	if _, err := os.Stat(newDir); err == nil {
+		return nil // new directory already exists
+	}
+
+	if err := os.Rename(oldDir, newDir); err != nil {
+		return fmt.Errorf("migrate project dir: %w", err)
+	}
+
+	if err := ports.RenameContainer(oldName, newName); err != nil {
+		log.Warn("migrate port allocation: %v", err)
+	}
+
+	log.Info("migrated project data from %s to %s", oldName, newName)
+	return nil
 }
 
 func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, error) {

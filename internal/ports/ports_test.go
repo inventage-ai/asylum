@@ -147,6 +147,34 @@ func TestReleaseContainer(t *testing.T) {
 	}
 }
 
+func TestRenameContainer(t *testing.T) {
+	setup(t)
+
+	Allocate("/proj/a", "asylum-aaa", 5)
+	Allocate("/proj/b", "asylum-bbb", 5)
+
+	if err := RenameContainer("asylum-aaa", "asylum-aaa-myproject"); err != nil {
+		t.Fatal(err)
+	}
+
+	// Re-allocate should find the renamed entry
+	r, err := Allocate("/proj/a", "asylum-aaa-myproject", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.Container != "asylum-aaa-myproject" {
+		t.Errorf("container = %q, want asylum-aaa-myproject", r.Container)
+	}
+	if r.Start != BasePort {
+		t.Errorf("start = %d, want %d", r.Start, BasePort)
+	}
+
+	// Renaming non-existent container is a no-op
+	if err := RenameContainer("asylum-zzz", "asylum-zzz-other"); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestRange_Ports(t *testing.T) {
 	r := Range{Start: 10000, Count: 3}
 	got := r.Ports()

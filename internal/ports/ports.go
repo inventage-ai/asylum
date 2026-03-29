@@ -97,6 +97,33 @@ func ReleaseContainer(containerName string) error {
 	return release(func(r Range) bool { return r.Container == containerName })
 }
 
+// RenameContainer updates the container name for an existing port allocation.
+func RenameContainer(oldName, newName string) error {
+	path, err := registryPath()
+	if err != nil {
+		return err
+	}
+
+	f, err := openLocked(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	reg, err := readRegistry(f)
+	if err != nil {
+		return err
+	}
+
+	for i, r := range reg.Ranges {
+		if r.Container == oldName {
+			reg.Ranges[i].Container = newName
+			return writeRegistry(f, reg)
+		}
+	}
+	return nil
+}
+
 func release(match func(Range) bool) error {
 	path, err := registryPath()
 	if err != nil {

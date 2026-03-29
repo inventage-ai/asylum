@@ -1,11 +1,15 @@
 ## ADDED Requirements
 
 ### Requirement: Container naming
-Container name SHALL be `asylum-<sha256(project_dir)[:12]>` and hostname SHALL be `asylum-<project_basename>`.
+Container name SHALL be `asylum-<sha256(project_dir)[:12]>-<sanitized_basename>` and hostname SHALL be `asylum-<sanitized_basename>`. On first run, old-format project directories (`asylum-<hash>` without suffix) SHALL be migrated to the new format.
 
 #### Scenario: Naming from project path
 - **WHEN** the project directory is `/home/user/code/myapp`
-- **THEN** the container name is `asylum-` followed by the first 12 chars of the SHA256 of that path, and hostname is `asylum-myapp`
+- **THEN** the container name is `asylum-<hash[:12]>-myapp` and hostname is `asylum-myapp`
+
+#### Scenario: Migration of old project directory
+- **WHEN** `~/.asylum/projects/asylum-<hash>` exists but `~/.asylum/projects/asylum-<hash>-<project>` does not
+- **THEN** the old directory is renamed and port allocations are updated
 
 ### Requirement: Common volume mounts
 The container SHALL include all common mounts: project dir at real path, gitconfig, ssh, caches (as named Docker volumes), history, custom volumes, and direnv.

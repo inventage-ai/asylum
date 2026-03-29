@@ -175,6 +175,10 @@ func main() {
 		die("%v", err)
 	}
 
+	if err := container.MigrateProjectDir(projectDir); err != nil {
+		log.Warn("project migration: %v", err)
+	}
+
 	cname := container.ContainerName(projectDir)
 	newSession := flags.New
 	freshContainer := false
@@ -614,7 +618,11 @@ func runCleanupProject() {
 		return
 	}
 
+	// Migrate old-format project dir before cleanup so we find the right resources
+	container.MigrateProjectDir(projectDir)
+
 	cname := container.ContainerName(projectDir)
+	oldName := container.OldContainerName(projectDir)
 	log.Info("cleaning up project %s (container %s)...", filepath.Base(projectDir), cname)
 
 	var errs int
@@ -627,14 +635,16 @@ func runCleanupProject() {
 		}
 	}
 
-	// Remove volumes prefixed with container name
-	if vols, err := docker.ListVolumes(cname + "-"); err != nil {
-		log.Error("list volumes: %v", err)
-		errs++
-	} else if len(vols) > 0 {
-		if err := docker.RemoveVolumes(vols...); err != nil {
-			log.Error("remove volumes: %v", err)
+	// Remove volumes prefixed with container name (new and old format)
+	for _, prefix := range []string{cname + "-", oldName + "-"} {
+		if vols, err := docker.ListVolumes(prefix); err != nil {
+			log.Error("list volumes: %v", err)
 			errs++
+		} else if len(vols) > 0 {
+			if err := docker.RemoveVolumes(vols...); err != nil {
+				log.Error("remove volumes: %v", err)
+				errs++
+			}
 		}
 	}
 

@@ -547,9 +547,50 @@ func TestContainerName(t *testing.T) {
 	if !strings.HasPrefix(name1, "asylum-") {
 		t.Errorf("container name %q should start with asylum-", name1)
 	}
+	if !strings.HasSuffix(name1, "-projecta") {
+		t.Errorf("container name %q should end with project suffix", name1)
+	}
 	// Should be deterministic
 	if ContainerName("/home/user/projectA") != name1 {
 		t.Error("containerName should be deterministic")
+	}
+}
+
+func TestOldContainerName(t *testing.T) {
+	old := OldContainerName("/home/user/projectA")
+	if !strings.HasPrefix(old, "asylum-") {
+		t.Errorf("old name %q should start with asylum-", old)
+	}
+	// Old format should NOT contain the project suffix
+	if strings.Contains(old, "projecta") {
+		t.Errorf("old name %q should not contain project suffix", old)
+	}
+	// New name should start with old name
+	newName := ContainerName("/home/user/projectA")
+	if !strings.HasPrefix(newName, old+"-") {
+		t.Errorf("new name %q should start with old name %q plus hyphen", newName, old)
+	}
+}
+
+func TestSanitizeProject(t *testing.T) {
+	tests := []struct {
+		projectDir string
+		want       string
+	}{
+		{"/home/user/my-project", "my-project"},
+		{"/home/user/MyApp", "myapp"},
+		{"/home/user/hello world", "hello-world"},
+		{"/home/user/foo@bar!baz", "foo-bar-baz"},
+		{"/home/user/---trimmed---", "trimmed"},
+		{"/", "project"}, // empty after sanitization
+	}
+	for _, tt := range tests {
+		t.Run(tt.projectDir, func(t *testing.T) {
+			got := sanitizeProject(tt.projectDir)
+			if got != tt.want {
+				t.Errorf("sanitizeProject(%q) = %q, want %q", tt.projectDir, got, tt.want)
+			}
+		})
 	}
 }
 
