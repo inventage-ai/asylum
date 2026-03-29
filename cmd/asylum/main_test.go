@@ -339,6 +339,34 @@ func TestParseArgs(t *testing.T) {
 			wantFlags: cliFlags{Agents: &[]string{"claude"}},
 		},
 
+		// --worktree / -w passthrough
+		{
+			name:      "worktree with name",
+			args:      []string{"--worktree", "feat-x"},
+			wantExtra: []string{"--worktree", "feat-x"},
+		},
+		{
+			name:      "worktree without name",
+			args:      []string{"--worktree"},
+			wantExtra: []string{"--worktree"},
+		},
+		{
+			name:      "worktree short flag with name",
+			args:      []string{"-w", "feat-x"},
+			wantExtra: []string{"--worktree", "feat-x"},
+		},
+		{
+			name:      "worktree short flag without name",
+			args:      []string{"-w"},
+			wantExtra: []string{"--worktree"},
+		},
+		{
+			name:      "worktree does not consume next flag as name",
+			args:      []string{"--worktree", "-n"},
+			wantFlags: cliFlags{New: true},
+			wantExtra: []string{"--worktree"},
+		},
+
 		// strict: unknown flags error
 		{
 			name:    "all without cleanup errors",

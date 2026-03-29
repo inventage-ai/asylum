@@ -824,6 +824,21 @@ func TestFindNodeModulesDirs(t *testing.T) {
 		}
 	})
 
+	t.Run("skips .claude worktrees", func(t *testing.T) {
+		project := t.TempDir()
+		os.WriteFile(filepath.Join(project, "package.json"), []byte("{}"), 0644)
+		// package.json inside a Claude worktree should not be found
+		wtPkg := filepath.Join(project, ".claude", "worktrees", "feat-x")
+		os.MkdirAll(wtPkg, 0755)
+		os.WriteFile(filepath.Join(wtPkg, "package.json"), []byte("{}"), 0644)
+
+		got := FindNodeModulesDirs(project)
+		want := []string{filepath.Join(project, "node_modules")}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+
 	t.Run("does not recurse into existing node_modules", func(t *testing.T) {
 		project := t.TempDir()
 		os.WriteFile(filepath.Join(project, "package.json"), []byte("{}"), 0644)

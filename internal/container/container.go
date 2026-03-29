@@ -613,7 +613,7 @@ func FindNodeModulesDirs(projectDir string) []string {
 	}
 	// Directories that never contain relevant package.json files
 	skip := map[string]bool{
-		".git": true, ".venv": true, "__pycache__": true,
+		".git": true, ".claude": true, ".venv": true, "__pycache__": true,
 		"vendor": true, "target": true, "dist": true,
 	}
 

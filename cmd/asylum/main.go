@@ -441,6 +441,13 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 				a := strings.Split(val, ",")
 				flags.Agents = &a
 			}
+		case arg == "-w" || arg == "--worktree":
+			extraArgs = append(extraArgs, "--worktree")
+			i++
+			if i < len(args) && !strings.HasPrefix(args[i], "-") {
+				extraArgs = append(extraArgs, args[i])
+				i++
+			}
 		case arg == "-n" || arg == "--new":
 			flags.New = true
 			i++
