@@ -1,9 +1,17 @@
+# Source project-level entrypoint if present (project kit setup)
+if [ -f /usr/local/bin/project-entrypoint.sh ]; then
+    . /usr/local/bin/project-entrypoint.sh || true
+fi
+
 # Welcome message for interactive sessions
 if [ -t 0 ] && [ -t 1 ]; then
     echo "Asylum Development Environment"
     echo "================================"
     echo "Workspace: $(pwd)"
 # PROFILE_BANNER_PLACEHOLDER
+    if [ -n "${PROJECT_BANNER:-}" ]; then
+        eval "$PROJECT_BANNER"
+    fi
     echo "================================"
     echo ""
 fi

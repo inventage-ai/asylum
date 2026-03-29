@@ -220,7 +220,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 
 func TestGenerateProjectDockerfile_WithProfileSnippets(t *testing.T) {
 	snippet := "RUN echo 'from-profile'\n"
-	df, err := generateProjectDockerfile(snippet, nil, "", "testuser")
+	df, err := generateProjectDockerfile(snippet, nil, "", "testuser", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +233,7 @@ func TestGenerateProjectDockerfile_WithProfileSnippets(t *testing.T) {
 }
 
 func TestGenerateProjectDockerfile_EmptyReturnsMinimal(t *testing.T) {
-	df, err := generateProjectDockerfile("", nil, "", "testuser")
+	df, err := generateProjectDockerfile("", nil, "", "testuser", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,5 +242,99 @@ func TestGenerateProjectDockerfile_EmptyReturnsMinimal(t *testing.T) {
 	}
 	if !strings.HasSuffix(strings.TrimSpace(df), "USER testuser") {
 		t.Error("should end with USER testuser")
+	}
+}
+
+func TestAssembleProjectEntrypoint(t *testing.T) {
+	t.Run("kits with entrypoint snippets", func(t *testing.T) {
+		kits := []*kit.Kit{
+			{Name: "a", EntrypointSnippet: "echo setup-a\n"},
+			{Name: "b", EntrypointSnippet: "echo setup-b\n"},
+		}
+		ep := assembleProjectEntrypoint(kits)
+		if ep == nil {
+			t.Fatal("expected non-nil project entrypoint")
+		}
+		s := string(ep)
+		if !strings.HasPrefix(s, "#!/bin/bash\nset -e\n") {
+			t.Error("should start with shebang and set -e")
+		}
+		if !strings.Contains(s, "echo setup-a") {
+			t.Error("missing snippet from kit a")
+		}
+		if !strings.Contains(s, "echo setup-b") {
+			t.Error("missing snippet from kit b")
+		}
+	})
+
+	t.Run("no snippets returns nil", func(t *testing.T) {
+		kits := []*kit.Kit{
+			{Name: "a"},
+			{Name: "b"},
+		}
+		if ep := assembleProjectEntrypoint(kits); ep != nil {
+			t.Error("expected nil when no kits have snippets")
+		}
+	})
+
+	t.Run("nil kits returns nil", func(t *testing.T) {
+		if ep := assembleProjectEntrypoint(nil); ep != nil {
+			t.Error("expected nil for nil kits")
+		}
+	})
+
+	t.Run("banner lines exported", func(t *testing.T) {
+		kits := []*kit.Kit{
+			{Name: "a", BannerLines: "    echo \"a: v1\"\n"},
+		}
+		ep := assembleProjectEntrypoint(kits)
+		if ep == nil {
+			t.Fatal("expected non-nil project entrypoint")
+		}
+		s := string(ep)
+		if !strings.Contains(s, "PROJECT_BANNER") {
+			t.Error("should export PROJECT_BANNER")
+		}
+		if !strings.Contains(s, "a: v1") {
+			t.Error("PROJECT_BANNER should contain banner line content")
+		}
+	})
+
+	t.Run("mixed snippets and banner lines", func(t *testing.T) {
+		kits := []*kit.Kit{
+			{Name: "a", EntrypointSnippet: "echo setup-a\n"},
+			{Name: "b", BannerLines: "    echo \"b: v2\"\n"},
+		}
+		ep := assembleProjectEntrypoint(kits)
+		if ep == nil {
+			t.Fatal("expected non-nil project entrypoint")
+		}
+		s := string(ep)
+		if !strings.Contains(s, "echo setup-a") {
+			t.Error("missing entrypoint snippet")
+		}
+		if !strings.Contains(s, "PROJECT_BANNER") {
+			t.Error("missing PROJECT_BANNER export")
+		}
+	})
+}
+
+func TestGenerateProjectDockerfile_WithProjectEntrypoint(t *testing.T) {
+	df, err := generateProjectDockerfile("", nil, "", "testuser", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(df, "COPY --chmod=755 project-entrypoint.sh /usr/local/bin/project-entrypoint.sh") {
+		t.Error("should contain COPY for project-entrypoint.sh")
+	}
+}
+
+func TestGenerateProjectDockerfile_WithoutProjectEntrypoint(t *testing.T) {
+	df, err := generateProjectDockerfile("", nil, "", "testuser", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(df, "project-entrypoint.sh") {
+		t.Error("should not reference project-entrypoint.sh when not present")
 	}
 }

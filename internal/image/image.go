@@ -60,6 +60,32 @@ func assembleEntrypoint(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall
 	return []byte(b.String())
 }
 
+// assembleProjectEntrypoint builds an optional entrypoint script from project-level kit snippets.
+// Returns nil if no project kits have EntrypointSnippets or BannerLines.
+func assembleProjectEntrypoint(projectKits []*kit.Kit) []byte {
+	snippets := kit.AssembleEntrypointSnippets(projectKits)
+	bannerLines := kit.AssembleBannerLines(projectKits)
+	if snippets == "" && bannerLines == "" {
+		return nil
+	}
+
+	var b strings.Builder
+	b.WriteString("#!/bin/bash\nset -e\n\n")
+	if snippets != "" {
+		b.WriteString(snippets)
+		if !strings.HasSuffix(snippets, "\n") {
+			b.WriteByte('\n')
+		}
+		b.WriteByte('\n')
+	}
+	if bannerLines != "" {
+		b.WriteString("export PROJECT_BANNER='")
+		b.WriteString(strings.ReplaceAll(bannerLines, "'", "'\\''"))
+		b.WriteString("'\n")
+	}
+	return []byte(b.String())
+}
+
 func baseHash(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) string {
 	h := sha256.New()
 	h.Write(assets.DockerfileCore)
@@ -150,9 +176,10 @@ var preinstalledJava = map[string]bool{"17": true, "21": true, "25": true}
 
 func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, javaVersion string, version string, baseRebuilt bool, noCache bool) (string, error) {
 	profileSnippets := kit.AssembleDockerSnippets(projectProfiles)
+	projectEntrypoint := assembleProjectEntrypoint(projectProfiles)
 	needsCustomJava := javaVersion != "" && !preinstalledJava[javaVersion]
 
-	if len(packages) == 0 && !needsCustomJava && profileSnippets == "" {
+	if len(packages) == 0 && !needsCustomJava && profileSnippets == "" && projectEntrypoint == nil {
 		return baseTag, nil
 	}
 
@@ -160,7 +187,7 @@ func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, jav
 	if u, err := user.Current(); err == nil {
 		username = u.Username
 	}
-	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, javaVersion, username)
+	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, javaVersion, username, projectEntrypoint != nil)
 	if err != nil {
 		return "", err
 	}
@@ -180,7 +207,12 @@ func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, jav
 		"asylum.version":       version,
 	}
 
-	if err := buildImage([]byte(dockerfile), nil, tag, labels, nil, noCache); err != nil {
+	var extraFiles map[string][]byte
+	if projectEntrypoint != nil {
+		extraFiles = map[string][]byte{"project-entrypoint.sh": projectEntrypoint}
+	}
+
+	if err := buildImage([]byte(dockerfile), extraFiles, tag, labels, nil, noCache); err != nil {
 		return "", fmt.Errorf("build project image: %w", err)
 	}
 
@@ -204,7 +236,7 @@ func validatePackageNames(pkgType string, names []string) error {
 	return nil
 }
 
-func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string, username string) (string, error) {
+func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string, username string, hasProjectEntrypoint bool) (string, error) {
 	for k := range packages {
 		if !knownPackageTypes[k] {
 			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, cx-lang, run)", k)
@@ -270,6 +302,11 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 		}
 		b.WriteString("\nUSER " + username + "\n")
 		b.WriteString("RUN $HOME/.local/bin/mise install java@" + javaVersion + " && $HOME/.local/bin/mise use --global java@" + javaVersion + "\n")
+	}
+
+	if hasProjectEntrypoint {
+		b.WriteString("\nUSER root\n")
+		b.WriteString("COPY --chmod=755 project-entrypoint.sh /usr/local/bin/project-entrypoint.sh\n")
 	}
 
 	b.WriteString("\nUSER " + username + "\n")

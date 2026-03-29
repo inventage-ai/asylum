@@ -1,30 +1,4 @@
-## ADDED Requirements
-
-### Requirement: All three agent CLIs installed
-The Dockerfile SHALL install agent CLIs based on the active agents config. When no agents config is specified (default), only Claude Code SHALL be installed.
-
-#### Scenario: Default agents (no config)
-- **WHEN** the container starts with no agents config specified
-- **THEN** only `claude` is available in PATH
-
-#### Scenario: Only claude selected
-- **WHEN** the container starts with `agents: [claude]`
-- **THEN** only `claude` is available in PATH; `gemini` and `codex` are not installed
-
-#### Scenario: No agents selected
-- **WHEN** the container starts with `agents: []`
-- **THEN** no agent CLIs are installed
-
-### Requirement: ASYLUM_ environment variables
-The entrypoint SHALL use ASYLUM_ prefixed environment variables instead of AGENTBOX_.
-
-#### Scenario: Docker flag check
-- **WHEN** `ASYLUM_DOCKER=1` is set
-- **THEN** the entrypoint starts the Docker daemon
-
-#### Scenario: Java version
-- **WHEN** `ASYLUM_JAVA_VERSION` is set
-- **THEN** the entrypoint selects that Java version via mise
+## MODIFIED Requirements
 
 ### Requirement: Welcome banner
 The entrypoint SHALL display an Asylum-branded welcome banner with tool versions for active profiles and installed agents only. If a project entrypoint has set the `PROJECT_BANNER` variable, those banner lines SHALL also be displayed.
