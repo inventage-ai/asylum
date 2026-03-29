@@ -93,7 +93,15 @@ func RunArgs(opts RunOpts) ([]string, error) {
 	// so we ensure rules/ exists there and the file mount layers on top.
 	if opts.Agent.Name() == "claude" {
 		agentDir := config.ExpandTilde(opts.Agent.AsylumConfigDir(), home)
-		os.MkdirAll(filepath.Join(agentDir, "rules"), 0755)
+		rulesSubdir := filepath.Join(agentDir, "rules")
+		os.MkdirAll(rulesSubdir, 0755)
+		// Clean up stale directory that Docker may have created at the mount
+		// target path from a previous run (Docker creates dirs, not files,
+		// when the target doesn't exist).
+		target := filepath.Join(rulesSubdir, "asylum-sandbox.md")
+		if info, err := os.Stat(target); err == nil && info.IsDir() {
+			os.RemoveAll(target)
+		}
 
 		rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Version, opts.AllocatedPorts)
 		if err != nil {
