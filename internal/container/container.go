@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -69,7 +70,7 @@ func RunArgs(opts RunOpts) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	args, err = appendEnvVars(args, opts)
+	args, err = appendEnvVars(args, home, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -230,13 +231,14 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	// SSH
 	sshDir := filepath.Join(home, ".asylum", "ssh")
 	if dirExists(sshDir) {
-		vol(sshDir, "/home/claude/.ssh", "rw")
+		vol(sshDir, filepath.Join(home, ".ssh"), "rw")
 	}
 
 	// Caches (named volumes for better IO on macOS)
 	for _, name := range slices.Sorted(maps.Keys(opts.CacheDirs)) {
 		volName := cname + "-cache-" + name
-		args = append(args, "--mount", "type=volume,src="+volName+",dst="+opts.CacheDirs[name])
+		dst := config.ExpandTilde(opts.CacheDirs[name], home)
+		args = append(args, "--mount", "type=volume,src="+volName+",dst="+dst)
 	}
 
 	// Shell history
@@ -244,11 +246,11 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	if err := os.MkdirAll(histDir, 0755); err != nil {
 		return nil, fmt.Errorf("create history dir: %w", err)
 	}
-	vol(histDir, "/home/claude/.shell_history", "rw")
+	vol(histDir, filepath.Join(home, ".shell_history"), "rw")
 
 	// Agent config
 	agentDir := config.ExpandTilde(opts.Agent.AsylumConfigDir(), home)
-	vol(agentDir, opts.Agent.ContainerConfigDir(), "")
+	vol(agentDir, config.ExpandTilde(opts.Agent.ContainerConfigDir(), home), "")
 
 	// Direnv
 	envrc := filepath.Join(opts.ProjectDir, ".envrc")
@@ -270,7 +272,7 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	return args, nil
 }
 
-func appendEnvVars(args []string, opts RunOpts) ([]string, error) {
+func appendEnvVars(args []string, home string, opts RunOpts) ([]string, error) {
 	env := func(k, v string) {
 		args = append(args, "-e", k+"="+v)
 	}
@@ -297,7 +299,7 @@ func appendEnvVars(args []string, opts RunOpts) ([]string, error) {
 	if !opts.Config.AllowAgentTermTitle() {
 		env("CLAUDE_CODE_DISABLE_TERMINAL_TITLE", "1")
 	}
-	env("HISTFILE", "/home/claude/.shell_history/zsh_history")
+	env("HISTFILE", filepath.Join(home, ".shell_history", "zsh_history"))
 	env("HOST_PROJECT_DIR", opts.ProjectDir)
 
 	if java := opts.Config.JavaVersion(); java != "" {
@@ -338,7 +340,7 @@ For detailed documentation, troubleshooting, and config reference, read ~/.claud
 Changelog: https://github.com/inventage-ai/asylum/blob/main/CHANGELOG.md
 
 ## Environment
-- User: claude (with passwordless sudo)
+- User: %s (with passwordless sudo)
 - Host machine: reachable at host.docker.internal
 - Project directory: mounted from the host at its real path
 
@@ -360,7 +362,11 @@ func generateSandboxRules(home, containerName string, kits []*kit.Kit, version s
 	}
 
 	var b strings.Builder
-	fmt.Fprintf(&b, sandboxRulesTemplate, version)
+	username := "claude"
+	if u, err := user.Current(); err == nil {
+		username = u.Username
+	}
+	fmt.Fprintf(&b, sandboxRulesTemplate, version, username)
 
 	if tools := kit.AggregateTools(kits); len(tools) > 0 {
 		b.WriteString("\n## Kit Tools\n")

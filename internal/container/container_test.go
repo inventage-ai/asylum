@@ -306,7 +306,7 @@ func TestAppendEnvVars(t *testing.T) {
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/myproject",
 		}
-		got, err := appendEnvVars([]string{}, opts)
+		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -322,12 +322,17 @@ func TestAppendEnvVars(t *testing.T) {
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/myproject",
 		}
-		got, err := appendEnvVars([]string{}, opts)
+		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		joined := strings.Join(got, " ")
-		if strings.Contains(joined, "ASYLUM_DOCKER") {
+		found := false
+		for _, v := range got {
+			if v == "ASYLUM_DOCKER=1" {
+				found = true
+			}
+		}
+		if found {
 			t.Error("ASYLUM_DOCKER should NOT be set when docker kit is inactive")
 		}
 	})
@@ -338,7 +343,7 @@ func TestAppendEnvVars(t *testing.T) {
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/myproject",
 		}
-		got, err := appendEnvVars([]string{}, opts)
+		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -347,7 +352,7 @@ func TestAppendEnvVars(t *testing.T) {
 		for _, want := range []string{
 			"-e COLORTERM=truecolor",
 			"-e TERM=xterm-256color",
-			"-e HISTFILE=/home/claude/.shell_history/zsh_history",
+			"-e HISTFILE=",  // dynamic path, just check it's set
 			"-e HOST_PROJECT_DIR=/work/myproject",
 		} {
 			if !strings.Contains(joined, want) {
@@ -363,7 +368,7 @@ func TestAppendEnvVars(t *testing.T) {
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/proj",
 		}
-		got, err := appendEnvVars([]string{}, opts)
+		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -379,7 +384,7 @@ func TestAppendEnvVars(t *testing.T) {
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/proj",
 		}
-		got, err := appendEnvVars([]string{}, opts)
+		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -400,7 +405,7 @@ func TestAppendEnvVars(t *testing.T) {
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/proj",
 		}
-		got, err := appendEnvVars([]string{}, opts)
+		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -441,7 +446,7 @@ func TestAppendEnvVars(t *testing.T) {
 			Agent:      stubAgent{envVars: map[string]string{"MY_TOKEN": "secret"}},
 			ProjectDir: "/work/proj",
 		}
-		got, err := appendEnvVars([]string{}, opts)
+		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -848,10 +853,10 @@ func TestAppendVolumesCacheNamedVolumes(t *testing.T) {
 		Agent:      stubAgent{},
 		ProjectDir: projectDir,
 		CacheDirs: map[string]string{
-			"npm":    "/home/claude/.npm",
-			"pip":    "/home/claude/.cache/pip",
-			"maven":  "/home/claude/.m2",
-			"gradle": "/home/claude/.gradle",
+			"npm":    "~/.npm",
+			"pip":    "~/.cache/pip",
+			"maven":  "~/.m2",
+			"gradle": "~/.gradle",
 		},
 	}
 

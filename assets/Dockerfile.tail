@@ -12,7 +12,7 @@ COPY --chmod=755 entrypoint.sh /usr/local/bin/entrypoint.sh
 WORKDIR /workspace
 
 # Set the user for runtime
-USER ${USERNAME:-claude}
+USER ${USERNAME}
 
 # Entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

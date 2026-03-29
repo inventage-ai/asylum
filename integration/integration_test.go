@@ -23,7 +23,7 @@ var baseErr error
 func ensureBaseImage(t *testing.T) {
 	t.Helper()
 	baseOnce.Do(func() {
-		_, baseErr = image.EnsureBase(testVersion, false)
+		_, baseErr = image.EnsureBase(nil, nil, testVersion, false)
 	})
 	if baseErr != nil {
 		t.Fatalf("base image build failed: %v", baseErr)

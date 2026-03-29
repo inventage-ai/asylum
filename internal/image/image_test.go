@@ -7,7 +7,7 @@ import (
 
 func TestGenerateProjectDockerfile(t *testing.T) {
 	t.Run("unknown key rejected", func(t *testing.T) {
-		_, err := generateProjectDockerfile("", map[string][]string{"bad": {"x"}}, "")
+		_, err := generateProjectDockerfile("", map[string][]string{"bad": {"x"}}, "", "testuser")
 		if err == nil {
 			t.Error("expected error for unknown package type")
 		}
@@ -16,7 +16,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	t.Run("apt packages", func(t *testing.T) {
 		df, err := generateProjectDockerfile("", map[string][]string{
 			"apt": {"curl", "jq"},
-		}, "")
+		}, "", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -29,15 +29,15 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 		if !strings.Contains(df, "curl") || !strings.Contains(df, "jq") {
 			t.Error("missing package names")
 		}
-		if !strings.HasSuffix(strings.TrimSpace(df), "USER claude") {
-			t.Error("should end with USER claude")
+		if !strings.HasSuffix(strings.TrimSpace(df), "USER testuser") {
+			t.Error("should end with USER testuser")
 		}
 	})
 
 	t.Run("npm packages", func(t *testing.T) {
 		df, err := generateProjectDockerfile("", map[string][]string{
 			"npm": {"typescript", "eslint"},
-		}, "")
+		}, "", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -52,7 +52,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	t.Run("pip packages each get own RUN", func(t *testing.T) {
 		df, err := generateProjectDockerfile("", map[string][]string{
 			"pip": {"ruff", "black"},
-		}, "")
+		}, "", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -73,7 +73,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	t.Run("run commands emitted as-is", func(t *testing.T) {
 		df, err := generateProjectDockerfile("", map[string][]string{
 			"run": {"echo hello", "echo world"},
-		}, "")
+		}, "", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,7 +89,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 		df, err := generateProjectDockerfile("", map[string][]string{
 			"apt": {},
 			"npm": {"typescript"},
-		}, "")
+		}, "", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -101,15 +101,15 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 		}
 	})
 
-	t.Run("always ends with USER claude", func(t *testing.T) {
+	t.Run("always ends with USER testuser", func(t *testing.T) {
 		df, err := generateProjectDockerfile("", map[string][]string{
 			"apt": {"curl"},
-		}, "")
+		}, "", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.HasSuffix(strings.TrimSpace(df), "USER claude") {
-			t.Errorf("dockerfile does not end with USER claude:\n%s", df)
+		if !strings.HasSuffix(strings.TrimSpace(df), "USER testuser") {
+			t.Errorf("dockerfile does not end with USER testuser:\n%s", df)
 		}
 	})
 
@@ -121,7 +121,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			"curl$(evil)",
 		}
 		for _, name := range bad {
-			_, err := generateProjectDockerfile("", map[string][]string{"apt": {name}}, "")
+			_, err := generateProjectDockerfile("", map[string][]string{"apt": {name}}, "", "testuser")
 			if err == nil {
 				t.Errorf("expected error for apt package name %q", name)
 			}
@@ -134,7 +134,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			"typescript; rm -rf /",
 		}
 		for _, name := range bad {
-			_, err := generateProjectDockerfile("", map[string][]string{"npm": {name}}, "")
+			_, err := generateProjectDockerfile("", map[string][]string{"npm": {name}}, "", "testuser")
 			if err == nil {
 				t.Errorf("expected error for npm package name %q", name)
 			}
@@ -142,7 +142,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("custom java version adds mise install", func(t *testing.T) {
-		df, err := generateProjectDockerfile("", map[string][]string{}, "11")
+		df, err := generateProjectDockerfile("", map[string][]string{}, "11", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -158,7 +158,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("pre-installed java version skips mise install", func(t *testing.T) {
-		df, err := generateProjectDockerfile("", map[string][]string{"apt": {"curl"}}, "21")
+		df, err := generateProjectDockerfile("", map[string][]string{"apt": {"curl"}}, "21", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -168,7 +168,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 	})
 
 	t.Run("custom java only triggers project image", func(t *testing.T) {
-		df, err := generateProjectDockerfile("", map[string][]string{}, "11")
+		df, err := generateProjectDockerfile("", map[string][]string{}, "11", "testuser")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -185,7 +185,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			"abc",
 		}
 		for _, ver := range bad {
-			_, err := generateProjectDockerfile("", map[string][]string{}, ver)
+			_, err := generateProjectDockerfile("", map[string][]string{}, ver, "testuser")
 			if err == nil {
 				t.Errorf("expected error for java version %q", ver)
 			}
@@ -194,7 +194,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 
 	t.Run("valid java versions accepted", func(t *testing.T) {
 		for _, ver := range []string{"11", "8.0.392", "11.0"} {
-			_, err := generateProjectDockerfile("", map[string][]string{}, ver)
+			_, err := generateProjectDockerfile("", map[string][]string{}, ver, "testuser")
 			if err != nil {
 				t.Errorf("unexpected error for java version %q: %v", ver, err)
 			}
@@ -209,7 +209,7 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 			"ruff$(evil)",
 		}
 		for _, name := range bad {
-			_, err := generateProjectDockerfile("", map[string][]string{"pip": {name}}, "")
+			_, err := generateProjectDockerfile("", map[string][]string{"pip": {name}}, "", "testuser")
 			if err == nil {
 				t.Errorf("expected error for pip package name %q", name)
 			}

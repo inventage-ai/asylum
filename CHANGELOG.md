@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Changed
+- Container user now matches host user (username, UID, GID, home directory) instead of hardcoded `claude:1000:/home/claude` — fixes absolute symlink resolution and removes path mismatches
 - Container names now include the project name: `asylum-<hash>-<project>` (e.g., `asylum-7a3f2b1c9e04-myapp`). Existing project data is migrated automatically on first run.
 - `cleanup` now scopes to the current project by default (removes container, volumes, and project data for the current directory only)
 - `cleanup` and `version` are now proper subcommands (`asylum cleanup`, `asylum version`); `--cleanup` and `--version` flags kept as aliases

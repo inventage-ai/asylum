@@ -12,12 +12,12 @@ if command -v fnm >/dev/null 2>&1; then
 fi
 
 # Set proper permissions on mounted SSH directory
-if [ -d "/home/claude/.ssh" ]; then
-    chmod 700 /home/claude/.ssh 2>/dev/null || true
-    chmod 600 /home/claude/.ssh/* 2>/dev/null || true
-    chmod 644 /home/claude/.ssh/*.pub 2>/dev/null || true
-    chmod 644 /home/claude/.ssh/authorized_keys 2>/dev/null || true
-    chmod 644 /home/claude/.ssh/known_hosts 2>/dev/null || true
+if [ -d "$HOME/.ssh" ]; then
+    chmod 700 "$HOME/.ssh" 2>/dev/null || true
+    chmod 600 "$HOME/.ssh"/* 2>/dev/null || true
+    chmod 644 "$HOME/.ssh"/*.pub 2>/dev/null || true
+    chmod 644 "$HOME/.ssh"/authorized_keys 2>/dev/null || true
+    chmod 644 "$HOME/.ssh"/known_hosts 2>/dev/null || true
 fi
 
 # Restore Claude config from backup if missing or incomplete (no auth)
@@ -35,7 +35,7 @@ fi
 
 # Translate host direnv approvals to container paths
 if [ -d "/tmp/host_direnv_allow" ] && [ -n "$HOST_PROJECT_DIR" ] && [ -f "$HOST_PROJECT_DIR/.envrc" ]; then
-    mkdir -p /home/claude/.local/share/direnv/allow
+    mkdir -p "$HOME/.local/share/direnv/allow"
 
     host_envrc_path="$HOST_PROJECT_DIR/.envrc"
     expected_host_hash=$(printf "%s\n" "$host_envrc_path" | cat - "$HOST_PROJECT_DIR/.envrc" | sha256sum | cut -d' ' -f1)
@@ -45,19 +45,19 @@ if [ -d "/tmp/host_direnv_allow" ] && [ -n "$HOST_PROJECT_DIR" ] && [ -f "$HOST_
         if [ "$approved_path" = "$host_envrc_path" ]; then
             container_envrc="$HOST_PROJECT_DIR/.envrc"
             container_hash=$(printf "%s\n" "$container_envrc" | cat - "$container_envrc" | sha256sum | cut -d' ' -f1)
-            echo "$container_envrc" > /home/claude/.local/share/direnv/allow/"$container_hash"
+            echo "$container_envrc" > "$HOME/.local/share/direnv/allow/$container_hash"
         fi
     fi
 fi
 
 # Set up git config
 if [ -f "/tmp/host_gitconfig" ]; then
-    cp /tmp/host_gitconfig /home/claude/.gitconfig
+    cp /tmp/host_gitconfig "$HOME/.gitconfig"
 else
-    cat > /home/claude/.gitconfig << 'EOF'
+    cat > "$HOME/.gitconfig" << EOF
 [user]
-    email = claude@asylum
-    name = Claude (Asylum)
+    email = $(whoami)@asylum
+    name = $(whoami) (Asylum)
 [init]
     defaultBranch = main
 EOF

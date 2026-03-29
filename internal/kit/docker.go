@@ -14,8 +14,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends docker-ce docker-buildx-plugin docker-compose-plugin && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
-    usermod -aG docker claude
-USER claude
+    usermod -aG docker ${USERNAME}
+USER ${USERNAME}
 `,
 		RulesSnippet: `### Docker (docker kit)
 Full Docker Engine is available (not just CLI). The container runs in privileged mode with dockerd started automatically. You can build and run containers directly.

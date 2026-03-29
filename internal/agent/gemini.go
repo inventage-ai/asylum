@@ -25,9 +25,9 @@ type Gemini struct{}
 
 func (Gemini) Name() string             { return "gemini" }
 func (Gemini) Binary() string           { return "gemini" }
-func (Gemini) NativeConfigDir() string  { return "~/.gemini" }
-func (Gemini) ContainerConfigDir() string { return "/home/claude/.gemini" }
-func (Gemini) AsylumConfigDir() string  { return "~/.asylum/agents/gemini" }
+func (Gemini) NativeConfigDir() string    { return "~/.gemini" }
+func (Gemini) ContainerConfigDir() string { return "~/.gemini" }
+func (Gemini) AsylumConfigDir() string    { return "~/.asylum/agents/gemini" }
 
 func (Gemini) EnvVars() map[string]string { return nil }
 

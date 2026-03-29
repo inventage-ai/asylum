@@ -25,13 +25,14 @@ type Claude struct{}
 
 func (Claude) Name() string             { return "claude" }
 func (Claude) Binary() string           { return "claude" }
-func (Claude) NativeConfigDir() string  { return "~/.claude" }
-func (Claude) ContainerConfigDir() string { return "/home/claude/.claude" }
-func (Claude) AsylumConfigDir() string  { return "~/.asylum/agents/claude" }
+func (Claude) NativeConfigDir() string    { return "~/.claude" }
+func (Claude) ContainerConfigDir() string { return "~/.claude" }
+func (Claude) AsylumConfigDir() string    { return "~/.asylum/agents/claude" }
 
 func (Claude) EnvVars() map[string]string {
+	home, _ := os.UserHomeDir()
 	return map[string]string{
-		"CLAUDE_CONFIG_DIR": "/home/claude/.claude",
+		"CLAUDE_CONFIG_DIR": filepath.Join(home, ".claude"),
 	}
 }
 

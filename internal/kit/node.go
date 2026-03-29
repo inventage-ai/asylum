@@ -45,7 +45,7 @@ Node.js LTS is installed via fnm. Global packages: typescript, @types/node, ts-n
 			"npm": {
 				Name:            "node/npm",
 				Description:     "npm with caching and onboarding",
-				CacheDirs:       map[string]string{"npm": "/home/claude/.npm"},
+				CacheDirs:       map[string]string{"npm": "~/.npm"},
 				OnboardingTasks: []onboarding.Task{onboarding.NPMTask{}},
 			},
 			"pnpm": {

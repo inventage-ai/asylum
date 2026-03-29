@@ -24,7 +24,7 @@ type Opencode struct{}
 func (Opencode) Name() string               { return "opencode" }
 func (Opencode) Binary() string             { return "opencode" }
 func (Opencode) NativeConfigDir() string    { return "~/.opencode" }
-func (Opencode) ContainerConfigDir() string { return "/home/claude/.opencode" }
+func (Opencode) ContainerConfigDir() string { return "~/.opencode" }
 func (Opencode) AsylumConfigDir() string    { return "~/.asylum/agents/opencode" }
 
 func (Opencode) EnvVars() map[string]string { return nil }

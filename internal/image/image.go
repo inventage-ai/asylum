@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -70,6 +71,14 @@ func baseHash(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) string {
 	h.Write([]byte(kit.AssembleBannerLines(profiles)))
 	h.Write([]byte(agent.AssembleAgentSnippets(agentInstalls)))
 	h.Write([]byte(agent.AssembleAgentBannerLines(agentInstalls)))
+	// Include host user identity so username/homedir changes trigger rebuild
+	h.Write([]byte(fmt.Sprintf("uid=%d gid=%d", os.Getuid(), os.Getgid())))
+	if home, err := os.UserHomeDir(); err == nil {
+		h.Write([]byte(home))
+	}
+	if u, err := user.Current(); err == nil {
+		h.Write([]byte(u.Username))
+	}
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -108,10 +117,17 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, versio
 		"asylum.hash":    hash,
 		"asylum.version": version,
 	}
+	home, _ := os.UserHomeDir()
+	username := "claude"
+	if u, err := user.Current(); err == nil {
+		username = u.Username
+	}
+
 	buildArgs := map[string]string{
-		"USER_ID":  fmt.Sprintf("%d", os.Getuid()),
-		"GROUP_ID": fmt.Sprintf("%d", os.Getgid()),
-		"USERNAME": "claude",
+		"USER_ID":   fmt.Sprintf("%d", os.Getuid()),
+		"GROUP_ID":  fmt.Sprintf("%d", os.Getgid()),
+		"USERNAME":  username,
+		"USER_HOME": home,
 	}
 
 	dockerfile := assembleDockerfile(profiles, agentInstalls)
@@ -140,7 +156,11 @@ func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, jav
 		return baseTag, nil
 	}
 
-	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, javaVersion)
+	username := "claude"
+	if u, err := user.Current(); err == nil {
+		username = u.Username
+	}
+	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, javaVersion, username)
 	if err != nil {
 		return "", err
 	}
@@ -184,7 +204,7 @@ func validatePackageNames(pkgType string, names []string) error {
 	return nil
 }
 
-func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string) (string, error) {
+func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string, username string) (string, error) {
 	for k := range packages {
 		if !knownPackageTypes[k] {
 			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, cx-lang, run)", k)
@@ -209,7 +229,7 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 
 	// Project-level profile snippets
 	if profileSnippets != "" {
-		b.WriteString("\nUSER claude\n")
+		b.WriteString("\nUSER " + username + "\n")
 		b.WriteString(profileSnippets)
 	}
 
@@ -221,7 +241,7 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 	}
 
 	if npm := packages["npm"]; len(npm) > 0 {
-		b.WriteString("\nUSER claude\n")
+		b.WriteString("\nUSER " + username + "\n")
 		b.WriteString("RUN bash -c 'eval \"$(fnm env)\" && npm install -g \\\n    ")
 		b.WriteString(strings.Join(npm, " \\\n    "))
 		b.WriteString("'\n")
@@ -231,7 +251,7 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 		if len(items) == 0 {
 			return
 		}
-		b.WriteString("\nUSER claude\n")
+		b.WriteString("\nUSER " + username + "\n")
 		for _, item := range items {
 			if strings.TrimSpace(item) == "" {
 				continue
@@ -248,11 +268,11 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 		if !validJavaVersion.MatchString(javaVersion) {
 			return "", fmt.Errorf("invalid java version %q", javaVersion)
 		}
-		b.WriteString("\nUSER claude\n")
+		b.WriteString("\nUSER " + username + "\n")
 		b.WriteString("RUN $HOME/.local/bin/mise install java@" + javaVersion + " && $HOME/.local/bin/mise use --global java@" + javaVersion + "\n")
 	}
 
-	b.WriteString("\nUSER claude\n")
+	b.WriteString("\nUSER " + username + "\n")
 
 	return b.String(), nil
 }

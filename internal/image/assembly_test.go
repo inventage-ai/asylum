@@ -220,7 +220,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 
 func TestGenerateProjectDockerfile_WithProfileSnippets(t *testing.T) {
 	snippet := "RUN echo 'from-profile'\n"
-	df, err := generateProjectDockerfile(snippet, nil, "")
+	df, err := generateProjectDockerfile(snippet, nil, "", "testuser")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,14 +233,14 @@ func TestGenerateProjectDockerfile_WithProfileSnippets(t *testing.T) {
 }
 
 func TestGenerateProjectDockerfile_EmptyReturnsMinimal(t *testing.T) {
-	df, err := generateProjectDockerfile("", nil, "")
+	df, err := generateProjectDockerfile("", nil, "", "testuser")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.HasPrefix(df, "FROM asylum:latest") {
 		t.Error("should start with FROM asylum:latest")
 	}
-	if !strings.HasSuffix(strings.TrimSpace(df), "USER claude") {
-		t.Error("should end with USER claude")
+	if !strings.HasSuffix(strings.TrimSpace(df), "USER testuser") {
+		t.Error("should end with USER testuser")
 	}
 }

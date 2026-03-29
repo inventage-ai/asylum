@@ -46,9 +46,9 @@ fi
 				DockerSnippet: `# Install Maven
 USER root
 RUN apt-get update && apt-get install -y --no-install-recommends maven && rm -rf /var/lib/apt/lists/*
-USER claude
+USER ${USERNAME}
 `,
-				CacheDirs: map[string]string{"maven": "/home/claude/.m2"},
+				CacheDirs: map[string]string{"maven": "~/.m2"},
 			},
 			"gradle": {
 				Name:        "java/gradle",
@@ -61,7 +61,7 @@ Gradle is installed via mise. Dependencies are cached across container restarts.
 RUN ~/.local/bin/mise install gradle@latest && \
     ~/.local/bin/mise use --global gradle@latest
 `,
-				CacheDirs: map[string]string{"gradle": "/home/claude/.gradle"},
+				CacheDirs: map[string]string{"gradle": "~/.gradle"},
 			},
 		},
 	})

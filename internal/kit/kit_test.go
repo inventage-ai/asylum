@@ -169,18 +169,18 @@ func TestResolve_UnknownProfile(t *testing.T) {
 
 func TestAggregateCacheDirs(t *testing.T) {
 	profiles := []*Kit{
-		{Name: "a", CacheDirs: map[string]string{"npm": "/home/claude/.npm"}},
-		{Name: "b", CacheDirs: map[string]string{"pip": "/home/claude/.cache/pip"}},
+		{Name: "a", CacheDirs: map[string]string{"npm": "~/.npm"}},
+		{Name: "b", CacheDirs: map[string]string{"pip": "~/.cache/pip"}},
 		{Name: "c"}, // no cache dirs
 	}
 	dirs := AggregateCacheDirs(profiles)
 	if len(dirs) != 2 {
 		t.Fatalf("expected 2 cache dirs, got %d", len(dirs))
 	}
-	if dirs["npm"] != "/home/claude/.npm" {
+	if dirs["npm"] != "~/.npm" {
 		t.Errorf("npm = %q", dirs["npm"])
 	}
-	if dirs["pip"] != "/home/claude/.cache/pip" {
+	if dirs["pip"] != "~/.cache/pip" {
 		t.Errorf("pip = %q", dirs["pip"])
 	}
 }

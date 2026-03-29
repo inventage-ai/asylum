@@ -17,7 +17,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-dev python3-pip python3-venv libssl-dev libffi-dev && \
     rm -rf /var/lib/apt/lists/*
-USER claude
+USER ${USERNAME}
 
 # Setup Python tools
 RUN $HOME/.local/bin/uv tool install black && \
@@ -55,7 +55,7 @@ if [ -n "$HOST_PROJECT_DIR" ] && [ ! -d "$HOST_PROJECT_DIR/.venv" ] && has_pytho
     fi
 fi
 `,
-				CacheDirs: map[string]string{"pip": "/home/claude/.cache/pip"},
+				CacheDirs: map[string]string{"pip": "~/.cache/pip"},
 			},
 		},
 	})

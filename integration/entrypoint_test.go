@@ -97,8 +97,10 @@ func TestEntrypointSSHPermissions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	script := `stat -c '%a' /home/claude/.ssh && stat -c '%a' /home/claude/.ssh/id_rsa && stat -c '%a' /home/claude/.ssh/id_rsa.pub`
-	out := dockerRunWithVolume(t, sshDir+":/home/claude/.ssh", script)
+	home, _ := os.UserHomeDir()
+	sshDst := filepath.Join(home, ".ssh")
+	script := `stat -c '%a' $HOME/.ssh && stat -c '%a' $HOME/.ssh/id_rsa && stat -c '%a' $HOME/.ssh/id_rsa.pub`
+	out := dockerRunWithVolume(t, sshDir+":"+sshDst, script)
 	lines := strings.Split(out, "\n")
 	if len(lines) < 3 {
 		t.Fatalf("unexpected output: %s", out)
@@ -124,6 +126,7 @@ func TestEntrypointEnvironment(t *testing.T) {
 
 func TestEntrypointClaudeConfigRestore(t *testing.T) {
 	ensureBaseImage(t)
+	home, _ := os.UserHomeDir()
 	tmp := t.TempDir()
 	backupDir := filepath.Join(tmp, "backups")
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
@@ -134,9 +137,9 @@ func TestEntrypointClaudeConfigRestore(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out := dockerRunWithVolumeAndEnv(t, tmp+":/home/claude/.claude",
-		map[string]string{"CLAUDE_CONFIG_DIR": "/home/claude/.claude"},
-		"cat /home/claude/.claude/.claude.json")
+	out := dockerRunWithVolumeAndEnv(t, tmp+":"+filepath.Join(home, ".claude"),
+		map[string]string{"CLAUDE_CONFIG_DIR": filepath.Join(home, ".claude")},
+		"cat $HOME/.claude/.claude.json")
 	if !strings.Contains(out, `"oauthAccount"`) {
 		t.Fatalf("expected restored config with oauthAccount, got: %s", out)
 	}
@@ -144,6 +147,7 @@ func TestEntrypointClaudeConfigRestore(t *testing.T) {
 
 func TestEntrypointClaudeConfigRestoreSkipsWithoutAuth(t *testing.T) {
 	ensureBaseImage(t)
+	home, _ := os.UserHomeDir()
 	tmp := t.TempDir()
 	backupDir := filepath.Join(tmp, "backups")
 	if err := os.MkdirAll(backupDir, 0755); err != nil {
@@ -153,9 +157,9 @@ func TestEntrypointClaudeConfigRestoreSkipsWithoutAuth(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out := dockerRunWithVolumeAndEnv(t, tmp+":/home/claude/.claude",
-		map[string]string{"CLAUDE_CONFIG_DIR": "/home/claude/.claude"},
-		"test -f /home/claude/.claude/.claude.json && echo EXISTS || echo MISSING")
+	out := dockerRunWithVolumeAndEnv(t, tmp+":"+filepath.Join(home, ".claude"),
+		map[string]string{"CLAUDE_CONFIG_DIR": filepath.Join(home, ".claude")},
+		"test -f $HOME/.claude/.claude.json && echo EXISTS || echo MISSING")
 	if !strings.Contains(out, "MISSING") {
 		t.Fatalf("expected MISSING when backup has no auth, got: %s", out)
 	}
@@ -163,6 +167,7 @@ func TestEntrypointClaudeConfigRestoreSkipsWithoutAuth(t *testing.T) {
 
 func TestEntrypointClaudeConfigNoRestoreWhenPresent(t *testing.T) {
 	ensureBaseImage(t)
+	home, _ := os.UserHomeDir()
 	tmp := t.TempDir()
 	if err := os.WriteFile(filepath.Join(tmp, ".claude.json"), []byte(`{"oauthAccount":"original"}`), 0644); err != nil {
 		t.Fatal(err)
@@ -175,9 +180,9 @@ func TestEntrypointClaudeConfigNoRestoreWhenPresent(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out := dockerRunWithVolumeAndEnv(t, tmp+":/home/claude/.claude",
-		map[string]string{"CLAUDE_CONFIG_DIR": "/home/claude/.claude"},
-		"cat /home/claude/.claude/.claude.json")
+	out := dockerRunWithVolumeAndEnv(t, tmp+":"+filepath.Join(home, ".claude"),
+		map[string]string{"CLAUDE_CONFIG_DIR": filepath.Join(home, ".claude")},
+		"cat $HOME/.claude/.claude.json")
 	if !strings.Contains(out, `"original"`) {
 		t.Fatalf("expected original config preserved, got: %s", out)
 	}

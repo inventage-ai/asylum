@@ -20,7 +20,7 @@ RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \
     apt-get install -y gh && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-USER claude
+USER ${USERNAME}
 `,
 	})
 }

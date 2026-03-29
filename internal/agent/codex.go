@@ -26,13 +26,14 @@ type Codex struct{}
 
 func (Codex) Name() string             { return "codex" }
 func (Codex) Binary() string           { return "codex" }
-func (Codex) NativeConfigDir() string  { return "~/.codex" }
-func (Codex) ContainerConfigDir() string { return "/home/claude/.codex" }
-func (Codex) AsylumConfigDir() string  { return "~/.asylum/agents/codex" }
+func (Codex) NativeConfigDir() string    { return "~/.codex" }
+func (Codex) ContainerConfigDir() string { return "~/.codex" }
+func (Codex) AsylumConfigDir() string    { return "~/.asylum/agents/codex" }
 
 func (Codex) EnvVars() map[string]string {
+	home, _ := os.UserHomeDir()
 	return map[string]string{
-		"CODEX_HOME": "/home/claude/.codex",
+		"CODEX_HOME": filepath.Join(home, ".codex"),
 	}
 }
 
