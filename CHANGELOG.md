@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Sandbox rules file lists disabled kits with a reference to the asylum-reference doc for activation instructions
+
 ### Fixed
 - Tilde (`~`) not expanded in volume destination paths, causing Docker mount errors
 

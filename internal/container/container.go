@@ -463,6 +463,28 @@ func generateSandboxRules(home, containerName string, kits []*kit.Kit, version s
 		b.WriteString(kitSnippets)
 	}
 
+	// List kits that are available but not active.
+	active := map[string]bool{}
+	for _, k := range kits {
+		active[k.Name] = true
+	}
+	var disabled []string
+	for _, name := range kit.All() {
+		if !active[name] {
+			if k := kit.Get(name); k != nil {
+				disabled = append(disabled, fmt.Sprintf("- **%s** — %s", k.Name, k.Description))
+			}
+		}
+	}
+	if len(disabled) > 0 {
+		b.WriteString("\n## Disabled Kits\n")
+		b.WriteString("These kits are available but not active. See ~/.claude/asylum-reference.md for how to enable them.\n")
+		for _, line := range disabled {
+			b.WriteString(line)
+			b.WriteByte('\n')
+		}
+	}
+
 	if err := os.WriteFile(filepath.Join(dir, "asylum-sandbox.md"), []byte(b.String()), 0644); err != nil {
 		return "", fmt.Errorf("write rules: %w", err)
 	}

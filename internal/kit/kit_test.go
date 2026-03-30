@@ -199,7 +199,7 @@ func TestAssembleRulesSnippets(t *testing.T) {
 		{Name: "c", RulesSnippet: "## C\nTools from C."},
 	}
 	got := AssembleRulesSnippets(kits)
-	want := "## A\nTools from A.\n## C\nTools from C.\n"
+	want := "## A\nTools from A.\n\n## C\nTools from C.\n"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}

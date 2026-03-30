@@ -1307,12 +1307,23 @@ func TestGenerateSandboxRules(t *testing.T) {
 		t.Error("missing mvn in kit tools")
 	}
 
-	// Kit snippets
+	// Kit snippets with blank line separation
 	if !strings.Contains(content, "### Java") {
 		t.Error("missing java kit snippet")
 	}
 	if !strings.Contains(content, "### Node.js") {
 		t.Error("missing node kit snippet")
+	}
+	if !strings.Contains(content, "JDK 17/21/25 via mise.\n\n### Node.js") {
+		t.Error("missing blank line between kit snippets")
+	}
+
+	// Disabled kits section
+	if !strings.Contains(content, "## Disabled Kits") {
+		t.Error("missing disabled kits section")
+	}
+	if !strings.Contains(content, "asylum-reference.md") {
+		t.Error("disabled kits section should reference asylum-reference.md")
 	}
 
 	// Reference doc written
@@ -1348,6 +1359,10 @@ func TestGenerateSandboxRules_NoKits(t *testing.T) {
 	}
 	if strings.Contains(content, "## Active Kits") {
 		t.Error("should not have Active Kits section with no kit snippets")
+	}
+	// All kits should appear as disabled when none are active
+	if !strings.Contains(content, "## Disabled Kits") {
+		t.Error("should have Disabled Kits section listing available kits")
 	}
 }
 

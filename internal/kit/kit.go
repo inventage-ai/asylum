@@ -367,15 +367,21 @@ func AssembleConfigSnippets() string {
 	return b.String()
 }
 
-// AssembleRulesSnippets concatenates RulesSnippets from all provided kits.
+// AssembleRulesSnippets concatenates RulesSnippets from all provided kits,
+// separated by blank lines.
 func AssembleRulesSnippets(kits []*Kit) string {
 	var b strings.Builder
+	first := true
 	for _, k := range kits {
 		if k.RulesSnippet != "" {
+			if !first {
+				b.WriteByte('\n')
+			}
 			b.WriteString(k.RulesSnippet)
 			if !strings.HasSuffix(k.RulesSnippet, "\n") {
 				b.WriteByte('\n')
 			}
+			first = false
 		}
 	}
 	return b.String()
