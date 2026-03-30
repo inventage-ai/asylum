@@ -3,7 +3,6 @@ package container
 import (
 	"crypto/sha256"
 	"fmt"
-	"io"
 	"io/fs"
 	"maps"
 	"os"
@@ -13,7 +12,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/inventage-ai/asylum/assets"
 	"github.com/inventage-ai/asylum/internal/agent"
@@ -739,88 +737,6 @@ func FindNodeModulesDirs(projectDir string) []string {
 	nodeModulesCache.dir = projectDir
 	nodeModulesCache.results = results
 	return results
-}
-
-// sessionCounterPath returns the path to the session counter file for a container.
-func sessionCounterPath(containerName string) (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".asylum", "projects", containerName)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "sessions"), nil
-}
-
-// SessionCount returns the current session count without modifying it.
-func SessionCount(containerName string) int {
-	path, err := sessionCounterPath(containerName)
-	if err != nil {
-		return 0
-	}
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return 0
-	}
-	n, _ := strconv.Atoi(strings.TrimSpace(string(data)))
-	return n
-}
-
-// IncrementSessions atomically increments the session counter and returns the new value.
-func IncrementSessions(containerName string) (int, error) {
-	path, err := sessionCounterPath(containerName)
-	if err != nil {
-		return 0, err
-	}
-	return adjustCounter(path, 1)
-}
-
-// DecrementSessions atomically decrements the session counter and returns the new value.
-func DecrementSessions(containerName string) (int, error) {
-	path, err := sessionCounterPath(containerName)
-	if err != nil {
-		return 0, err
-	}
-	n, err := adjustCounter(path, -1)
-	if err != nil {
-		return 0, err
-	}
-	if n <= 0 {
-		os.Remove(path)
-	}
-	return n, nil
-}
-
-func adjustCounter(path string, delta int) (int, error) {
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0644)
-	if err != nil {
-		return 0, fmt.Errorf("open counter: %w", err)
-	}
-	defer f.Close()
-
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		return 0, fmt.Errorf("lock counter: %w", err)
-	}
-
-	data, _ := io.ReadAll(f)
-	n, _ := strconv.Atoi(strings.TrimSpace(string(data)))
-	n += delta
-	if n < 0 {
-		n = 0
-	}
-
-	if err := f.Truncate(0); err != nil {
-		return n, fmt.Errorf("truncate counter: %w", err)
-	}
-	if _, err := f.Seek(0, 0); err != nil {
-		return n, fmt.Errorf("seek counter: %w", err)
-	}
-	if _, err := f.WriteString(strconv.Itoa(n)); err != nil {
-		return n, fmt.Errorf("write counter: %w", err)
-	}
-	return n, nil
 }
 
 // ensureMountpoint ensures path exists as a regular file so that Docker

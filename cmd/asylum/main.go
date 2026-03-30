@@ -205,14 +205,7 @@ func main() {
 
 	// If --rebuild requested but container is already running, ask to kill it
 	if flags.Rebuild && docker.IsRunning(cname) {
-		sessions := container.SessionCount(cname)
-		msg := "Container is running. Kill it and rebuild?"
-		if sessions == 1 {
-			msg = "Container is running (1 active session). Kill it and rebuild?"
-		} else if sessions > 1 {
-			msg = fmt.Sprintf("Container is running (%d active sessions). Kill it and rebuild?", sessions)
-		}
-		confirmed, err := tui.Confirm(msg, false)
+		confirmed, err := tui.Confirm("Container is running. Kill it and rebuild?", false)
 		if err != nil {
 			die("aborted")
 		}
@@ -351,25 +344,12 @@ func main() {
 		Config:        cfg,
 	})
 
-	incremented := false
-	if _, err := container.IncrementSessions(cname); err != nil {
-		log.Error("track session: %v", err)
-	} else {
-		incremented = true
-	}
-
 	setTabTitle(cfg.TabTitle(), projectDir, agentName, containerMode)
 	exitCode := runDocker(execArgs)
 
-	// Cleanup: remove container if this was the last session
-	if incremented {
-		remaining, err := container.DecrementSessions(cname)
-		if err != nil {
-			log.Error("track session: %v", err)
-		}
-		if remaining <= 0 {
-			docker.RemoveContainer(cname)
-		}
+	// Cleanup: remove container if no other sessions are active
+	if !docker.HasOtherSessions(cname) {
+		docker.RemoveContainer(cname)
 	}
 
 	os.Exit(exitCode)
@@ -633,7 +613,7 @@ func runDocker(args []string) int {
 
 	// Forward signals to the docker process
 	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	go func() {
 		for sig := range sigCh {
 			if cmd.Process != nil {

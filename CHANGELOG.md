@@ -11,6 +11,7 @@
 - Agent-browser Claude Code skill is generated at build time and mounted into `~/.claude/skills/` at runtime
 
 ### Fixed
+- Container not stopping after session exit when a previous session ended abnormally (terminal close, SIGHUP) — replaced file-based session counter with runtime exec session detection
 - Kit activation via `SyncKitToConfig` mangling config.yaml indentation, comments, and whitespace (switched from YAML roundtrip to text-based insertion)
 - Tilde (`~`) not expanded in volume destination paths, causing Docker mount errors
 

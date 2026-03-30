@@ -10,7 +10,7 @@ Multiple terminals can share the same container:
 2. Subsequent invocations exec into the running container
 3. The container is automatically removed when the last session exits
 
-Session count is tracked in `~/.asylum/projects/<container>/sessions` using file locking.
+When a session exits, asylum checks for other active exec sessions inside the container. If none remain, the container is automatically removed.
 
 ## Agent Resume
 

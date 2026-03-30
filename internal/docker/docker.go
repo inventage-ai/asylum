@@ -151,6 +151,35 @@ func RemoveVolumes(volumes ...string) error {
 	return cmd.Run()
 }
 
+// HasOtherSessions checks whether other exec sessions are active in the
+// container by running ps inside it and counting processes with PPID=0
+// (which identifies docker exec injected processes in the PID namespace).
+// PID 1 (docker-init) and the check command itself are excluded.
+func HasOtherSessions(containerName string) bool {
+	out, err := exec.Command("docker", "exec", containerName,
+		"ps", "-o", "pid,ppid", "--no-headers").Output()
+	if err != nil {
+		return false
+	}
+	return countExecSessions(string(out)) > 1 // 1 = our check command
+}
+
+// countExecSessions counts processes with PPID=0 excluding PID 1.
+func countExecSessions(psOutput string) int {
+	count := 0
+	for _, line := range strings.Split(psOutput, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 2 {
+			continue
+		}
+		pid, ppid := fields[0], fields[1]
+		if ppid == "0" && pid != "1" {
+			count++
+		}
+	}
+	return count
+}
+
 func ListImages(filter string) ([]string, error) {
 	cmd := exec.Command("docker", "images", "--format", "{{.Repository}}:{{.Tag}}", "--filter", "reference="+filter)
 	out, err := cmd.Output()
