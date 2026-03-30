@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- Tilde (`~`) not expanded in volume destination paths, causing Docker mount errors
+
 ## 0.6.1 — 2026-03-30
 
 Patch release fixing Docker volume mounting issues on some Docker Desktop versions and a spurious kit sync message for new users.

@@ -391,6 +391,8 @@ func TestParseVolume(t *testing.T) {
 		{"shorthand with mount option", "/data:ro", Volume{Host: "/data", Container: "/data", Options: "ro"}},
 		{"tilde expansion standard", "~/data:/data:ro", Volume{Host: "/home/user/data", Container: "/data", Options: "ro"}},
 		{"tilde shorthand", "~/data", Volume{Host: "/home/user/data", Container: "/home/user/data"}},
+		{"tilde expansion in container", "~/data:~/data:ro", Volume{Host: "/home/user/data", Container: "/home/user/data", Options: "ro"}},
+		{"tilde expansion both paths", "~/src:~/dest", Volume{Host: "/home/user/src", Container: "/home/user/dest"}},
 		{"three parts with single option", "/host:/container:ro", Volume{Host: "/host", Container: "/container", Options: "ro"}},
 		{"four parts with two options", "/host:/container:ro:z", Volume{Host: "/host", Container: "/container", Options: "ro:z"}},
 		{"three parts with selinux label", "/host:/container:z", Volume{Host: "/host", Container: "/container", Options: "z"}},
