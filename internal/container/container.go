@@ -325,6 +325,11 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 		return nil, fmt.Errorf("resolve agent config dir: %w", err)
 	}
 	os.MkdirAll(hostConfigDir, 0755)
+	// Resolve symlinks so Docker doesn't fail with "mkdir … file exists"
+	// when the agent config dir is a symlink (e.g. ~/.claude on macOS).
+	if resolved, err := filepath.EvalSymlinks(hostConfigDir); err == nil {
+		hostConfigDir = resolved
+	}
 	vol(hostConfigDir, containerConfigDir, "")
 
 	// Direnv
