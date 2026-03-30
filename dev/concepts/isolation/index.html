@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://asylum.inventage.ai/dev/concepts/agents/">
+        <link rel="canonical" href="https://asylum.inventage.ai/dev/concepts/isolation/">
       
       
-        <link rel="prev" href="../sessions/">
-      
-      
-        <link rel="next" href="../../development/building-from-source/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>Agents - Asylum</title>
+        <title>Config Isolation - Asylum</title>
       
     
     
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#agents" class="md-skip">
+        <a href="#config-isolation" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Agents
+              Config Isolation
             
           </span>
         </div>
@@ -1142,8 +1138,6 @@
       
   
   
-    
-  
   
   
     
@@ -1156,11 +1150,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
@@ -1181,7 +1177,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
@@ -1308,37 +1304,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Agents
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../agents/" class="md-nav__link">
         
   
   
@@ -1354,92 +1323,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#supported-agents" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Supported Agents
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#selecting-an-agent" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Selecting an Agent
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#config-isolation" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Config Isolation
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#passing-extra-args" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Passing Extra Args
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#resume-behavior" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Resume Behavior
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#installing-multiple-agents" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Installing Multiple Agents
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1568,68 +1451,108 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#supported-agents" class="md-nav__link">
+  <a href="#modes" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Supported Agents
+        Modes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shared" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shared
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#selecting-an-agent" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#isolated-default" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Selecting an Agent
+        isolated (default)
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#config-isolation" class="md-nav__link">
+        
+          <li class="md-nav__item">
+  <a href="#project" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Config Isolation
+        project
       
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#passing-extra-args" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Passing Extra Args
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#first-run-wizard" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        First-Run Wizard
       
     </span>
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
-  <a href="#resume-behavior" class="md-nav__link">
+  <a href="#config-seeding" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Resume Behavior
+        Config Seeding
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Config Seeding">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#first-run-session-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        First-Run Session Behavior
       
     </span>
   </a>
   
 </li>
-      
-        <li class="md-nav__item">
-  <a href="#installing-multiple-agents" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Installing Multiple Agents
-      
-    </span>
-  </a>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1653,68 +1576,91 @@
   
 
 
-<h1 id="agents">Agents<a class="headerlink" href="#agents" title="Permanent link">&para;</a></h1>
-<p>Asylum supports three AI coding agents. Each runs in YOLO mode (auto-approve all actions) by default.</p>
-<h2 id="supported-agents">Supported Agents<a class="headerlink" href="#supported-agents" title="Permanent link">&para;</a></h2>
+<h1 id="config-isolation">Config Isolation<a class="headerlink" href="#config-isolation" title="Permanent link">&para;</a></h1>
+<p>Asylum controls how each agent's config directory (e.g. <code>~/.claude</code>) is managed inside the container. Three isolation modes determine where config lives on the host and how it's mounted.</p>
+<h2 id="modes">Modes<a class="headerlink" href="#modes" title="Permanent link">&para;</a></h2>
+<h3 id="shared"><code>shared</code><a class="headerlink" href="#shared" title="Permanent link">&para;</a></h3>
+<p>The host config directory is mounted directly into the container. Changes sync both ways — anything the agent writes inside the container is immediately visible on the host, and vice versa.</p>
 <table>
 <thead>
 <tr>
-<th>Agent</th>
-<th>Binary</th>
-<th>Default Mode</th>
-<th>Config Dir</th>
+<th></th>
+<th>Path</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><a href="https://claude.ai">Claude Code</a></td>
-<td><code>claude</code></td>
-<td><code>--dangerously-skip-permissions</code></td>
+<td><strong>Host</strong></td>
 <td><code>~/.claude</code></td>
 </tr>
 <tr>
-<td><a href="https://github.com/google-gemini/gemini-cli">Gemini CLI</a></td>
-<td><code>gemini</code></td>
-<td><code>--yolo</code></td>
-<td><code>~/.gemini</code></td>
-</tr>
-<tr>
-<td><a href="https://github.com/openai/codex">Codex</a></td>
-<td><code>codex</code></td>
-<td><code>--yolo</code></td>
-<td><code>~/.codex</code></td>
+<td><strong>Container</strong></td>
+<td><code>~/.claude</code></td>
 </tr>
 </tbody>
 </table>
-<h2 id="selecting-an-agent">Selecting an Agent<a class="headerlink" href="#selecting-an-agent" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>asylum<span class="w">                </span><span class="c1"># Claude Code (default)</span>
-asylum<span class="w"> </span>-a<span class="w"> </span>gemini<span class="w">      </span><span class="c1"># Gemini CLI</span>
-asylum<span class="w"> </span>-a<span class="w"> </span>codex<span class="w">       </span><span class="c1"># Codex</span>
+<p><strong>Use when:</strong> you want identical config inside and outside the sandbox, or use the same API keys, MCP servers, and settings everywhere.</p>
+<p><strong>Trade-off:</strong> no isolation. A misbehaving agent can modify your host config.</p>
+<h3 id="isolated-default"><code>isolated</code> (default)<a class="headerlink" href="#isolated-default" title="Permanent link">&para;</a></h3>
+<p>Agent config is stored in Asylum's own directory, separate from the host. On first run, Asylum seeds this by copying from the host config. After that, the two are independent.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Host</strong></td>
+<td><code>~/.asylum/agents/claude/</code></td>
+</tr>
+<tr>
+<td><strong>Container</strong></td>
+<td><code>~/.claude</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Use when:</strong> you want a stable sandbox config that doesn't drift with host changes, but is shared across all projects.</p>
+<p><strong>Trade-off:</strong> changes to your host config (e.g. new MCP servers) won't appear in the container. You need to update the asylum copy separately, or delete it to re-trigger seeding.</p>
+<h3 id="project"><code>project</code><a class="headerlink" href="#project" title="Permanent link">&para;</a></h3>
+<p>Each project gets its own independent agent config directory. On first run, Asylum seeds it from the host config, just like <code>isolated</code> mode.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Path</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Host</strong></td>
+<td><code>~/.asylum/projects/&lt;container&gt;/claude-config/</code></td>
+</tr>
+<tr>
+<td><strong>Container</strong></td>
+<td><code>~/.claude</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Use when:</strong> you need completely separate agent state per project — different settings, different conversation history, no cross-contamination.</p>
+<p><strong>Trade-off:</strong> more directories to manage. Config changes must be made per-project.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<p>Set the isolation mode in your config:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ~/.asylum/config.yaml (or .asylum / .asylum.local)</span>
+<span class="nt">agents</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">claude</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">isolated</span><span class="w">   </span><span class="c1"># shared | isolated | project</span>
 </code></pre></div>
-<p>Or set it in your config:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">agent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini</span>
-</code></pre></div>
-<h2 id="config-isolation">Config Isolation<a class="headerlink" href="#config-isolation" title="Permanent link">&para;</a></h2>
-<p>Asylum controls how each agent's config directory is managed inside the container. Three modes are available: <code>shared</code> (host config mounted directly), <code>isolated</code> (default — separate copy in <code>~/.asylum/agents/&lt;agent&gt;/</code>), and <code>project</code> (per-project copy).</p>
-<p>On first run with Claude, Asylum prompts you to choose a mode. See <a href="../isolation/">Config Isolation</a> for full details.</p>
-<h2 id="passing-extra-args">Passing Extra Args<a class="headerlink" href="#passing-extra-args" title="Permanent link">&para;</a></h2>
-<p>Use <code>--</code> to pass flags to the agent:</p>
-<div class="highlight"><pre><span></span><code>asylum<span class="w"> </span>--<span class="w"> </span>--verbose
-asylum<span class="w"> </span>-a<span class="w"> </span>gemini<span class="w"> </span>--<span class="w"> </span>--sandboxed
-</code></pre></div>
-<h2 id="resume-behavior">Resume Behavior<a class="headerlink" href="#resume-behavior" title="Permanent link">&para;</a></h2>
-<p>Each agent resumes its previous session by default. Use <code>-n</code> to start fresh. See <a href="../sessions/">Sessions</a> for details on how each agent detects previous sessions.</p>
-<h2 id="installing-multiple-agents">Installing Multiple Agents<a class="headerlink" href="#installing-multiple-agents" title="Permanent link">&para;</a></h2>
-<p>By default, only Claude Code is installed in the base image. To install additional agents:</p>
-<div class="highlight"><pre><span></span><code><span class="nt">agents</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">claude</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
-<span class="w">  </span><span class="nt">gemini</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
-<span class="w">  </span><span class="nt">codex</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
-</code></pre></div>
-<p>Or via CLI:</p>
-<div class="highlight"><pre><span></span><code>asylum<span class="w"> </span>--agents<span class="w"> </span>claude,gemini
-</code></pre></div>
-<p>Agent installation requires their kit dependencies (Gemini and Codex need the <code>node</code> kit).</p>
+<h3 id="first-run-wizard">First-Run Wizard<a class="headerlink" href="#first-run-wizard" title="Permanent link">&para;</a></h3>
+<p>On first run with Claude, Asylum prompts you to choose an isolation mode if one isn't configured. The choice is saved to <code>~/.asylum/config.yaml</code>. In non-interactive environments, <code>isolated</code> is used as the default.</p>
+<p>Other agents (Gemini, Codex) currently default to <code>isolated</code> without prompting.</p>
+<h2 id="config-seeding">Config Seeding<a class="headerlink" href="#config-seeding" title="Permanent link">&para;</a></h2>
+<p>In <code>isolated</code> and <code>project</code> modes, Asylum performs a one-time copy of your host agent config into the target directory on first run. This seeds API keys, settings, and other config so you don't have to set them up again.</p>
+<p>After seeding, the copy is independent — changes to the host config don't propagate. To re-seed, delete the asylum copy and restart.</p>
+<p>Seeding is skipped in <code>shared</code> mode since the host directory is used directly.</p>
+<h3 id="first-run-session-behavior">First-Run Session Behavior<a class="headerlink" href="#first-run-session-behavior" title="Permanent link">&para;</a></h3>
+<p>When config is freshly seeded, Asylum forces a new agent session (<code>-n</code> behavior) regardless of what the seeded data contains. The seeded files may include session state from the host, but they don't represent a container session.</p>
 
 
 
