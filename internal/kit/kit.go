@@ -22,10 +22,12 @@ const (
 
 // CredentialOpts is passed to a kit's CredentialFunc.
 type CredentialOpts struct {
-	ProjectDir string
-	HomeDir    string
-	Mode       CredentialMode
-	Explicit   []string // identifiers when Mode is CredentialExplicit
+	ProjectDir    string
+	HomeDir       string
+	ContainerName string
+	Isolation     string         // kit-specific isolation level from config
+	Mode          CredentialMode
+	Explicit      []string // identifiers when Mode is CredentialExplicit
 }
 
 // CredentialMount describes a credential to mount into the container.

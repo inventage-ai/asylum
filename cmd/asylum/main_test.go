@@ -213,18 +213,6 @@ func TestParseArgs(t *testing.T) {
 			wantFlags: cliFlags{Ports: []string{"8080"}},
 		},
 
-		// ssh-init subcommand
-		{
-			name:    "ssh-init",
-			args:    []string{"ssh-init"},
-			wantSub: "ssh-init",
-		},
-		{
-			name:    "ssh-init extra arg errors",
-			args:    []string{"ssh-init", "extra"},
-			wantErr: true,
-		},
-
 		// run subcommand
 		{
 			name:      "run command",

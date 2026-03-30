@@ -55,6 +55,7 @@ type KitConfig struct {
 	Build               []string     `yaml:"build,omitempty"`
 	Count               int          `yaml:"count,omitempty"`
 	Credentials         *Credentials `yaml:"credentials,omitempty"`
+	Isolation           string       `yaml:"isolation,omitempty"` // shared, isolated, project
 }
 
 // AgentConfig holds per-agent configuration.
@@ -124,6 +125,15 @@ func (c Config) KitOption(name string) *KitConfig {
 		return nil
 	}
 	return c.Kits[name]
+}
+
+// SSHIsolation returns the SSH kit isolation level.
+// Returns "isolated" when not configured.
+func (c Config) SSHIsolation() string {
+	if kc := c.KitOption("ssh"); kc != nil && kc.Isolation != "" {
+		return kc.Isolation
+	}
+	return "isolated"
 }
 
 // AgentActive returns true if the named agent is present in the config.

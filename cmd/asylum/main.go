@@ -20,7 +20,6 @@ import (
 	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/ports"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
-	"github.com/inventage-ai/asylum/internal/ssh"
 	"github.com/inventage-ai/asylum/internal/term"
 	"github.com/inventage-ai/asylum/internal/tui"
 )
@@ -58,11 +57,6 @@ func main() {
 		return
 	case "cleanup":
 		runCleanup(flags.All)
-		return
-	case "ssh-init":
-		if err := ssh.Init(); err != nil {
-			die("%v", err)
-		}
 		return
 	case "config":
 		runConfig()
@@ -521,12 +515,6 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			i++
 			if i < len(args) {
 				return cliFlags{}, "", nil, fmt.Errorf("unexpected argument %q after config", args[i])
-			}
-		case arg == "ssh-init":
-			subcommand = "ssh-init"
-			i++
-			if i < len(args) {
-				return cliFlags{}, "", nil, fmt.Errorf("unexpected argument %q after ssh-init", args[i])
 			}
 		case arg == "self-update" || arg == "selfupdate":
 			subcommand = "self-update"
@@ -1056,7 +1044,6 @@ Usage:
   asylum cleanup                Remove current project's container, volumes, and data
   asylum cleanup --all          Remove all Asylum images, volumes, and cached data
   asylum version [--short]      Show version
-  asylum ssh-init               Initialize SSH directory
   asylum self-update [version]  Update to latest (or specific) version
   asylum self-update --dev      Update to latest dev build
   asylum self-update --safe     Emergency update (always dev, no checks)

@@ -12,15 +12,15 @@ Container name SHALL be `asylum-<sha256(project_dir)[:12]>-<sanitized_basename>`
 - **THEN** the old directory is renamed and port allocations are updated
 
 ### Requirement: Common volume mounts
-The container SHALL include all common mounts: project dir at real path, gitconfig, ssh, caches (as named Docker volumes), history, custom volumes, and direnv.
+The container SHALL include all common mounts: project dir at real path, gitconfig, caches (as named Docker volumes), history, custom volumes, and direnv. SSH mounts are handled by the SSH kit's credential function.
 
 #### Scenario: All common mounts present
-- **WHEN** gitconfig exists, ssh dir exists, and project has .envrc
+- **WHEN** gitconfig exists and project has .envrc
 - **THEN** all conditional mounts are included in the args
 
 #### Scenario: Missing optional paths
-- **WHEN** gitconfig and ssh dir do not exist
-- **THEN** those mounts are omitted, all others remain
+- **WHEN** gitconfig does not exist
+- **THEN** that mount is omitted, all others remain
 
 #### Scenario: Cache directories use named volumes
 - **WHEN** the container is started

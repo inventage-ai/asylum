@@ -241,13 +241,17 @@ asylum self-update 0.4.0        # Install a specific version
 
 ## SSH
 
-Asylum provides SSH access to the container via `~/.asylum/ssh/`. Initialize with:
+SSH is managed by an always-on kit. On first container start, an ed25519 key pair is generated automatically at `~/.asylum/ssh/` and mounted into `~/.ssh/`. The host's `~/.ssh/known_hosts` is mounted read-write if it exists.
 
-```
-asylum ssh-init
-```
+Configure isolation in `.asylum` or `~/.asylum/config.yaml`:
 
-This generates a key pair and configures the SSH directory that gets mounted into containers.
+```yaml
+kits:
+  ssh:
+    isolation: isolated   # default — generated keys in ~/.asylum/ssh/
+    # isolation: shared   # mount host ~/.ssh/ directly (read-write)
+    # isolation: project  # per-project keys in ~/.asylum/projects/<container>/ssh/
+```
 
 ## Troubleshooting
 

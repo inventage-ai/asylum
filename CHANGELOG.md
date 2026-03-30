@@ -4,7 +4,11 @@
 
 ### Added
 - `asylum config` command — interactive tabbed TUI for managing kits, credentials, and isolation settings after initial setup
+- SSH is now an always-on kit with configurable `isolation` (isolated/shared/project) — keys are generated automatically on first container start, replacing the manual `asylum ssh-init` command
 - Sandbox rules file lists disabled kits with a reference to the asylum-reference doc for activation instructions
+
+### Removed
+- `asylum ssh-init` command (replaced by the SSH kit's automatic key generation)
 
 ### Changed
 - New kit activation prompt uses TUI multiselect instead of per-kit Y/n text prompts — all new kits (default and opt-in) shown in one batch with descriptions, default-on kits pre-selected

@@ -230,12 +230,6 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 		vol(gitconfig, "/tmp/host_gitconfig", "ro")
 	}
 
-	// SSH
-	sshDir := filepath.Join(home, ".asylum", "ssh")
-	if dirExists(sshDir) {
-		vol(sshDir, filepath.Join(home, ".ssh"), "rw")
-	}
-
 	// Caches (named volumes for better IO on macOS)
 	for _, name := range slices.Sorted(maps.Keys(opts.CacheDirs)) {
 		volName := cname + "-cache-" + name
@@ -251,10 +245,18 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 		}
 		// Determine credential mode from the kit's config entry.
 		// Sub-kits (e.g. java/maven) check the parent kit's config.
+		// Always-on kits default to auto when not explicitly configured.
 		kitName, _, _ := strings.Cut(k.Name, "/")
 		mode := opts.Config.KitCredentialMode(kitName)
-		if mode == "" || mode == "none" {
+		if mode == "none" {
 			continue
+		}
+		if mode == "" {
+			if k.Tier == kit.TierAlwaysOn {
+				mode = "auto"
+			} else {
+				continue
+			}
 		}
 		credMode := kit.CredentialAuto
 		var explicit []string
@@ -262,11 +264,17 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 			credMode = kit.CredentialExplicit
 			explicit = opts.Config.KitCredentialExplicit(kitName)
 		}
+		var isolation string
+		if kc := opts.Config.KitOption(kitName); kc != nil {
+			isolation = kc.Isolation
+		}
 		mounts, err := k.CredentialFunc(kit.CredentialOpts{
-			ProjectDir: opts.ProjectDir,
-			HomeDir:    home,
-			Mode:       credMode,
-			Explicit:   explicit,
+			ProjectDir:    opts.ProjectDir,
+			HomeDir:       home,
+			ContainerName: cname,
+			Isolation:     isolation,
+			Mode:          credMode,
+			Explicit:      explicit,
 		})
 		if err != nil {
 			log.Warn("credentials for %s: %v", k.Name, err)
