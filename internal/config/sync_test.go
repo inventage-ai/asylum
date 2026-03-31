@@ -352,52 +352,55 @@ kits:
 	}
 }
 
-func TestRemoveKitEntry_WithNestedConfig(t *testing.T) {
+func TestSetKitDisabled(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
 
-	initial := `version: "0.2"
-kits:
-  docker: {}
-
-  java:
-    versions:
-      - 17
-      - 21
-    default-version: 21
-
-  node:
-    versions:
-      - 22
-`
+	initial := "version: \"0.2\"\nkits:\n  ast-grep:\n  java:\n    versions:\n      - 17\n"
 	os.WriteFile(path, []byte(initial), 0644)
 
-	if err := RemoveKitEntry(path, "java"); err != nil {
+	if err := SetKitDisabled(path, "ast-grep"); err != nil {
 		t.Fatal(err)
 	}
 
 	data, _ := os.ReadFile(path)
 	text := string(data)
 
-	if strings.Contains(text, "java") {
-		t.Errorf("java block should be removed, got:\n%s", text)
+	if !strings.Contains(text, "  ast-grep:\n    disabled: true\n") {
+		t.Errorf("expected disabled: true under ast-grep, got:\n%s", text)
 	}
-	if !strings.Contains(text, "docker") {
-		t.Error("docker should be preserved")
-	}
-	if !strings.Contains(text, "node") {
-		t.Error("node should be preserved")
+	if !strings.Contains(text, "java:") {
+		t.Error("java should be preserved")
 	}
 }
 
-func TestRemoveKitEntry_NotPresent(t *testing.T) {
+func TestSetKitDisabled_WithExistingProperties(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
 
-	initial := "version: \"0.2\"\nkits:\n  docker: {}\n"
+	initial := "version: \"0.2\"\nkits:\n  apt:\n    packages:\n      - imagemagick\n"
 	os.WriteFile(path, []byte(initial), 0644)
 
-	if err := RemoveKitEntry(path, "java"); err != nil {
+	if err := SetKitDisabled(path, "apt"); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(path)
+	text := string(data)
+
+	if !strings.Contains(text, "  apt:\n    disabled: true\n    packages:\n") {
+		t.Errorf("disabled should be first property, got:\n%s", text)
+	}
+}
+
+func TestSetKitDisabled_AlreadyDisabled(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	initial := "version: \"0.2\"\nkits:\n  ast-grep:\n    disabled: true\n"
+	os.WriteFile(path, []byte(initial), 0644)
+
+	if err := SetKitDisabled(path, "ast-grep"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -407,36 +410,110 @@ func TestRemoveKitEntry_NotPresent(t *testing.T) {
 	}
 }
 
-func TestRemoveKitEntry_EmptyMapping(t *testing.T) {
+func TestSetKitDisabled_OverridesDisabledFalse(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "config.yaml")
 
-	initial := `version: "0.2"
-kits:
-  docker: {}
-
-  github: {}
-
-  node:
-    versions:
-      - 22
-`
+	initial := "version: \"0.2\"\nkits:\n  ast-grep:\n    disabled: false\n    packages:\n      - foo\n"
 	os.WriteFile(path, []byte(initial), 0644)
 
-	if err := RemoveKitEntry(path, "github"); err != nil {
+	if err := SetKitDisabled(path, "ast-grep"); err != nil {
 		t.Fatal(err)
 	}
 
 	data, _ := os.ReadFile(path)
 	text := string(data)
 
-	if strings.Contains(text, "github") {
-		t.Errorf("github should be removed, got:\n%s", text)
+	if !strings.Contains(text, "disabled: true") {
+		t.Errorf("disabled: false should become disabled: true, got:\n%s", text)
 	}
-	if !strings.Contains(text, "docker") {
-		t.Error("docker should be preserved")
+	if strings.Contains(text, "disabled: false") {
+		t.Errorf("disabled: false should be gone, got:\n%s", text)
 	}
-	if !strings.Contains(text, "node") {
-		t.Error("node should be preserved")
+	if !strings.Contains(text, "packages:") {
+		t.Errorf("other properties should be preserved, got:\n%s", text)
 	}
 }
+
+func TestRemoveKitDisabled(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	initial := "version: \"0.2\"\nkits:\n  ast-grep:\n    disabled: true\n  java:\n"
+	os.WriteFile(path, []byte(initial), 0644)
+
+	if err := RemoveKitDisabled(path, "ast-grep"); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(path)
+	text := string(data)
+
+	if strings.Contains(text, "disabled") {
+		t.Errorf("disabled line should be removed, got:\n%s", text)
+	}
+	if !strings.Contains(text, "ast-grep:") {
+		t.Error("ast-grep entry should remain")
+	}
+	if !strings.Contains(text, "java:") {
+		t.Error("java should be preserved")
+	}
+}
+
+func TestRemoveKitDisabled_NotPresent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	initial := "version: \"0.2\"\nkits:\n  ast-grep:\n"
+	os.WriteFile(path, []byte(initial), 0644)
+
+	if err := RemoveKitDisabled(path, "ast-grep"); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(path)
+	if string(data) != initial {
+		t.Errorf("file should be unchanged, got:\n%s", string(data))
+	}
+}
+
+func TestRemoveKitDisabled_PreservesOtherProperties(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	initial := "version: \"0.2\"\nkits:\n  apt:\n    disabled: true\n    packages:\n      - imagemagick\n"
+	os.WriteFile(path, []byte(initial), 0644)
+
+	if err := RemoveKitDisabled(path, "apt"); err != nil {
+		t.Fatal(err)
+	}
+
+	data, _ := os.ReadFile(path)
+	text := string(data)
+
+	if strings.Contains(text, "disabled") {
+		t.Errorf("disabled line should be removed, got:\n%s", text)
+	}
+	if !strings.Contains(text, "packages:") {
+		t.Errorf("packages should be preserved, got:\n%s", text)
+	}
+}
+
+func TestKitExistsInFile(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+
+	initial := "version: \"0.2\"\nkits:\n  docker: {}\n\n  # ast-grep:\n"
+	os.WriteFile(path, []byte(initial), 0644)
+
+	if !KitExistsInFile(path, "docker") {
+		t.Error("docker should exist as active entry")
+	}
+	if KitExistsInFile(path, "ast-grep") {
+		t.Error("ast-grep is a comment, should not be found")
+	}
+	if KitExistsInFile(path, "python") {
+		t.Error("python is absent, should not be found")
+	}
+}
+

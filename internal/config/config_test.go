@@ -587,6 +587,16 @@ func TestMergeKitConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "disabled false overrides disabled true",
+			base: &KitConfig{Disabled: boolPtr(true)},
+			over: &KitConfig{Disabled: boolPtr(false)},
+			check: func(t *testing.T, kc *KitConfig) {
+				if kc.Disabled == nil || *kc.Disabled {
+					t.Error("disabled should be false (project override)")
+				}
+			},
+		},
+		{
 			name: "packages concat",
 			base: &KitConfig{Packages: []string{"tsx"}},
 			over: &KitConfig{Packages: []string{"vitest"}},

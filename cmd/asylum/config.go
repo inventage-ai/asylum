@@ -33,7 +33,7 @@ func runConfig() {
 	// Build kits tab: all non-always-on registered kits
 	activeKits := map[string]bool{}
 	for _, name := range cfg.KitNames() {
-		activeKits[name] = true
+		activeKits[name] = cfg.KitActive(name)
 	}
 
 	var kitOptions []tui.Option
@@ -103,22 +103,21 @@ func runConfig() {
 		wasActive := activeKits[name]
 		nowActive := newActive[name]
 		if nowActive && !wasActive {
-			// Activate: remove comment, insert active snippet
-			config.RemoveKitComment(cfgPath, name)
-			k := kit.Get(name)
-			if k.ConfigSnippet != "" {
-				if err := config.SyncKitToConfig(cfgPath, name, k.ConfigSnippet); err != nil {
+			if config.KitExistsInFile(cfgPath, name) {
+				// Previously enabled, now has disabled: true — remove the flag.
+				if err := config.RemoveKitDisabled(cfgPath, name); err != nil {
+					log.Error("activate kit %s: %v", name, err)
+				}
+			} else {
+				// Never enabled — remove comment block, insert clean entry.
+				config.RemoveKitComment(cfgPath, name)
+				if err := config.SyncKitToConfig(cfgPath, name, "  "+name+":"); err != nil {
 					log.Error("activate kit %s: %v", name, err)
 				}
 			}
 		} else if !nowActive && wasActive {
-			// Deactivate: remove active entry, insert comment
-			config.RemoveKitEntry(cfgPath, name)
-			k := kit.Get(name)
-			if k.ConfigComment != "" {
-				if err := config.SyncKitCommentToConfig(cfgPath, k.ConfigComment); err != nil {
-					log.Error("deactivate kit %s: %v", name, err)
-				}
+			if err := config.SetKitDisabled(cfgPath, name); err != nil {
+				log.Error("deactivate kit %s: %v", name, err)
 			}
 		}
 	}

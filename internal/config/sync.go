@@ -178,84 +178,6 @@ func RemoveKitComment(path string, kitName string) error {
 	return os.WriteFile(path, []byte(strings.Join(result, "\n")), 0644)
 }
 
-// RemoveKitEntry removes an active kit's YAML block (the kit key line and all
-// nested lines at deeper indentation) from the kits section.
-func RemoveKitEntry(path string, kitName string) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return err
-	}
-	lines := strings.Split(string(data), "\n")
-
-	kitsIdx := -1
-	kitsLineIndent := 0
-	for i, line := range lines {
-		trimmed := strings.TrimLeft(line, " ")
-		if strings.HasPrefix(trimmed, "kits:") {
-			kitsIdx = i
-			kitsLineIndent = len(line) - len(trimmed)
-			break
-		}
-	}
-	if kitsIdx < 0 {
-		return nil
-	}
-
-	entryIndent := kitsLineIndent + 2
-
-	// Find the kit entry line.
-	startIdx := -1
-	for i := kitsIdx + 1; i < len(lines); i++ {
-		line := lines[i]
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			continue
-		}
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		if indent <= kitsLineIndent && !strings.HasPrefix(trimmed, "#") {
-			break
-		}
-		if indent == entryIndent && !strings.HasPrefix(trimmed, "#") && strings.HasPrefix(trimmed, kitName+":") {
-			startIdx = i
-			break
-		}
-	}
-	if startIdx < 0 {
-		return nil
-	}
-
-	// Find the end: lines deeper than entry indent (nested config).
-	endIdx := startIdx + 1
-	for endIdx < len(lines) {
-		line := lines[endIdx]
-		trimmed := strings.TrimSpace(line)
-		if trimmed == "" {
-			endIdx++
-			continue
-		}
-		indent := len(line) - len(strings.TrimLeft(line, " "))
-		if indent <= entryIndent {
-			break
-		}
-		endIdx++
-	}
-
-	// Consume one trailing blank line if present.
-	if endIdx < len(lines) && strings.TrimSpace(lines[endIdx]) == "" {
-		endIdx++
-	}
-
-	// Also consume a leading blank line if the previous line is also blank or is the kits: line.
-	if startIdx > 0 && strings.TrimSpace(lines[startIdx-1]) == "" && startIdx-1 > kitsIdx {
-		startIdx--
-	}
-
-	result := make([]string, 0, len(lines)-(endIdx-startIdx))
-	result = append(result, lines[:startIdx]...)
-	result = append(result, lines[endIdx:]...)
-
-	return os.WriteFile(path, []byte(strings.Join(result, "\n")), 0644)
-}
 
 // SyncKitCommentToConfig appends a commented-out kit entry to the end of
 // the kits block, preserving file formatting via goccy/go-yaml's AST.
@@ -357,4 +279,82 @@ func kitExistsInMapping(mapping *yaml.Node, name string) bool {
 		}
 	}
 	return false
+}
+
+// KitExistsInFile checks whether a kit key exists as an active (non-comment)
+// YAML entry in the kits mapping of the given config file.
+func KitExistsInFile(path string, kitName string) bool {
+	doc, err := parseConfigDoc(path)
+	if err != nil {
+		return false
+	}
+	kitsNode := findKitsMapping(doc)
+	if kitsNode == nil {
+		return false
+	}
+	return kitExistsInMapping(kitsNode, kitName)
+}
+
+// SetKitDisabled adds `disabled: true` as the first property under a kit's
+// entry in the config file. If the kit already has `disabled: true`, no
+// modification is made. Uses text-based editing to preserve formatting.
+func SetKitDisabled(path, kitName string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(data), "\n")
+
+	kitsIdx := findSection(lines, "kits")
+	if kitsIdx == -1 {
+		return nil
+	}
+	kitIdx := findKey(lines, kitsIdx, kitName)
+	if kitIdx == -1 {
+		return nil
+	}
+
+	disabledIdx := findKey(lines, kitIdx, "disabled")
+	if disabledIdx != -1 {
+		if strings.TrimSpace(lines[disabledIdx]) == "disabled: true" {
+			return nil // already disabled
+		}
+		// Replace disabled: false → disabled: true
+		indent := leadingSpaces(lines[disabledIdx])
+		lines[disabledIdx] = strings.Repeat(" ", indent) + "disabled: true"
+		return writeLines(path, lines)
+	}
+
+	parentIndent := leadingSpaces(lines[kitIdx])
+	lines = insertAfter(lines, kitIdx, parentIndent+2, "disabled: true")
+	return writeLines(path, lines)
+}
+
+// RemoveKitDisabled removes the `disabled: true` (or `disabled: false`) line
+// from a kit's entry in the config file. If no disabled field is present, no
+// modification is made.
+func RemoveKitDisabled(path, kitName string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(data), "\n")
+
+	kitsIdx := findSection(lines, "kits")
+	if kitsIdx == -1 {
+		return nil
+	}
+	kitIdx := findKey(lines, kitsIdx, kitName)
+	if kitIdx == -1 {
+		return nil
+	}
+	disabledIdx := findKey(lines, kitIdx, "disabled")
+	if disabledIdx == -1 {
+		return nil
+	}
+
+	result := make([]string, 0, len(lines)-1)
+	result = append(result, lines[:disabledIdx]...)
+	result = append(result, lines[disabledIdx+1:]...)
+	return writeLines(path, result)
 }

@@ -27,11 +27,11 @@ The user SHALL be able to switch between tabs using the left and right arrow key
 - **THEN** the active tab SHALL NOT change (no wrap-around)
 
 ### Requirement: Kits tab shows multiselect of all kits
-The Kits tab SHALL display a multiselect list of all registered kits (excluding always-on kits). Kits that are currently active in the config SHALL be pre-selected.
+The Kits tab SHALL display a multiselect list of all registered kits (excluding always-on kits). Kits that are currently active (present in config and not disabled) SHALL be pre-selected.
 
 #### Scenario: Kit list population
 - **WHEN** the Kits tab is displayed
-- **THEN** all registered kits with tier Default or OptIn are listed, with currently active kits checked
+- **THEN** all registered kits with tier Default or OptIn are listed, with currently active (not disabled) kits checked
 
 #### Scenario: Toggle kit selection
 - **WHEN** the user presses space on a kit entry
@@ -54,13 +54,17 @@ The Isolation tab SHALL display a single-select list with options: Shared, Isola
 ### Requirement: Confirm applies all changes
 When the user presses Enter, all changes across all tabs SHALL be applied to `~/.asylum/config.yaml`.
 
-#### Scenario: Apply kit activation
-- **WHEN** the user selects a previously inactive kit and presses Enter
-- **THEN** any commented-out config for that kit (including commented options) is removed and the kit's active ConfigSnippet is inserted into the kits section
+#### Scenario: Apply kit activation (first time)
+- **WHEN** the user selects a never-enabled kit (exists only as a comment block) and presses Enter
+- **THEN** the comment block is removed and a clean YAML entry is inserted into the kits section
+
+#### Scenario: Apply kit activation (re-enable)
+- **WHEN** the user selects a previously-enabled kit that has `disabled: true` and presses Enter
+- **THEN** the `disabled` field is removed from the kit's YAML entry
 
 #### Scenario: Apply kit deactivation
 - **WHEN** the user deselects a previously active kit and presses Enter
-- **THEN** the kit's active config entry is removed from the kits section and a commented version is inserted
+- **THEN** `disabled: true` is added as the first property of the kit's existing YAML entry, preserving all other configuration
 
 #### Scenario: Apply credential change
 - **WHEN** the user toggles a credential kit and presses Enter
@@ -74,20 +78,13 @@ When the user presses Enter, all changes across all tabs SHALL be applied to `~/
 - **WHEN** the user presses Escape
 - **THEN** no changes are written and the command exits
 
-### Requirement: Kit comment removal on activation
-When activating a kit, the system SHALL detect and remove any existing commented-out config block for that kit before inserting the active config snippet.
+### Requirement: Kit comment removal on first activation
+When activating a never-enabled kit, the system SHALL detect and remove any existing commented-out config block for that kit before inserting the active config entry.
 
 #### Scenario: Commented kit with options
 - **WHEN** a kit has a commented-out block like `# python:` followed by commented option lines (e.g. `#   versions:`, `#     - 3.14`)
-- **THEN** all commented lines belonging to that kit block are removed before the active snippet is inserted
+- **THEN** all commented lines belonging to that kit block are removed before the active entry is inserted
 
 #### Scenario: No commented version exists
 - **WHEN** a kit has no commented-out config in the file
-- **THEN** the active snippet is inserted normally without any removal step
-
-### Requirement: Kit entry removal on deactivation
-When deactivating a kit, the system SHALL remove the active config entry (the kit key and all its nested YAML lines) before inserting the commented version.
-
-#### Scenario: Active kit with nested config
-- **WHEN** a kit `java:` has nested lines like `versions:`, `default-version:`
-- **THEN** the entire block (key + all nested lines) is removed before the commented version is inserted
+- **THEN** the active entry is inserted normally without any removal step
