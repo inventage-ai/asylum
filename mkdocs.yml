@@ -48,6 +48,7 @@ nav:
     - Overview: commands/index.md
     - shell: commands/shell.md
     - run: commands/run.md
+    - config: commands/config.md
     - cleanup: commands/cleanup.md
     - version: commands/version.md
     - self-update: commands/self-update.md

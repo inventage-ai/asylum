@@ -10,7 +10,7 @@ Asylum uses a layered YAML config system. Settings are merged from multiple sour
 | 2 | `.asylum` | Project config (commit this) |
 | 3 (highest) | `.asylum.local` | Local overrides (gitignore this) |
 
-[CLI flags](flags.md) override all config files.
+[CLI flags](flags.md) override all config files. You can also use [`asylum config`](../commands/config.md) to interactively manage kits, credentials, and isolation.
 
 ## Example `.asylum`
 

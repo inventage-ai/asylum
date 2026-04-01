@@ -69,7 +69,7 @@ env:
   DEBUG: "true"
 ```
 
-See [Configuration](configuration/index.md) for all options, and [Kits](kits/index.md) for available language and tool kits.
+You can also use `asylum config` to interactively toggle kits, credentials, and isolation mode. See [Configuration](configuration/index.md) for all options, and [Kits](kits/index.md) for available language and tool kits.
 
 ## SSH
 

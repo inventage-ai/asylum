@@ -8,6 +8,7 @@ asylum [flags] -- [args]      Start agent with extra args
 asylum [flags] shell          Interactive zsh shell
 asylum [flags] shell --admin  Admin shell with sudo notice
 asylum [flags] run <cmd>      Run command in container
+asylum config                 Configure kits, credentials, and isolation
 asylum cleanup                Remove current project's container, volumes, and data
 asylum cleanup --all          Remove all Asylum images, volumes, and cached data
 asylum version [--short]      Show version
@@ -35,6 +36,7 @@ See [CLI Flags](../configuration/flags.md) for all available flags.
 |---------|-------------|
 | [`shell`](shell.md) | Interactive zsh shell in the container |
 | [`run`](run.md) | Run a command in the container |
+| [`config`](config.md) | Configure kits, credentials, and isolation |
 | [`cleanup`](cleanup.md) | Clean up current project (or `--all` for everything) |
 | [`version`](version.md) | Show version information |
 | [`self-update`](self-update.md) | Update Asylum to a new version |

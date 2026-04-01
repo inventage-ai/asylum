@@ -92,6 +92,7 @@ Full reference: [Configuration documentation](https://asylum.inventage.ai/latest
 | `asylum` | Start the default agent |
 | `asylum shell` | Interactive zsh shell |
 | `asylum run <cmd>` | Run a command in the container |
+| `asylum config` | Configure kits, credentials, and isolation |
 | `asylum cleanup` | Clean up current project (`--all` for everything) |
 | `asylum version` | Show version |
 | `asylum self-update` | Update to latest version |
