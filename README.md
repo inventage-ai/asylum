@@ -57,7 +57,7 @@ On first run, Asylum builds a Docker image (~5 min) and seeds agent config from 
 | **Shell** | zsh with oh-my-zsh |
 | **GitHub** | GitHub CLI (`gh`) |
 
-Everything is modular via [Kits](https://asylum.inventage.ai/latest/dev/kits/) — enable what you need, disable what you don't.
+Everything is modular via [Kits](https://asylum.inventage.ai/latest/kits/) — enable what you need, disable what you don't.
 
 ## Configuration
 
@@ -83,7 +83,7 @@ env:
   DEBUG: "true"
 ```
 
-Full reference: [Configuration documentation](https://asylum.inventage.ai/latest/dev/configuration/)
+Full reference: [Configuration documentation](https://asylum.inventage.ai/latest/configuration/)
 
 ## Commands
 
@@ -96,26 +96,26 @@ Full reference: [Configuration documentation](https://asylum.inventage.ai/latest
 | `asylum version` | Show version |
 | `asylum self-update` | Update to latest version |
 
-Full reference: [Commands documentation](https://asylum.inventage.ai/latest/dev/commands/)
+Full reference: [Commands documentation](https://asylum.inventage.ai/latest/commands/)
 
 ## Kits
 
 | Kit | Description | Default |
 |-----|-------------|---------|
-| [`node`](https://asylum.inventage.ai/latest/dev/kits/node/) | Node.js LTS + npm/pnpm/yarn | Always on |
-| [`python`](https://asylum.inventage.ai/latest/dev/kits/python/) | Python 3 + uv | On |
-| [`java`](https://asylum.inventage.ai/latest/dev/kits/java/) | JDK 17/21/25 + Maven/Gradle | On |
-| [`docker`](https://asylum.inventage.ai/latest/dev/kits/docker/) | Docker-in-Docker | On |
-| [`github`](https://asylum.inventage.ai/latest/dev/kits/github/) | GitHub CLI | On |
-| [`shell`](https://asylum.inventage.ai/latest/dev/kits/shell/) | oh-my-zsh, tmux, direnv | Always on |
-| [`ports`](https://asylum.inventage.ai/latest/dev/kits/ports/) | Automatic port forwarding | Always on |
-| [`openspec`](https://asylum.inventage.ai/latest/dev/kits/openspec/) | [OpenSpec](https://openspec.dev) CLI | On |
-| [`ast-grep`](https://asylum.inventage.ai/latest/dev/kits/ast-grep/) | AST-based code search (`sg`) | Opt-in |
-| [`browser`](https://asylum.inventage.ai/latest/dev/kits/browser/) | Chromium via Playwright | Opt-in |
-| [`cx`](https://asylum.inventage.ai/latest/dev/kits/cx/) | Semantic code navigation | Opt-in |
-| [`apt`](https://asylum.inventage.ai/latest/dev/kits/apt/) | Extra system packages | Opt-in |
+| [`node`](https://asylum.inventage.ai/latest/kits/node/) | Node.js LTS + npm/pnpm/yarn | Always on |
+| [`python`](https://asylum.inventage.ai/latest/kits/python/) | Python 3 + uv | On |
+| [`java`](https://asylum.inventage.ai/latest/kits/java/) | JDK 17/21/25 + Maven/Gradle | On |
+| [`docker`](https://asylum.inventage.ai/latest/kits/docker/) | Docker-in-Docker | On |
+| [`github`](https://asylum.inventage.ai/latest/kits/github/) | GitHub CLI | On |
+| [`shell`](https://asylum.inventage.ai/latest/kits/shell/) | oh-my-zsh, tmux, direnv | Always on |
+| [`ports`](https://asylum.inventage.ai/latest/kits/ports/) | Automatic port forwarding | Always on |
+| [`openspec`](https://asylum.inventage.ai/latest/kits/openspec/) | [OpenSpec](https://openspec.dev) CLI | On |
+| [`ast-grep`](https://asylum.inventage.ai/latest/kits/ast-grep/) | AST-based code search (`sg`) | Opt-in |
+| [`browser`](https://asylum.inventage.ai/latest/kits/browser/) | Chromium via Playwright | Opt-in |
+| [`cx`](https://asylum.inventage.ai/latest/kits/cx/) | Semantic code navigation | Opt-in |
+| [`apt`](https://asylum.inventage.ai/latest/kits/apt/) | Extra system packages | Opt-in |
 
-See the [full kits reference](https://asylum.inventage.ai/latest/dev/kits/) for configuration details.
+See the [full kits reference](https://asylum.inventage.ai/latest/kits/) for configuration details.
 
 ## How Does It Compare?
 
