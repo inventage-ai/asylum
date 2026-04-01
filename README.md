@@ -111,7 +111,7 @@ Full reference: [Commands documentation](https://asylum.inventage.ai/latest/comm
 | [`ports`](https://asylum.inventage.ai/latest/kits/ports/) | Automatic port forwarding | Always on |
 | [`openspec`](https://asylum.inventage.ai/latest/kits/openspec/) | [OpenSpec](https://openspec.dev) CLI | On |
 | [`ast-grep`](https://asylum.inventage.ai/latest/kits/ast-grep/) | AST-based code search (`sg`) | Opt-in |
-| [`browser`](https://asylum.inventage.ai/latest/kits/browser/) | Chromium via Playwright | Opt-in |
+| [`agent-browser`](https://asylum.inventage.ai/latest/kits/agent-browser/) | Browser automation via agent-browser | Opt-in |
 | [`cx`](https://asylum.inventage.ai/latest/kits/cx/) | Semantic code navigation | Opt-in |
 | [`apt`](https://asylum.inventage.ai/latest/kits/apt/) | Extra system packages | Opt-in |
 
