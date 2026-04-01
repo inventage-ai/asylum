@@ -15,7 +15,7 @@ func init() {
 RUN curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
 # Generate rtk hooks for Claude Code
 RUN mkdir -p "$HOME/.claude" && \
-    rtk init -g && \
+    $HOME/.local/bin/rtk init -g && \
     mkdir -p /tmp/asylum-kit-rtk && \
     cp -r "$HOME/.claude/hooks" /tmp/asylum-kit-rtk/hooks && \
     cp "$HOME/.claude/RTK.md" /tmp/asylum-kit-rtk/RTK.md && \
