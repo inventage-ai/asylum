@@ -64,7 +64,6 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	core := func(flag, value string) {
 		all = append(all, kit.RunArg{Flag: flag, Value: value, Source: "core", Priority: kit.PriorityCore})
 	}
-	core("--rm", "")
 	core("--init", "")
 	core("--name", containerName)
 	core("--hostname", hostname)

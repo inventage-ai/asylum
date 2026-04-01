@@ -9,10 +9,6 @@ The system SHALL represent every docker run **option** as a `RunArg` struct cont
 - **WHEN** the docker kit produces a privileged flag
 - **THEN** the RunArg SHALL have Flag=`--privileged`, Value=`""`, Source=`docker kit`, Priority=1
 
-#### Scenario: Core structural arg
-- **WHEN** the container builder produces the `--rm` flag
-- **THEN** the RunArg SHALL have Flag=`--rm`, Value=`""`, Source=`core`, Priority=0
-
 #### Scenario: Subcommand not in pipeline
 - **WHEN** the RunArg pipeline is assembled
 - **THEN** no RunArg with Flag=`run` or Flag=`-d` SHALL exist in the pipeline

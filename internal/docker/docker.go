@@ -91,9 +91,7 @@ func CopyTo(container, hostDir, containerPath string) error {
 }
 
 func RemoveContainer(name string) error {
-	cmd := exec.Command("docker", "rm", "-f", name)
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	return exec.Command("docker", "rm", "-f", name).Run()
 }
 
 func ShowLogs(name string) {
@@ -105,9 +103,13 @@ func ShowLogs(name string) {
 
 // WaitReady polls until the container is running and the entrypoint has
 // finished (indicated by /tmp/asylum-path existing), up to timeoutSec seconds.
+// Returns immediately if the container stops or is removed.
 func WaitReady(name string, timeoutSec int) bool {
 	for i := 0; i < timeoutSec; i++ {
-		if IsRunning(name) && fileExists(name, "/tmp/asylum-path") {
+		if !IsRunning(name) {
+			return false
+		}
+		if fileExists(name, "/tmp/asylum-path") {
 			return true
 		}
 		time.Sleep(time.Second)

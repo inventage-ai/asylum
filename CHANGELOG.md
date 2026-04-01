@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- Container startup appearing to freeze for 60 seconds when the container crashes immediately — now fails fast with logs
+
 ## 0.6.2 — 2026-04-01
 
 Adds `asylum config` for post-setup kit and credential management, replaces the SSH init command with an always-on SSH kit, and renames the browser kit to `agent-browser` backed by Vercel's agent-browser tool.

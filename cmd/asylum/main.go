@@ -277,6 +277,9 @@ func main() {
 			fmt.Fprint(os.Stderr, container.FormatDebug(resolved, overrides))
 		}
 
+		// Remove any stale stopped container with the same name
+		docker.RemoveContainer(cname)
+
 		if err := docker.RunDetached(runArgs); err != nil {
 			die("start container: %v", err)
 		}
