@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- New `rtk` kit (opt-in) — installs [RTK](https://github.com/rtk-ai/rtk) token-reduction proxy that compresses shell command output, reducing LLM token usage by 60-90%
 - `asylum config` command — interactive tabbed TUI for managing kits, credentials, and isolation settings after initial setup
 - SSH is now an always-on kit with configurable `isolation` (isolated/shared/project) — keys are generated automatically on first container start, replacing the manual `asylum ssh-init` command
 - Sandbox rules file lists disabled kits with a reference to the asylum-reference doc for activation instructions
