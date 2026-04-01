@@ -2,25 +2,32 @@
 
 ## Unreleased
 
+## 0.6.2 — 2026-04-01
+
+Adds `asylum config` for post-setup kit and credential management, replaces the SSH init command with an always-on SSH kit, and renames the browser kit to `agent-browser` backed by Vercel's agent-browser tool.
+
 ### Added
-- New `rtk` kit (opt-in) — installs [RTK](https://github.com/rtk-ai/rtk) token-reduction proxy that compresses shell command output, reducing LLM token usage by 60-90%
 - `asylum config` command — interactive tabbed TUI for managing kits, credentials, and isolation settings after initial setup
 - SSH is now an always-on kit with configurable `isolation` (isolated/shared/project) — keys are generated automatically on first container start, replacing the manual `asylum ssh-init` command
+- New `rtk` kit (opt-in) — installs [RTK](https://github.com/rtk-ai/rtk) token-reduction proxy that compresses shell command output, reducing LLM token usage by 60-90%
 - Sandbox rules file lists disabled kits with a reference to the asylum-reference doc for activation instructions
+
+### Changed
+- Browser kit renamed from `browser` to `agent-browser`, now backed by [agent-browser](https://github.com/vercel-labs/agent-browser) instead of Playwright — Claude Code skill generated at build time; the old `browser:` config key still works as an alias
+- New kit activation prompt uses TUI multiselect instead of per-kit Y/n text prompts — all new kits shown in one batch with descriptions, default-on kits pre-selected
+- ast-grep kit now generates and mounts the upstream Claude Code skill for better rule authoring
+- Dockerfile instruction ordering optimized for layer caching — faster rebuilds when only later layers change
+- `apt` and `shell` kits hidden from interactive selection UIs
+
+### Fixed
+- Container not stopping after session exit when a previous session ended abnormally — replaced file-based session counter with runtime exec session detection
+- Docker mount failure when agent config dir is a symlink
+- Kit activation via `SyncKitToConfig` mangling config.yaml indentation, comments, and whitespace
+- Tilde (`~`) not expanded in volume destination paths, causing Docker mount errors
+- Release notification dropping last changelog section
 
 ### Removed
 - `asylum ssh-init` command (replaced by the SSH kit's automatic key generation)
-
-### Changed
-- New kit activation prompt uses TUI multiselect instead of per-kit Y/n text prompts — all new kits (default and opt-in) shown in one batch with descriptions, default-on kits pre-selected
-- Browser kit renamed from `browser` to `agent-browser` and now uses [agent-browser](https://github.com/vercel-labs/agent-browser) instead of Playwright; the old `browser:` config key still works as an alias
-- Agent-browser Claude Code skill is generated at build time and mounted into `~/.claude/skills/` at runtime
-- ast-grep kit now generates and mounts the upstream Claude Code skill (`ast-grep/agent-skill`) for better rule authoring
-
-### Fixed
-- Container not stopping after session exit when a previous session ended abnormally (terminal close, SIGHUP) — replaced file-based session counter with runtime exec session detection
-- Kit activation via `SyncKitToConfig` mangling config.yaml indentation, comments, and whitespace (switched from YAML roundtrip to text-based insertion)
-- Tilde (`~`) not expanded in volume destination paths, causing Docker mount errors
 
 ## 0.6.1 — 2026-03-30
 
