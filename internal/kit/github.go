@@ -18,6 +18,9 @@ func init() {
 `,
 		ConfigNodes:   configNodes("github", "GitHub CLI (gh)", nil),
 		ConfigComment: "github:               # GitHub CLI (gh)",
+		RulesSnippet: `### GitHub CLI (github kit)
+GitHub CLI (` + "`gh`" + `) is installed and pre-authenticated with the host's GitHub credentials. You can use ` + "`gh`" + ` commands directly without running ` + "`gh auth login`" + `.
+`,
 		DockerSnippet: `# Install GitHub CLI
 USER root
 RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | \

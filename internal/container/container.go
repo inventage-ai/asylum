@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -550,23 +551,23 @@ func validPort(s string) bool {
 
 const sandboxRulesTemplate = `# Asylum Sandbox (v%s)
 
-You are running inside an Asylum Docker container (Debian). Do not attempt to install system packages or tools that are already available.
+You are running inside an Asylum Docker container (Debian bookworm, %s). Do not install system packages via apt — they won't survive container rebuilds. If a tool is missing, tell the user to add it as a kit or custom build step in ` + "`.asylum`" + `.
 
 For detailed documentation, troubleshooting, and config reference, read ~/.claude/asylum-reference.md
-Changelog: https://github.com/inventage-ai/asylum/blob/main/CHANGELOG.md
 
 ## Environment
 - User: %s (with passwordless sudo)
 - Host machine: reachable at host.docker.internal
+- Default shell: zsh (oh-my-zsh)
 - Project directory: mounted from the host at its real path
 
 ## Base Tools (always available)
-git, docker (CLI), curl, wget, jq, yq, ripgrep (rg), fd, make, cmake, gcc/g++, vim, nano, htop, zip/unzip, ssh
+git, docker, curl, wget, jq, yq, ripgrep (rg), fd, direnv, make, cmake, gcc/g++, vim, nano, htop, zip/unzip, ssh
 
-## Language Managers
-- Node.js: fnm (Fast Node Manager) — switch versions with fnm use <version>
-- Python: uv — fast package installer and venv manager
-- Java: mise — switch versions with mise use java@<version>
+## Package & Version Managers
+- fnm: Node.js version manager — ` + "`fnm use <version>`" + `
+- uv: Python package installer and venv manager
+- mise: Runtime version manager (Java, etc.) — ` + "`mise use java@<version>`" + `
 `
 
 // generateSandboxRules writes the rules file and reference doc to
@@ -582,7 +583,7 @@ func generateSandboxRules(home, containerName string, kits []*kit.Kit, version s
 	if u, err := user.Current(); err == nil {
 		username = u.Username
 	}
-	fmt.Fprintf(&b, sandboxRulesTemplate, version, username)
+	fmt.Fprintf(&b, sandboxRulesTemplate, version, runtime.GOARCH, username)
 
 	if tools := kit.AggregateTools(kits); len(tools) > 0 {
 		b.WriteString("\n## Kit Tools\n")

@@ -27,7 +27,7 @@ if [ -d /tmp/asylum-kit-skills-ast-grep ] && [ -d "$HOME/.claude" ]; then
 fi
 `,
 		RulesSnippet: `### ast-grep (ast-grep kit)
-ast-grep (` + "`sg`" + `) is installed for AST-based code search, linting, and rewriting. Use ` + "`sg run`" + ` to search with patterns, ` + "`sg scan`" + ` to lint, and ` + "`sg rewrite`" + ` to apply transformations. Patterns use ` + "`$VAR`" + ` for wildcards.
+ast-grep (` + "`sg`" + `) is installed for AST-based code search, linting, and rewriting. Use ` + "`sg run`" + ` to search with patterns, ` + "`sg scan`" + ` to lint, and ` + "`sg rewrite`" + ` to apply transformations. Patterns use ` + "`$VAR`" + ` for wildcards. Example: ` + "`sg run -p 'fmt.Errorf($MSG)' -l go`" + `.
 `,
 		BannerLines: `    echo "ast-grep:  $(sg --version 2>/dev/null | head -1 || echo 'not found')"
 `,
