@@ -2,8 +2,9 @@ package kit
 
 func init() {
 	Register(&Kit{
-		Name:        "docker",
-		Description: "Docker-in-Docker support",
+		Name:           "docker",
+		Description:    "Docker-in-Docker support",
+		DockerPriority: 30,
 		ConfigSnippet: `  docker:               # Docker-in-Docker support
 `,
 		ConfigNodes:   configNodes("docker", "Docker-in-Docker support", nil),

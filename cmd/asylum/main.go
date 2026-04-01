@@ -239,9 +239,20 @@ func main() {
 			}
 		}
 
-		baseRebuilt, err := image.EnsureBase(globalKits, agentInstalls, version, flags.Rebuild)
+		asylumDir := filepath.Join(home, ".asylum")
+		state, err := config.LoadState(asylumDir)
+		if err != nil {
+			log.Warn("load state: %v", err)
+		}
+		baseRebuilt, newOrder, err := image.EnsureBase(globalKits, agentInstalls, version, flags.Rebuild, state.DockerSourceOrder)
 		if err != nil {
 			die("%v", err)
+		}
+		if newOrder != nil {
+			state.DockerSourceOrder = newOrder
+			if err := config.SaveState(asylumDir, state); err != nil {
+				log.Warn("save state: %v", err)
+			}
 		}
 
 		imageTag, err := image.EnsureProject(projectKits, collectPackages(cfg), cfg.JavaVersion(), version, baseRebuilt, flags.Rebuild)

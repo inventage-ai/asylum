@@ -2,9 +2,10 @@ package kit
 
 func init() {
 	Register(&Kit{
-		Name:        "agent-browser",
-		Description: "Browser automation via agent-browser",
-		Tier:        TierOptIn,
+		Name:           "agent-browser",
+		Description:    "Browser automation via agent-browser",
+		DockerPriority: 34,
+		Tier:           TierOptIn,
 		Deps:        []string{"node"},
 		Tools:       []string{"agent-browser"},
 		NeedsMount:  true,

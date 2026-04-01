@@ -4,8 +4,9 @@ import "gopkg.in/yaml.v3"
 
 func init() {
 	Register(&Kit{
-		Name:        "java",
-		Description: "Java via mise with JDK 17/21/25",
+		Name:           "java",
+		Description:    "Java via mise with JDK 17/21/25",
+		DockerPriority: 10,
 		ConfigSnippet: `  java:
     versions:
       - 17
@@ -39,6 +40,7 @@ fi
 			"maven": {
 				Name:            "java/maven",
 				Description:     "Maven with dependency caching",
+				DockerPriority:  10,
 				Tools:           []string{"mvn"},
 				CredentialFunc:  mavenCredentialFunc,
 				CredentialLabel: "Java/Maven",
@@ -50,8 +52,9 @@ USER ${USERNAME}
 				CacheDirs: map[string]string{"maven": "~/.m2"},
 			},
 			"gradle": {
-				Name:        "java/gradle",
-				Description: "Gradle via mise with dependency caching",
+				Name:           "java/gradle",
+				Description:    "Gradle via mise with dependency caching",
+				DockerPriority: 10,
 				Tools:       []string{"gradle"},
 				RulesSnippet: `### Gradle (java/gradle kit)
 Gradle is installed via mise. Dependencies are cached across container restarts.

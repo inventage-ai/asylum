@@ -2,9 +2,10 @@ package kit
 
 func init() {
 	Register(&Kit{
-		Name:        "cx",
-		Description: "Semantic code navigation for AI agents",
-		Tier:        TierOptIn,
+		Name:           "cx",
+		Description:    "Semantic code navigation for AI agents",
+		DockerPriority: 42,
+		Tier:           TierOptIn,
 		Tools:       []string{"cx"},
 		NeedsMount:  true,
 		ConfigSnippet: `  # cx:                 # Semantic code navigation

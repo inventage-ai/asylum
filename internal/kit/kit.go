@@ -107,6 +107,7 @@ type Kit struct {
 	MountFunc         func(CredentialOpts) ([]CredentialMount, error) // volume mounts without credential UI
 	ContainerFunc     func(ContainerOpts) ([]RunArg, error)          // docker run args contributed at container creation
 	NeedsMount        bool              // kit uses mount --bind at runtime (requires SYS_ADMIN)
+	DockerPriority    int               // lower = earlier in Dockerfile (stable/expensive first); 0 means default (50)
 	ConfigSnippet     string            // YAML snippet for default config (indented at 2 spaces under kits:)
 	ConfigNodes       []*yaml.Node      // structured key+value nodes for kits mapping (len 2: key, value)
 	ConfigComment     string            // comment text for opt-in/always-on kits shown in config

@@ -27,15 +27,20 @@ func writeCore(b *strings.Builder, core []byte) {
 	b.WriteByte('\n')
 }
 
-// assembleDockerfile builds a complete Dockerfile from core + profile snippets + agent snippets + tail.
-func assembleDockerfile(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) []byte {
+// assembleDockerfile builds a complete Dockerfile from core + ordered snippets + tail.
+// Snippets are written in the order specified by orderedIDs, which is computed
+// by computeSourceOrder to optimize Docker layer caching.
+func assembleDockerfile(orderedIDs []string, snippetOf map[string]string) []byte {
 	var b strings.Builder
 	writeCore(&b, assets.DockerfileCore)
-	if snippets := kit.AssembleDockerSnippets(profiles); snippets != "" {
-		b.WriteString(snippets)
-	}
-	if snippets := agent.AssembleAgentSnippets(agentInstalls); snippets != "" {
-		b.WriteString(snippets)
+	for _, id := range orderedIDs {
+		s := snippetOf[id]
+		if s != "" {
+			b.WriteString(s)
+			if !strings.HasSuffix(s, "\n") {
+				b.WriteByte('\n')
+			}
+		}
 	}
 	b.Write(assets.DockerfileTail)
 	return []byte(b.String())
@@ -86,16 +91,19 @@ func assembleProjectEntrypoint(projectKits []*kit.Kit) []byte {
 	return []byte(b.String())
 }
 
-func baseHash(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) string {
+func baseHash(orderedIDs []string, snippetOf map[string]string, profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) string {
 	h := sha256.New()
 	h.Write(assets.DockerfileCore)
 	h.Write(assets.DockerfileTail)
 	h.Write(assets.EntrypointCore)
 	h.Write(assets.EntrypointTail)
-	h.Write([]byte(kit.AssembleDockerSnippets(profiles)))
+	// Hash ordered snippets so that reordering triggers a rebuild
+	for _, id := range orderedIDs {
+		h.Write([]byte(id))
+		h.Write([]byte(snippetOf[id]))
+	}
 	h.Write([]byte(kit.AssembleEntrypointSnippets(profiles)))
 	h.Write([]byte(kit.AssembleBannerLines(profiles)))
-	h.Write([]byte(agent.AssembleAgentSnippets(agentInstalls)))
 	h.Write([]byte(agent.AssembleAgentBannerLines(agentInstalls)))
 	// Include host user identity so username/homedir changes trigger rebuild
 	h.Write([]byte(fmt.Sprintf("uid=%d gid=%d", os.Getuid(), os.Getgid())))
@@ -128,13 +136,25 @@ func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag stri
 	return docker.Build(tmpDir, dfPath, tag, labels, buildArgs, noCache)
 }
 
-func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, version string, noCache bool) (bool, error) {
-	hash := baseHash(profiles, agentInstalls)
+// EnsureBase builds the base image if needed, using computed source ordering
+// for optimal Docker layer caching. previousOrder is the source order from the
+// last successful build (from state.json). Returns (rebuilt, newOrder, err)
+// where newOrder should be saved to state on success.
+func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, version string, noCache bool, previousOrder []string) (bool, []string, error) {
+	sources := collectSources(profiles, agentInstalls)
+	orderedIDs := computeSourceOrder(sources, previousOrder)
+
+	snippetOf := map[string]string{}
+	for _, s := range sources {
+		snippetOf[s.ID] = s.Snippet
+	}
+
+	hash := baseHash(orderedIDs, snippetOf, profiles, agentInstalls)
 
 	existing, err := docker.InspectLabel(baseTag, "asylum.hash")
 	if err == nil && existing == hash && !noCache {
 		log.Info("base image up to date")
-		return false, nil
+		return false, orderedIDs, nil
 	}
 
 	log.Build("building base image...")
@@ -156,11 +176,11 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, versio
 		"USER_HOME": home,
 	}
 
-	dockerfile := assembleDockerfile(profiles, agentInstalls)
+	dockerfile := assembleDockerfile(orderedIDs, snippetOf)
 	entrypoint := assembleEntrypoint(profiles, agentInstalls)
 
 	if err := buildImage(dockerfile, map[string][]byte{"entrypoint.sh": entrypoint}, baseTag, labels, buildArgs, noCache); err != nil {
-		return false, fmt.Errorf("build base image: %w", err)
+		return false, nil, fmt.Errorf("build base image: %w", err)
 	}
 
 	log.Success("base image built")
@@ -168,7 +188,7 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, versio
 		log.Error("prune old base images: %v", err)
 	}
 
-	return true, nil
+	return true, orderedIDs, nil
 }
 
 // Pre-installed Java versions in the base image.

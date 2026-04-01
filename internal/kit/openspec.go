@@ -2,9 +2,10 @@ package kit
 
 func init() {
 	Register(&Kit{
-		Name:        "openspec",
-		Description: "OpenSpec CLI",
-		Deps:        []string{"node"},
+		Name:           "openspec",
+		Description:    "OpenSpec CLI",
+		DockerPriority: 46,
+		Deps:           []string{"node"},
 		Tools:       []string{"openspec"},
 		Tier: TierOptIn,
 		ConfigSnippet: `  # openspec:           # OpenSpec CLI

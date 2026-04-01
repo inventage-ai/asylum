@@ -2,8 +2,9 @@ package kit
 
 func init() {
 	Register(&Kit{
-		Name:        "python",
-		Description: "Python tools via uv",
+		Name:           "python",
+		Description:    "Python tools via uv",
+		DockerPriority: 12,
 		ConfigSnippet: `  python:
     # versions:
     #   - 3.14

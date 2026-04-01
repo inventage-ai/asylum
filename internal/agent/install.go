@@ -10,10 +10,11 @@ import (
 
 // AgentInstall holds build-time installation metadata for an agent CLI.
 type AgentInstall struct {
-	Name          string   // matches Agent.Name()
-	DockerSnippet string   // Dockerfile RUN instructions
-	KitDeps   []string // kit names this agent needs (e.g., ["node"])
-	BannerLine    string   // shell command for welcome banner
+	Name           string   // matches Agent.Name()
+	DockerSnippet  string   // Dockerfile RUN instructions
+	DockerPriority int      // lower = earlier in Dockerfile (stable/expensive first); 0 means default (20)
+	KitDeps        []string // kit names this agent needs (e.g., ["node"])
+	BannerLine     string   // shell command for welcome banner
 }
 
 var installs = map[string]*AgentInstall{}

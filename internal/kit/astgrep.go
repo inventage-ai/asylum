@@ -2,9 +2,10 @@ package kit
 
 func init() {
 	Register(&Kit{
-		Name:        "ast-grep",
-		Description: "AST-based code search, lint, and rewrite",
-		Tier:        TierOptIn,
+		Name:           "ast-grep",
+		Description:    "AST-based code search, lint, and rewrite",
+		DockerPriority: 44,
+		Tier:           TierOptIn,
 		Deps:        []string{"node"},
 		Tools:       []string{"sg"},
 		NeedsMount:  true,

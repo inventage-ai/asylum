@@ -8,9 +8,10 @@ import (
 
 func init() {
 	Register(&Kit{
-		Name:        "node",
-		Description: "Node.js global development packages",
-		Tier:        TierAlwaysOn,
+		Name:           "node",
+		Description:    "Node.js global development packages",
+		DockerPriority: 14,
+		Tier:           TierAlwaysOn,
 		ConfigSnippet: `  node:
     shadow-node-modules: true
     onboarding: false
@@ -49,16 +50,18 @@ Node.js LTS is installed via fnm. Global packages: typescript, @types/node, ts-n
 				OnboardingTasks: []onboarding.Task{onboarding.NPMTask{}},
 			},
 			"pnpm": {
-				Name:        "node/pnpm",
-				Description: "pnpm global install",
+				Name:           "node/pnpm",
+				Description:    "pnpm global install",
+				DockerPriority: 14,
 				Tools:       []string{"pnpm"},
 				DockerSnippet: `# Install pnpm
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g pnpm'
 `,
 			},
 			"yarn": {
-				Name:        "node/yarn",
-				Description: "yarn global install",
+				Name:           "node/yarn",
+				Description:    "yarn global install",
+				DockerPriority: 14,
 				Tools:       []string{"yarn"},
 				DockerSnippet: `# Install yarn
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g yarn'

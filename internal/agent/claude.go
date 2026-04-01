@@ -11,7 +11,8 @@ import (
 func init() {
 	agents["claude"] = Claude{}
 	RegisterInstall(&AgentInstall{
-		Name: "claude",
+		Name:           "claude",
+		DockerPriority: 5,
 		DockerSnippet: `# Install Claude Code
 RUN curl -fsSL https://claude.ai/install.sh | bash && \
     ~/.local/bin/claude --version

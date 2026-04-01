@@ -28,12 +28,24 @@ func claudeOnlyInstalls(t *testing.T) []*agent.AgentInstall {
 	return installs
 }
 
+// testOrderedDockerfile is a test helper that computes source order and
+// assembles the Dockerfile, returning the result and the ordered IDs.
+func testOrderedDockerfile(profiles []*kit.Kit, agents []*agent.AgentInstall) ([]byte, []string) {
+	sources := collectSources(profiles, agents)
+	orderedIDs := computeSourceOrder(sources, nil)
+	snippetOf := map[string]string{}
+	for _, s := range sources {
+		snippetOf[s.ID] = s.Snippet
+	}
+	return assembleDockerfile(orderedIDs, snippetOf), orderedIDs
+}
+
 func TestAssembleDockerfile_AllProfiles(t *testing.T) {
 	profiles, err := kit.Resolve(nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	df := assembleDockerfile(profiles, allAgentInstalls(t))
+	df, _ := testOrderedDockerfile(profiles, allAgentInstalls(t))
 	s := string(df)
 
 	if !strings.HasPrefix(s, string(assets.DockerfileCore)) {
@@ -59,7 +71,7 @@ func TestAssembleDockerfile_NoProfiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	df := assembleDockerfile(profiles, claudeOnlyInstalls(t))
+	df, _ := testOrderedDockerfile(profiles, claudeOnlyInstalls(t))
 	s := string(df)
 
 	if !strings.Contains(s, string(assets.DockerfileCore)) {
@@ -77,30 +89,32 @@ func TestAssembleDockerfile_AgentSnippets(t *testing.T) {
 	profiles, _ := kit.Resolve(nil, nil)
 
 	t.Run("all agents", func(t *testing.T) {
-		df := string(assembleDockerfile(profiles, allAgentInstalls(t)))
-		if !strings.Contains(df, "claude.ai/install.sh") {
+		df, _ := testOrderedDockerfile(profiles, allAgentInstalls(t))
+		s := string(df)
+		if !strings.Contains(s, "claude.ai/install.sh") {
 			t.Error("missing claude install snippet")
 		}
-		if !strings.Contains(df, "gemini-cli") {
+		if !strings.Contains(s, "gemini-cli") {
 			t.Error("missing gemini install snippet")
 		}
-		if !strings.Contains(df, "@openai/codex") {
+		if !strings.Contains(s, "@openai/codex") {
 			t.Error("missing codex install snippet")
 		}
-		if !strings.Contains(df, "opencode") {
+		if !strings.Contains(s, "opencode") {
 			t.Error("missing opencode install snippet")
 		}
 	})
 
 	t.Run("claude only (default)", func(t *testing.T) {
-		df := string(assembleDockerfile(profiles, claudeOnlyInstalls(t)))
-		if !strings.Contains(df, "claude.ai/install.sh") {
+		df, _ := testOrderedDockerfile(profiles, claudeOnlyInstalls(t))
+		s := string(df)
+		if !strings.Contains(s, "claude.ai/install.sh") {
 			t.Error("missing claude install snippet")
 		}
-		if strings.Contains(df, "gemini-cli") {
+		if strings.Contains(s, "gemini-cli") {
 			t.Error("should not contain gemini snippet")
 		}
-		if strings.Contains(df, "@openai/codex") {
+		if strings.Contains(s, "@openai/codex") {
 			t.Error("should not contain codex snippet")
 		}
 	})
@@ -108,8 +122,9 @@ func TestAssembleDockerfile_AgentSnippets(t *testing.T) {
 	t.Run("no agents", func(t *testing.T) {
 		empty := map[string]bool{}
 		noAgents, _ := agent.ResolveInstalls(empty, nil)
-		df := string(assembleDockerfile(profiles, noAgents))
-		if strings.Contains(df, "claude.ai/install.sh") {
+		df, _ := testOrderedDockerfile(profiles, noAgents)
+		s := string(df)
+		if strings.Contains(s, "claude.ai/install.sh") {
 			t.Error("should not contain claude snippet")
 		}
 	})
@@ -197,14 +212,28 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	profiles, _ := kit.Resolve(nil, nil)
 	agents1 := allAgentInstalls(t)
 
-	h1 := baseHash(profiles, agents1)
-	h2 := baseHash(profiles, agents1)
+	_, order1 := testOrderedDockerfile(profiles, agents1)
+	sources1 := collectSources(profiles, agents1)
+	snippetOf1 := map[string]string{}
+	for _, s := range sources1 {
+		snippetOf1[s.ID] = s.Snippet
+	}
+
+	h1 := baseHash(order1, snippetOf1, profiles, agents1)
+	h2 := baseHash(order1, snippetOf1, profiles, agents1)
 	if h1 != h2 {
 		t.Error("baseHash should be deterministic")
 	}
 
 	// Different agents → different hash
-	h3 := baseHash(profiles, claudeOnlyInstalls(t))
+	agents2 := claudeOnlyInstalls(t)
+	_, order2 := testOrderedDockerfile(profiles, agents2)
+	sources2 := collectSources(profiles, agents2)
+	snippetOf2 := map[string]string{}
+	for _, s := range sources2 {
+		snippetOf2[s.ID] = s.Snippet
+	}
+	h3 := baseHash(order2, snippetOf2, profiles, agents2)
 	if h1 == h3 {
 		t.Error("different agents should produce different hash")
 	}
@@ -212,7 +241,13 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	// Different profiles → different hash
 	java := []string{"java"}
 	javaOnly, _ := kit.Resolve(java, nil)
-	h4 := baseHash(javaOnly, agents1)
+	_, order3 := testOrderedDockerfile(javaOnly, agents1)
+	sources3 := collectSources(javaOnly, agents1)
+	snippetOf3 := map[string]string{}
+	for _, s := range sources3 {
+		snippetOf3[s.ID] = s.Snippet
+	}
+	h4 := baseHash(order3, snippetOf3, javaOnly, agents1)
 	if h1 == h4 {
 		t.Error("different profiles should produce different hash")
 	}

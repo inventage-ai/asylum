@@ -2,9 +2,10 @@ package kit
 
 func init() {
 	Register(&Kit{
-		Name:        "shell",
-		Description: "Shell configuration (oh-my-zsh, tmux, direnv hooks)",
-		Tier:        TierAlwaysOn,
+		Name:           "shell",
+		Description:    "Shell configuration (oh-my-zsh, tmux, direnv hooks)",
+		DockerPriority: 32,
+		Tier:           TierAlwaysOn,
 		Tools:       []string{"tmux"},
 		ConfigSnippet: `  # shell:              # Custom Dockerfile/entrypoint steps (on by default)
   #   build:             # Commands run at image build time

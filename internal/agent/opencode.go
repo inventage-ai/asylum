@@ -10,7 +10,8 @@ import (
 func init() {
 	agents["opencode"] = Opencode{}
 	RegisterInstall(&AgentInstall{
-		Name: "opencode",
+		Name:           "opencode",
+		DockerPriority: 6,
 		DockerSnippet: `# Install Opencode
 RUN curl -fsSL https://opencode.ai/install | bash
 `,

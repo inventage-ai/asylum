@@ -10,6 +10,7 @@ func init() {
 	Register(&Kit{
 		Name:            "github",
 		Description:     "GitHub CLI",
+		DockerPriority:  40,
 		Tools:           []string{"gh"},
 		CredentialFunc:  githubCredentialFunc,
 		CredentialLabel: "GitHub",
