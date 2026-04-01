@@ -1,5 +1,5 @@
 ### Requirement: RunArg type
-The system SHALL represent every docker run argument as a `RunArg` struct containing: `Flag` (the docker flag, e.g. `-p`, `-v`, `-e`, `--privileged`), `Value` (the flag's value, empty for boolean flags), `Source` (human-readable origin label), and `Priority` (integer, higher wins).
+The system SHALL represent every docker run **option** as a `RunArg` struct containing: `Flag` (the docker flag, e.g. `-p`, `-v`, `-e`, `--privileged`), `Value` (the flag's value, empty for boolean flags), `Source` (human-readable origin label), and `Priority` (integer, higher wins). The docker subcommand (`run`) and mode flag (`-d`) SHALL NOT be represented as RunArgs.
 
 #### Scenario: Port arg from kit
 - **WHEN** the ports kit produces a port mapping
@@ -12,6 +12,10 @@ The system SHALL represent every docker run argument as a `RunArg` struct contai
 #### Scenario: Core structural arg
 - **WHEN** the container builder produces the `--rm` flag
 - **THEN** the RunArg SHALL have Flag=`--rm`, Value=`""`, Source=`core`, Priority=0
+
+#### Scenario: Subcommand not in pipeline
+- **WHEN** the RunArg pipeline is assembled
+- **THEN** no RunArg with Flag=`run` or Flag=`-d` SHALL exist in the pipeline
 
 ### Requirement: Priority levels
 The system SHALL define four priority levels: core=0, kit=1, config=2, cli=3. Higher priority SHALL silently override lower priority when two RunArgs share the same dedup key.
@@ -71,11 +75,15 @@ When two RunArgs have the same dedup key and the same priority but different val
 - **THEN** only one `--privileged` SHALL appear in the final args (no conflict)
 
 ### Requirement: Deterministic output ordering
-The resolved args SHALL be emitted in deterministic order: sorted by priority (ascending), then by source name (alphabetical), then by original insertion order within each source.
+The resolved args SHALL be emitted in deterministic order: sorted by priority (ascending), then by source name (alphabetical), then by dedup category key. The docker subcommand `run -d` SHALL be prepended as a fixed prefix before the sorted args during flattening, ensuring they always appear first in the final `[]string`.
 
 #### Scenario: Ordering across priorities
 - **WHEN** args come from core (priority 0), docker kit (priority 1), and user config (priority 2)
 - **THEN** core args SHALL appear first, then docker kit args, then user config args
+
+#### Scenario: Subcommand always first
+- **WHEN** the resolved args are flattened to `[]string`
+- **THEN** the first two elements SHALL be `"run"` and `"-d"`, followed by the sorted options, then the image tag and command
 
 ### Requirement: Kit ContainerFunc
 The Kit struct SHALL have an optional `ContainerFunc` field of type `func(ContainerOpts) ([]RunArg, error)`. When non-nil, it SHALL be called during container assembly for each active kit. `ContainerOpts` SHALL provide ProjectDir, ContainerName, HomeDir, and Config.

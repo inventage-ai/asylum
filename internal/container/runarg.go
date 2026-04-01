@@ -13,7 +13,6 @@ var booleanFlags = map[string]bool{
 	"--privileged": true,
 	"--rm":         true,
 	"--init":       true,
-	"-d":           true,
 	"-it":          true,
 	"-i":           true,
 }

@@ -64,8 +64,6 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	core := func(flag, value string) {
 		all = append(all, kit.RunArg{Flag: flag, Value: value, Source: "core", Priority: kit.PriorityCore})
 	}
-	core("run", "")
-	core("-d", "")
 	core("--rm", "")
 	core("--init", "")
 	core("--name", containerName)
@@ -150,8 +148,8 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 		return nil, nil, nil, err
 	}
 
-	// Flatten to []string, then append image + command (not subject to dedup)
-	flat := FlattenArgs(resolved)
+	// Flatten to []string: "run -d" prefix, then sorted options, then image + command
+	flat := append([]string{"run", "-d"}, FlattenArgs(resolved)...)
 	flat = append(flat, opts.ImageTag)
 	flat = append(flat, "sleep", "infinity")
 
