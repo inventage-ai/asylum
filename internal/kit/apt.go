@@ -5,6 +5,7 @@ func init() {
 		Name:        "apt",
 		Description: "Extra apt packages installed in the project image",
 		Tier:        TierOptIn,
+		Hidden:      true,
 		ConfigSnippet: `  # apt:                # System packages installed via apt-get
   #   packages:
   #     - imagemagick

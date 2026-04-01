@@ -106,6 +106,7 @@ type Kit struct {
 	CredentialLabel   string            // display label for onboarding (e.g. "Java/Maven")
 	MountFunc         func(CredentialOpts) ([]CredentialMount, error) // volume mounts without credential UI
 	ContainerFunc     func(ContainerOpts) ([]RunArg, error)          // docker run args contributed at container creation
+	Hidden            bool              // exclude from interactive selection UIs (config TUI, kit sync prompt, sandbox rules disabled list)
 	NeedsMount        bool              // kit uses mount --bind at runtime (requires SYS_ADMIN)
 	DockerPriority    int               // lower = earlier in Dockerfile (stable/expensive first); 0 means default (50)
 	ConfigSnippet     string            // YAML snippet for default config (indented at 2 spaces under kits:)

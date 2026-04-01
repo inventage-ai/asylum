@@ -52,10 +52,17 @@ func SyncNewKits(asylumDir string, interactive bool, promptFn func([]*kit.Kit) [
 			continue
 		}
 
-		switch k.Tier {
-		case kit.TierAlwaysOn:
+		switch {
+		case k.Tier == kit.TierAlwaysOn:
 			log.Info("new kit: %s (always active)", name)
-		case kit.TierDefault, kit.TierOptIn:
+		case k.Hidden:
+			// Hidden kits are silently added as comments — not prompted.
+			if k.ConfigComment != "" {
+				if err := SyncKitCommentToConfig(configPath, k.ConfigComment); err != nil {
+					log.Error("sync kit %s: %v", name, err)
+				}
+			}
+		default:
 			promptable = append(promptable, k)
 		}
 	}

@@ -6,6 +6,7 @@ func init() {
 		Description:    "Shell configuration (oh-my-zsh, tmux, direnv hooks)",
 		DockerPriority: 32,
 		Tier:           TierAlwaysOn,
+		Hidden:         true,
 		Tools:       []string{"tmux"},
 		ConfigSnippet: `  # shell:              # Custom Dockerfile/entrypoint steps (on by default)
   #   build:             # Commands run at image build time

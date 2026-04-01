@@ -613,7 +613,7 @@ func generateSandboxRules(home, containerName string, kits []*kit.Kit, version s
 	var disabled []string
 	for _, name := range kit.All() {
 		if !active[name] {
-			if k := kit.Get(name); k != nil {
+			if k := kit.Get(name); k != nil && !k.Hidden {
 				disabled = append(disabled, fmt.Sprintf("- **%s** — %s", k.Name, k.Description))
 			}
 		}

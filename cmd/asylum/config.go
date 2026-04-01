@@ -41,7 +41,7 @@ func runConfig() {
 	var kitNames []string // parallel to kitOptions
 	for _, name := range kit.All() {
 		k := kit.Get(name)
-		if k.Tier == kit.TierAlwaysOn {
+		if k.Tier == kit.TierAlwaysOn || k.Hidden {
 			continue
 		}
 		kitOptions = append(kitOptions, tui.Option{Label: k.Name, Description: k.Description})
