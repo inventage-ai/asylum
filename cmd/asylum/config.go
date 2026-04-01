@@ -85,7 +85,7 @@ func runConfig() {
 
 	tabs := []tui.Tab{
 		{Title: "Kits", Description: "Toggle kits on or off.", Kind: tui.StepMultiSelect, Options: kitOptions, DefaultSel: kitDefaultSel},
-		{Title: "Credentials", Description: "Allow the sandbox to access host credentials (read-only).", Kind: tui.StepMultiSelect, Options: credOptions, DefaultSel: credDefaultSel},
+		{Title: "Credentials", Description: "Allow the sandbox to access host credentials (scoped to what the project needs, where possible).", Kind: tui.StepMultiSelect, Options: credOptions, DefaultSel: credDefaultSel},
 		{Title: "Isolation", Description: "How should Claude's config (~/.claude) be managed inside the sandbox?", Kind: tui.StepSelect, Options: isolationOptions, DefaultIdx: isolationDefault},
 	}
 

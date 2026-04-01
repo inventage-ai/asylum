@@ -983,7 +983,7 @@ func runOnboarding(cfg *config.Config, a agent.Agent, allKits []*kit.Kit, home s
 		}
 		steps = append(steps, tui.WizardStep{
 			Title:       "Credentials",
-			Description: "Allow the sandbox to access host credentials for private registries and repositories (read-only, scoped to what the project needs).",
+			Description: "Allow the sandbox to access host credentials for private registries and repositories (scoped to what the project needs, where possible).",
 			Kind:       tui.StepMultiSelect,
 			Options:    options,
 			DefaultSel: preSelected,
