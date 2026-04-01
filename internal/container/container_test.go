@@ -226,32 +226,40 @@ func TestSafeHostname(t *testing.T) {
 	}
 }
 
-func TestAppendPorts(t *testing.T) {
+func hasRunArg(args []kit.RunArg, flag, value string) bool {
+	for _, a := range args {
+		if a.Flag == flag && a.Value == value {
+			return true
+		}
+	}
+	return false
+}
+
+func TestConfigPortArgs(t *testing.T) {
 	tests := []struct {
-		name    string
-		ports   []string
-		want    []string
-		wantErr bool
+		name      string
+		ports     []string
+		wantPairs [][2]string // flag, value pairs
+		wantErr   bool
 	}{
 		{
 			name:  "no ports",
 			ports: nil,
-			want:  []string{},
 		},
 		{
-			name:  "port without colon expands to host:container",
-			ports: []string{"8080"},
-			want:  []string{"-p", "8080:8080"},
+			name:      "port without colon expands to host:container",
+			ports:     []string{"8080"},
+			wantPairs: [][2]string{{"-p", "8080:8080"}},
 		},
 		{
-			name:  "port with colon used as-is",
-			ports: []string{"8080:9090"},
-			want:  []string{"-p", "8080:9090"},
+			name:      "port with colon used as-is",
+			ports:     []string{"8080:9090"},
+			wantPairs: [][2]string{{"-p", "8080:9090"}},
 		},
 		{
-			name:  "multiple ports mixed",
-			ports: []string{"3000", "4000:5000"},
-			want:  []string{"-p", "3000:3000", "-p", "4000:5000"},
+			name:      "multiple ports mixed",
+			ports:     []string{"3000", "4000:5000"},
+			wantPairs: [][2]string{{"-p", "3000:3000"}, {"-p", "4000:5000"}},
 		},
 		{
 			name:    "non-numeric port rejected",
@@ -282,7 +290,7 @@ func TestAppendPorts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := appendPorts([]string{}, tt.ports)
+			got, err := configPortArgs(tt.ports)
 			if tt.wantErr {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -292,166 +300,99 @@ func TestAppendPorts(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("appendPorts(%v) = %v, want %v", tt.ports, got, tt.want)
+			if len(tt.wantPairs) == 0 && len(got) != 0 {
+				t.Errorf("expected no args, got %v", got)
+			}
+			for _, pair := range tt.wantPairs {
+				if !hasRunArg(got, pair[0], pair[1]) {
+					t.Errorf("expected RunArg{Flag:%q, Value:%q} in %v", pair[0], pair[1], got)
+				}
 			}
 		})
 	}
 }
 
-func TestAppendEnvVars(t *testing.T) {
-	t.Run("ASYLUM_DOCKER set when docker kit active", func(t *testing.T) {
-		opts := RunOpts{
-			Config:     config.Config{Kits: map[string]*config.KitConfig{"docker": nil}},
-			Agent:      stubAgent{envVars: map[string]string{}},
-			ProjectDir: "/work/myproject",
-		}
-		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		joined := strings.Join(got, " ")
-		if !strings.Contains(joined, "ASYLUM_DOCKER=1") {
-			t.Error("ASYLUM_DOCKER=1 should be set when docker kit is active")
-		}
-	})
-
-	t.Run("ASYLUM_DOCKER not set when docker kit inactive", func(t *testing.T) {
+func TestCoreEnvVars(t *testing.T) {
+	t.Run("always includes required env vars", func(t *testing.T) {
+		home := t.TempDir()
 		opts := RunOpts{
 			Config:     config.Config{},
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/myproject",
 		}
-		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
+		got, err := coreEnvVars(home, opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
+
+		for _, want := range []string{
+			"COLORTERM=truecolor",
+			"TERM=xterm-256color",
+			"HOST_PROJECT_DIR=/work/myproject",
+		} {
+			if !hasRunArg(got, "-e", want) {
+				t.Errorf("expected RunArg{Flag:\"-e\", Value:%q} in %v", want, got)
+			}
+		}
+		// HISTFILE is dynamic, just check it's present
 		found := false
-		for _, v := range got {
-			if v == "ASYLUM_DOCKER=1" {
+		for _, a := range got {
+			if a.Flag == "-e" && strings.HasPrefix(a.Value, "HISTFILE=") {
 				found = true
 			}
 		}
-		if found {
-			t.Error("ASYLUM_DOCKER should NOT be set when docker kit is inactive")
-		}
-	})
-
-	t.Run("always includes required env vars", func(t *testing.T) {
-		opts := RunOpts{
-			Config:     config.Config{},
-			Agent:      stubAgent{envVars: map[string]string{}},
-			ProjectDir: "/work/myproject",
-		}
-		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-		joined := strings.Join(got, " ")
-
-		for _, want := range []string{
-			"-e COLORTERM=truecolor",
-			"-e TERM=xterm-256color",
-			"-e HISTFILE=",  // dynamic path, just check it's set
-			"-e HOST_PROJECT_DIR=/work/myproject",
-		} {
-			if !strings.Contains(joined, want) {
-				t.Errorf("expected %q in args %v", want, got)
-			}
+		if !found {
+			t.Error("expected HISTFILE env var")
 		}
 	})
 
 	t.Run("java version included when set", func(t *testing.T) {
+		home := t.TempDir()
 		cfg := config.Config{Kits: map[string]*config.KitConfig{"java": {DefaultVersion: "17"}}}
 		opts := RunOpts{
 			Config:     cfg,
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/proj",
 		}
-		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
+		got, err := coreEnvVars(home, opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		joined := strings.Join(got, " ")
-		if !strings.Contains(joined, "-e ASYLUM_JAVA_VERSION=17") {
+		if !hasRunArg(got, "-e", "ASYLUM_JAVA_VERSION=17") {
 			t.Errorf("expected ASYLUM_JAVA_VERSION=17 in %v", got)
 		}
 	})
 
 	t.Run("java version omitted when empty", func(t *testing.T) {
+		home := t.TempDir()
 		opts := RunOpts{
 			Config:     config.Config{},
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/proj",
 		}
-		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
+		got, err := coreEnvVars(home, opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		for _, v := range got {
-			if strings.HasPrefix(v, "ASYLUM_JAVA_VERSION") {
+		for _, a := range got {
+			if a.Flag == "-e" && strings.HasPrefix(a.Value, "ASYLUM_JAVA_VERSION") {
 				t.Errorf("unexpected ASYLUM_JAVA_VERSION in %v", got)
 			}
 		}
 	})
 
-	t.Run("config env vars emitted before hardcoded vars", func(t *testing.T) {
-		cfg := config.Config{
-			Kits: map[string]*config.KitConfig{"docker": nil},
-			Env:  map[string]string{"MY_VAR": "hello", "OTHER": "world"},
-		}
-		opts := RunOpts{
-			Config:     cfg,
-			Agent:      stubAgent{envVars: map[string]string{}},
-			ProjectDir: "/work/proj",
-		}
-		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
-
-		// Find positions of config env vars and ASYLUM_DOCKER
-		myVarIdx, asylumIdx := -1, -1
-		for i, v := range got {
-			if v == "MY_VAR=hello" {
-				myVarIdx = i
-			}
-			if v == "ASYLUM_DOCKER=1" {
-				asylumIdx = i
-			}
-		}
-		if myVarIdx == -1 {
-			t.Fatalf("MY_VAR=hello not found in %v", got)
-		}
-		if asylumIdx == -1 {
-			t.Fatalf("ASYLUM_DOCKER=1 not found in %v (docker kit is active)", got)
-		}
-		if myVarIdx > asylumIdx {
-			t.Errorf("config env vars should appear before hardcoded vars, MY_VAR at %d, ASYLUM_DOCKER at %d", myVarIdx, asylumIdx)
-		}
-
-		// Both config env vars present
-		joined := strings.Join(got, " ")
-		if !strings.Contains(joined, "-e MY_VAR=hello") {
-			t.Errorf("expected MY_VAR=hello in %v", got)
-		}
-		if !strings.Contains(joined, "-e OTHER=world") {
-			t.Errorf("expected OTHER=world in %v", got)
-		}
-	})
-
 	t.Run("agent env vars included", func(t *testing.T) {
+		home := t.TempDir()
 		opts := RunOpts{
 			Config:     config.Config{},
 			Agent:      stubAgent{envVars: map[string]string{"MY_TOKEN": "secret"}},
 			ProjectDir: "/work/proj",
 		}
-		got, err := appendEnvVars([]string{}, t.TempDir(), opts)
+		got, err := coreEnvVars(home, opts)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		joined := strings.Join(got, " ")
-		if !strings.Contains(joined, "-e MY_TOKEN=secret") {
+		if !hasRunArg(got, "-e", "MY_TOKEN=secret") {
 			t.Errorf("expected MY_TOKEN=secret in %v", got)
 		}
 	})
@@ -599,15 +540,8 @@ func TestSanitizeProject(t *testing.T) {
 	}
 }
 
-func TestAppendVolumesUserVolumes(t *testing.T) {
+func TestConfigVolumeArgs(t *testing.T) {
 	home := t.TempDir()
-	projectDir := t.TempDir()
-	cname := ContainerName(projectDir)
-
-	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
-	if err := os.MkdirAll(agentConfigDir, 0755); err != nil {
-		t.Fatal(err)
-	}
 
 	tests := []struct {
 		name        string
@@ -645,15 +579,9 @@ func TestAppendVolumesUserVolumes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			opts := RunOpts{
-				Config:     config.Config{Volumes: tt.volumes},
-				Agent:      stubAgent{},
-				ProjectDir: projectDir,
-			}
-
-			args, err := appendVolumes([]string{}, home, cname, opts)
+			args, err := configVolumeArgs(tt.volumes, home)
 			if err != nil {
-				t.Fatalf("appendVolumes: %v", err)
+				t.Fatalf("configVolumeArgs: %v", err)
 			}
 
 			wantMount := tt.wantHost + ":" + tt.wantCont
@@ -661,15 +589,8 @@ func TestAppendVolumesUserVolumes(t *testing.T) {
 				wantMount += ":" + tt.wantOptions
 			}
 
-			found := false
-			for i, arg := range args {
-				if arg == "-v" && i+1 < len(args) && args[i+1] == wantMount {
-					found = true
-					break
-				}
-			}
-			if !found {
-				t.Errorf("expected -v %q in args %v", wantMount, args)
+			if !hasRunArg(args, "-v", wantMount) {
+				t.Errorf("expected RunArg{Flag:\"-v\", Value:%q} in %v", wantMount, args)
 			}
 		})
 	}
@@ -855,7 +776,7 @@ func TestFindNodeModulesDirs(t *testing.T) {
 	})
 }
 
-func TestAppendVolumesCacheNamedVolumes(t *testing.T) {
+func TestCoreVolumesCacheNamedVolumes(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()
 	cname := ContainerName(projectDir)
@@ -875,16 +796,16 @@ func TestAppendVolumesCacheNamedVolumes(t *testing.T) {
 		},
 	}
 
-	args, err := appendVolumes([]string{}, home, cname, opts)
+	args, err := coreVolumes(home, cname, opts)
 	if err != nil {
-		t.Fatalf("appendVolumes: %v", err)
+		t.Fatalf("coreVolumes: %v", err)
 	}
 
 	for _, tool := range []string{"gradle", "maven", "npm", "pip"} {
 		wantPrefix := "type=volume,src=" + cname + "-cache-" + tool + ",dst="
 		found := false
-		for i, arg := range args {
-			if arg == "--mount" && i+1 < len(args) && strings.HasPrefix(args[i+1], wantPrefix) {
+		for _, a := range args {
+			if a.Flag == "--mount" && strings.HasPrefix(a.Value, wantPrefix) {
 				found = true
 				break
 			}
@@ -895,14 +816,14 @@ func TestAppendVolumesCacheNamedVolumes(t *testing.T) {
 	}
 
 	// No bind mount to ~/.asylum/cache/ should exist
-	for i, arg := range args {
-		if arg == "-v" && i+1 < len(args) && strings.Contains(args[i+1], ".asylum/cache") {
-			t.Errorf("unexpected bind mount for cache: %q", args[i+1])
+	for _, a := range args {
+		if a.Flag == "-v" && strings.Contains(a.Value, ".asylum/cache") {
+			t.Errorf("unexpected bind mount for cache: %q", a.Value)
 		}
 	}
 }
 
-func TestAppendVolumesCredentialMounts(t *testing.T) {
+func TestKitCredentialArgs(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()
 	cname := ContainerName(projectDir)
@@ -934,31 +855,23 @@ func TestAppendVolumesCredentialMounts(t *testing.T) {
 		Kits:       []*kit.Kit{testKit},
 	}
 
-	args, err := appendVolumes([]string{}, home, cname, opts)
+	args, err := kitCredentialArgs(home, cname, opts)
 	if err != nil {
-		t.Fatalf("appendVolumes: %v", err)
+		t.Fatalf("kitCredentialArgs: %v", err)
 	}
 
-	// Find cache mount and credential mount positions
-	cacheIdx := -1
-	credIdx := -1
-	for i, arg := range args {
-		if arg == "--mount" && i+1 < len(args) && strings.Contains(args[i+1], "-cache-maven") {
-			cacheIdx = i
-		}
-		if arg == "-v" && i+1 < len(args) && strings.Contains(args[i+1], "settings.xml") && strings.Contains(args[i+1], "credentials") {
-			credIdx = i
+	// Find credential mount
+	credFound := false
+	for _, a := range args {
+		if a.Flag == "-v" && strings.Contains(a.Value, "settings.xml") && strings.Contains(a.Value, "credentials") {
+			credFound = true
+			if !strings.HasSuffix(a.Value, ":ro") {
+				t.Errorf("credential mount should be read-only, got: %s", a.Value)
+			}
 		}
 	}
-
-	if cacheIdx == -1 {
-		t.Fatal("cache mount not found")
-	}
-	if credIdx == -1 {
+	if !credFound {
 		t.Fatal("credential mount not found")
-	}
-	if credIdx <= cacheIdx {
-		t.Errorf("credential mount (idx %d) should come after cache mount (idx %d)", credIdx, cacheIdx)
 	}
 
 	// Verify credential file was written
@@ -970,18 +883,9 @@ func TestAppendVolumesCredentialMounts(t *testing.T) {
 	if string(data) != "<settings><servers/></settings>" {
 		t.Errorf("unexpected credential content: %q", data)
 	}
-
-	// Verify mount is read-only
-	for i, arg := range args {
-		if arg == "-v" && i+1 < len(args) && strings.Contains(args[i+1], "credentials") {
-			if !strings.HasSuffix(args[i+1], ":ro") {
-				t.Errorf("credential mount should be read-only, got: %s", args[i+1])
-			}
-		}
-	}
 }
 
-func TestAppendVolumesCredentialHostPath(t *testing.T) {
+func TestKitCredentialArgsHostPath(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()
 	cname := ContainerName(projectDir)
@@ -1015,21 +919,21 @@ func TestAppendVolumesCredentialHostPath(t *testing.T) {
 		Kits:       []*kit.Kit{testKit},
 	}
 
-	args, err := appendVolumes([]string{}, home, cname, opts)
+	args, err := kitCredentialArgs(home, cname, opts)
 	if err != nil {
-		t.Fatalf("appendVolumes: %v", err)
+		t.Fatalf("kitCredentialArgs: %v", err)
 	}
 
 	// Verify HostPath is bind-mounted directly (not via staging dir)
 	found := false
-	for i, arg := range args {
-		if arg == "-v" && i+1 < len(args) && strings.Contains(args[i+1], ghDir) {
+	for _, a := range args {
+		if a.Flag == "-v" && strings.Contains(a.Value, ghDir) {
 			found = true
-			if !strings.HasSuffix(args[i+1], ":ro") {
-				t.Errorf("host path mount should be read-only, got: %s", args[i+1])
+			if !strings.HasSuffix(a.Value, ":ro") {
+				t.Errorf("host path mount should be read-only, got: %s", a.Value)
 			}
-			if strings.Contains(args[i+1], "credentials") {
-				t.Errorf("host path mount should not go through staging dir, got: %s", args[i+1])
+			if strings.Contains(a.Value, "credentials") {
+				t.Errorf("host path mount should not go through staging dir, got: %s", a.Value)
 			}
 		}
 	}
@@ -1038,7 +942,7 @@ func TestAppendVolumesCredentialHostPath(t *testing.T) {
 	}
 }
 
-func TestAppendVolumesCredentialFuncError(t *testing.T) {
+func TestKitCredentialArgsFuncError(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()
 	cname := ContainerName(projectDir)
@@ -1064,13 +968,13 @@ func TestAppendVolumesCredentialFuncError(t *testing.T) {
 	}
 
 	// Should not fail — error is logged as warning
-	_, err := appendVolumes([]string{}, home, cname, opts)
+	_, err := kitCredentialArgs(home, cname, opts)
 	if err != nil {
-		t.Fatalf("appendVolumes should not fail on credential error: %v", err)
+		t.Fatalf("kitCredentialArgs should not fail on credential error: %v", err)
 	}
 }
 
-func TestAppendVolumesNodeModulesShadowed(t *testing.T) {
+func TestCoreVolumesNodeModulesShadowed(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()
 	cname := ContainerName(projectDir)
@@ -1088,27 +992,20 @@ func TestAppendVolumesNodeModulesShadowed(t *testing.T) {
 		ProjectDir: projectDir,
 	}
 
-	args, err := appendVolumes([]string{}, home, cname, opts)
+	args, err := coreVolumes(home, cname, opts)
 	if err != nil {
-		t.Fatalf("appendVolumes: %v", err)
+		t.Fatalf("coreVolumes: %v", err)
 	}
 
 	// "node_modules" hashes to a fixed value
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte("node_modules")))[:11]
 	wantMount := "type=volume,src=" + cname + "-npm-" + hash + ",dst=" + nm
-	found := false
-	for i, arg := range args {
-		if arg == "--mount" && i+1 < len(args) && args[i+1] == wantMount {
-			found = true
-			break
-		}
-	}
-	if !found {
-		t.Errorf("expected --mount %q in args %v", wantMount, args)
+	if !hasRunArg(args, "--mount", wantMount) {
+		t.Errorf("expected RunArg{Flag:\"--mount\", Value:%q} in %v", wantMount, args)
 	}
 }
 
-func TestAppendVolumesNodeModulesDisabled(t *testing.T) {
+func TestCoreVolumesNodeModulesDisabled(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()
 	cname := ContainerName(projectDir)
@@ -1124,14 +1021,14 @@ func TestAppendVolumesNodeModulesDisabled(t *testing.T) {
 		ProjectDir: projectDir,
 	}
 
-	args, err := appendVolumes([]string{}, home, cname, opts)
+	args, err := coreVolumes(home, cname, opts)
 	if err != nil {
-		t.Fatalf("appendVolumes: %v", err)
+		t.Fatalf("coreVolumes: %v", err)
 	}
 
-	for _, arg := range args {
-		if strings.Contains(arg, "node_modules") && strings.Contains(arg, "type=volume") {
-			t.Errorf("node_modules shadow should be disabled, found %q", arg)
+	for _, a := range args {
+		if strings.Contains(a.Value, "node_modules") && strings.Contains(a.Value, "type=volume") {
+			t.Errorf("node_modules shadow should be disabled, found %q", a.Value)
 		}
 	}
 }
@@ -1321,7 +1218,7 @@ func TestRunArgsSandboxRulesMount(t *testing.T) {
 		Version:    "1.0.0",
 	}
 
-	args, err := RunArgs(opts)
+	args, _, _, err := RunArgs(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1403,38 +1300,4 @@ func TestGenerateSandboxRules_WithoutPorts(t *testing.T) {
 	}
 }
 
-func TestRunArgsAllocatedPorts(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-
-	projectDir := t.TempDir()
-	agentConfigDir := filepath.Join(home, ".asylum", "agents", "stub")
-	os.MkdirAll(agentConfigDir, 0755)
-
-	opts := RunOpts{
-		Config:         config.Config{},
-		Agent:          stubAgent{},
-		ImageTag:       "asylum:test",
-		ProjectDir:     projectDir,
-		AllocatedPorts: []int{10000, 10001, 10002},
-	}
-
-	args, err := RunArgs(opts)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	found := 0
-	for i, arg := range args {
-		if arg == "-p" && i+1 < len(args) {
-			next := args[i+1]
-			if next == "10000:10000" || next == "10001:10001" || next == "10002:10002" {
-				found++
-			}
-		}
-	}
-	if found != 3 {
-		t.Errorf("expected 3 allocated port mappings, found %d in args: %v", found, args)
-	}
-}
 

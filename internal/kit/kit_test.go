@@ -1,6 +1,7 @@
 package kit
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -416,4 +417,81 @@ func TestResolve_DisabledKitExcluded(t *testing.T) {
 			t.Error("disabled kit should not be in result")
 		}
 	}
+}
+
+type stubConfig struct{ portCount int }
+
+func (s stubConfig) PortCount() int { return s.portCount }
+
+func TestAggregateContainerArgs(t *testing.T) {
+	opts := ContainerOpts{
+		ProjectDir:    "/proj",
+		ContainerName: "asylum-test",
+		HomeDir:       "/home/test",
+		Config:        stubConfig{portCount: 5},
+	}
+
+	t.Run("collects args from kits with ContainerFunc", func(t *testing.T) {
+		kits := []*Kit{
+			{
+				Name: "kitA",
+				ContainerFunc: func(ContainerOpts) ([]RunArg, error) {
+					return []RunArg{{Flag: "-e", Value: "A=1", Source: "kitA", Priority: PriorityKit}}, nil
+				},
+			},
+			{
+				Name: "kitB",
+				ContainerFunc: func(ContainerOpts) ([]RunArg, error) {
+					return []RunArg{{Flag: "-e", Value: "B=2", Source: "kitB", Priority: PriorityKit}}, nil
+				},
+			},
+		}
+		args := AggregateContainerArgs(kits, opts)
+		if len(args) != 2 {
+			t.Fatalf("expected 2 args, got %d", len(args))
+		}
+		if args[0].Value != "A=1" || args[1].Value != "B=2" {
+			t.Errorf("unexpected args: %v", args)
+		}
+	})
+
+	t.Run("skips kits without ContainerFunc", func(t *testing.T) {
+		kits := []*Kit{
+			{Name: "noFunc"},
+			{
+				Name: "hasFunc",
+				ContainerFunc: func(ContainerOpts) ([]RunArg, error) {
+					return []RunArg{{Flag: "-e", Value: "X=1", Source: "hasFunc", Priority: PriorityKit}}, nil
+				},
+			},
+		}
+		args := AggregateContainerArgs(kits, opts)
+		if len(args) != 1 {
+			t.Fatalf("expected 1 arg, got %d", len(args))
+		}
+	})
+
+	t.Run("logs warning and skips on error", func(t *testing.T) {
+		kits := []*Kit{
+			{
+				Name: "failing",
+				ContainerFunc: func(ContainerOpts) ([]RunArg, error) {
+					return nil, fmt.Errorf("allocation failed")
+				},
+			},
+			{
+				Name: "working",
+				ContainerFunc: func(ContainerOpts) ([]RunArg, error) {
+					return []RunArg{{Flag: "-p", Value: "8080:8080", Source: "working", Priority: PriorityKit}}, nil
+				},
+			},
+		}
+		args := AggregateContainerArgs(kits, opts)
+		if len(args) != 1 {
+			t.Fatalf("expected 1 arg (failing kit skipped), got %d", len(args))
+		}
+		if args[0].Source != "working" {
+			t.Errorf("expected working kit arg, got source %q", args[0].Source)
+		}
+	})
 }

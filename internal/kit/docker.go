@@ -42,5 +42,13 @@ if [ "${ASYLUM_DOCKER:-}" = "1" ]; then
     fi
 fi
 `,
+		ContainerFunc: dockerContainerFunc,
 	})
+}
+
+func dockerContainerFunc(opts ContainerOpts) ([]RunArg, error) {
+	return []RunArg{
+		{Flag: "--privileged", Value: "", Source: "docker kit", Priority: PriorityKit},
+		{Flag: "-e", Value: "ASYLUM_DOCKER=1", Source: "docker kit", Priority: PriorityKit},
+	}, nil
 }

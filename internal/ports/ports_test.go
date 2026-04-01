@@ -97,56 +97,6 @@ func TestAllocate_ExtendBlocked(t *testing.T) {
 	}
 }
 
-func TestRelease(t *testing.T) {
-	setup(t)
-
-	Allocate("/proj/a", "asylum-aaa", 5)
-	Allocate("/proj/b", "asylum-bbb", 5)
-
-	if err := Release("/proj/a"); err != nil {
-		t.Fatal(err)
-	}
-
-	// b should still exist
-	r, err := Allocate("/proj/b", "asylum-bbb", 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r.Start != BasePort+5 {
-		t.Errorf("b should still be at %d, got %d", BasePort+5, r.Start)
-	}
-
-	// Releasing non-existent is a no-op
-	if err := Release("/proj/nonexistent"); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestReleaseContainer(t *testing.T) {
-	setup(t)
-
-	Allocate("/proj/a", "asylum-aaa", 5)
-	Allocate("/proj/b", "asylum-bbb", 5)
-
-	if err := ReleaseContainer("asylum-aaa"); err != nil {
-		t.Fatal(err)
-	}
-
-	// b should still exist
-	r, err := Allocate("/proj/b", "asylum-bbb", 5)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if r.Start != BasePort+5 {
-		t.Errorf("b should still be at %d, got %d", BasePort+5, r.Start)
-	}
-
-	// Releasing non-existent container is a no-op
-	if err := ReleaseContainer("asylum-zzz"); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestRenameContainer(t *testing.T) {
 	setup(t)
 

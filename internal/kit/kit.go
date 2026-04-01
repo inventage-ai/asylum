@@ -20,6 +20,44 @@ const (
 	CredentialExplicit                       // user-specified identifiers
 )
 
+// RunArg represents a single docker run argument with provenance.
+type RunArg struct {
+	Flag     string // e.g. "-p", "-v", "-e", "--privileged", "--mount", "--cap-add"
+	Value    string // e.g. "10000:10000", "/host:/ctr:ro", "FOO=bar", "" for boolean flags
+	Source   string // e.g. "core", "ports kit", "user config (ports)"
+	Priority int    // higher wins on dedup key collision
+}
+
+// String formats a RunArg as it would appear in docker run args.
+func (r RunArg) String() string {
+	if r.Value == "" {
+		return r.Flag
+	}
+	return r.Flag + " " + r.Value
+}
+
+// Priority levels for RunArg sources.
+const (
+	PriorityCore   = 0
+	PriorityKit    = 1
+	PriorityConfig = 2
+	PriorityCLI    = 3
+)
+
+// Override records a RunArg that was replaced by a higher-priority one.
+type Override struct {
+	Replaced RunArg
+	Winner   RunArg
+}
+
+// ContainerOpts is passed to a kit's ContainerFunc during container creation.
+type ContainerOpts struct {
+	ProjectDir    string
+	ContainerName string
+	HomeDir       string
+	Config        interface{ PortCount() int } // avoid circular import with config package
+}
+
 // CredentialOpts is passed to a kit's CredentialFunc.
 type CredentialOpts struct {
 	ProjectDir    string
@@ -67,6 +105,7 @@ type Kit struct {
 	CredentialFunc    func(CredentialOpts) ([]CredentialMount, error) // optional credential provider
 	CredentialLabel   string            // display label for onboarding (e.g. "Java/Maven")
 	MountFunc         func(CredentialOpts) ([]CredentialMount, error) // volume mounts without credential UI
+	ContainerFunc     func(ContainerOpts) ([]RunArg, error)          // docker run args contributed at container creation
 	NeedsMount        bool              // kit uses mount --bind at runtime (requires SYS_ADMIN)
 	ConfigSnippet     string            // YAML snippet for default config (indented at 2 spaces under kits:)
 	ConfigNodes       []*yaml.Node      // structured key+value nodes for kits mapping (len 2: key, value)
@@ -226,6 +265,24 @@ func sortedSubKeys(k *Kit) []string {
 	}
 	slices.Sort(keys)
 	return keys
+}
+
+// AggregateContainerArgs calls ContainerFunc on each kit that has one and
+// collects all returned RunArgs. Errors are logged as warnings and skipped.
+func AggregateContainerArgs(kits []*Kit, opts ContainerOpts) []RunArg {
+	var result []RunArg
+	for _, k := range kits {
+		if k.ContainerFunc == nil {
+			continue
+		}
+		args, err := k.ContainerFunc(opts)
+		if err != nil {
+			log.Warn("container args for %s: %v", k.Name, err)
+			continue
+		}
+		result = append(result, args...)
+	}
+	return result
 }
 
 // AggregateTools collects Tools from all provided kits into a deduplicated,

@@ -18,7 +18,6 @@ import (
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/onboarding"
 	"github.com/inventage-ai/asylum/internal/kit"
-	"github.com/inventage-ai/asylum/internal/ports"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/term"
 	"github.com/inventage-ai/asylum/internal/tui"
@@ -250,28 +249,21 @@ func main() {
 			die("%v", err)
 		}
 
-		var allocatedPorts []int
-		if cfg.KitActive("ports") {
-			pr, err := ports.Allocate(projectDir, cname, cfg.PortCount())
-			if err != nil {
-				log.Warn("port allocation: %v", err)
-			} else {
-				allocatedPorts = pr.Ports()
-			}
-		}
-
-		runArgs, err := container.RunArgs(container.RunOpts{
-			Config:         cfg,
-			Agent:          a,
-			ImageTag:       imageTag,
-			ProjectDir:     projectDir,
-			CacheDirs:      cacheDirs,
-			Kits:           allKits,
-			Version:        version,
-			AllocatedPorts: allocatedPorts,
+		runArgs, resolved, overrides, err := container.RunArgs(container.RunOpts{
+			Config:     cfg,
+			Agent:      a,
+			ImageTag:   imageTag,
+			ProjectDir: projectDir,
+			CacheDirs:  cacheDirs,
+			Kits:       allKits,
+			Version:    version,
 		})
 		if err != nil {
 			die("%v", err)
+		}
+
+		if flags.Debug {
+			fmt.Fprint(os.Stderr, container.FormatDebug(resolved, overrides))
 		}
 
 		if err := docker.RunDetached(runArgs); err != nil {
@@ -371,6 +363,7 @@ type cliFlags struct {
 	Dev            bool
 	SkipOnboarding bool
 	Safe           bool
+	Debug          bool
 	TargetVersion  string
 }
 
@@ -464,6 +457,9 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 				flags.All = true
 				i++
 			}
+		case arg == "--debug":
+			flags.Debug = true
+			i++
 		case arg == "--skip-onboarding":
 			flags.SkipOnboarding = true
 			i++
@@ -700,7 +696,6 @@ func runCleanupProject() {
 	} else {
 		projDir := filepath.Join(home, ".asylum", "projects", cname)
 		if _, err := os.Stat(projDir); err == nil {
-			ports.ReleaseContainer(cname)
 			if err := os.RemoveAll(projDir); err != nil {
 				log.Error("remove project data: %v", err)
 				errs++
@@ -821,7 +816,6 @@ func removeProjectsDir(dir string) error {
 				continue
 			}
 		}
-		ports.ReleaseContainer(e.Name())
 		os.RemoveAll(filepath.Join(dir, e.Name()))
 	}
 	if skipped == 0 {

@@ -87,16 +87,6 @@ func Allocate(projectDir, containerName string, count int) (Range, error) {
 	return r, nil
 }
 
-// Release removes the port allocation for projectDir.
-func Release(projectDir string) error {
-	return release(func(r Range) bool { return r.Project == projectDir })
-}
-
-// ReleaseContainer removes the port allocation for the given container name.
-func ReleaseContainer(containerName string) error {
-	return release(func(r Range) bool { return r.Container == containerName })
-}
-
 // RenameContainer updates the container name for an existing port allocation.
 func RenameContainer(oldName, newName string) error {
 	path, err := registryPath()
@@ -118,32 +108,6 @@ func RenameContainer(oldName, newName string) error {
 	for i, r := range reg.Ranges {
 		if r.Container == oldName {
 			reg.Ranges[i].Container = newName
-			return writeRegistry(f, reg)
-		}
-	}
-	return nil
-}
-
-func release(match func(Range) bool) error {
-	path, err := registryPath()
-	if err != nil {
-		return err
-	}
-
-	f, err := openLocked(path)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	reg, err := readRegistry(f)
-	if err != nil {
-		return err
-	}
-
-	for i, r := range reg.Ranges {
-		if match(r) {
-			reg.Ranges = append(reg.Ranges[:i], reg.Ranges[i+1:]...)
 			return writeRegistry(f, reg)
 		}
 	}

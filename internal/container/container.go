@@ -39,90 +39,122 @@ type RunOpts struct {
 	ImageTag   string
 	ProjectDir string
 	CacheDirs  map[string]string // tool name → container path
-	Kits           []*kit.Kit
-	Version        string
-	AllocatedPorts []int
+	Kits       []*kit.Kit
+	Version    string
 }
 
-func RunArgs(opts RunOpts) ([]string, error) {
+// RunArgs assembles docker run arguments via a unified RunArg pipeline.
+// All sources (core, kits, user config) produce typed RunArgs that are
+// collected, deduplicated, and validated before being flattened to []string.
+// Returns the flat args for docker run, plus the resolved RunArgs and any
+// overrides for debug output.
+func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return nil, fmt.Errorf("home dir: %w", err)
+		return nil, nil, nil, fmt.Errorf("home dir: %w", err)
 	}
 
 	containerName := ContainerName(opts.ProjectDir)
 	hostname := safeHostname(opts.ProjectDir)
 
-	args := []string{
-		"run", "-d", "--rm", "--init",
-		"--name", containerName,
-		"--hostname", hostname,
-		"--add-host=host.docker.internal:host-gateway",
-		"-w", opts.ProjectDir,
+	var all []kit.RunArg
+
+	// Core structural args
+	core := func(flag, value string) {
+		all = append(all, kit.RunArg{Flag: flag, Value: value, Source: "core", Priority: kit.PriorityCore})
 	}
-	if opts.Config.KitActive("docker") {
-		args = append(args, "--privileged")
-	} else if kit.AnyNeedsMount(opts.Kits) {
-		args = append(args, "--cap-add", "SYS_ADMIN")
+	core("run", "")
+	core("-d", "")
+	core("--rm", "")
+	core("--init", "")
+	core("--name", containerName)
+	core("--hostname", hostname)
+	core("--add-host", "host.docker.internal:host-gateway")
+	core("-w", opts.ProjectDir)
+
+	if kit.AnyNeedsMount(opts.Kits) {
+		core("--cap-add", "SYS_ADMIN")
 	}
 
-	args, err = appendVolumes(args, home, containerName, opts)
+	// Core volume mounts
+	coreVols, err := coreVolumes(home, containerName, opts)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
-	args, err = appendEnvVars(args, home, opts)
-	if err != nil {
-		return nil, err
-	}
-	args, err = appendPorts(args, opts.Config.Ports)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range opts.AllocatedPorts {
-		ps := strconv.Itoa(p)
-		args = append(args, "-p", ps+":"+ps)
-	}
+	all = append(all, coreVols...)
 
+	// Core env vars
+	coreEnvs, err := coreEnvVars(home, opts)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	all = append(all, coreEnvs...)
+
+	// .env file
 	if envFile := filepath.Join(opts.ProjectDir, ".env"); fileExists(envFile) {
-		args = append(args, "--env-file", envFile)
+		core("--env-file", envFile)
 	}
 
-	// Generate and mount sandbox rules for Claude.
-	// The agent config dir is bind-mounted at ~/.claude/, so the rules file
-	// mount at ~/.claude/rules/asylum-sandbox.md is nested inside it.
-	// Some Docker/runc versions cannot create mountpoint files through a
-	// VirtioFS-backed bind mount (the resolved path falls outside the overlay
-	// rootfs). Pre-creating the mountpoint files in the host config dir
-	// avoids this — runc finds the files already present and binds on top.
+	// Kit ContainerFunc args (includes ports, docker --privileged, etc.)
+	kitArgs := kit.AggregateContainerArgs(opts.Kits, kit.ContainerOpts{
+		ProjectDir:    opts.ProjectDir,
+		ContainerName: containerName,
+		HomeDir:       home,
+		Config:        opts.Config,
+	})
+	all = append(all, kitArgs...)
+
+	// Kit credential mounts
+	credArgs, err := kitCredentialArgs(home, containerName, opts)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	all = append(all, credArgs...)
+
+	// Kit volume mounts (non-credential)
+	mountArgs := kitMountArgs(home, containerName, opts)
+	all = append(all, mountArgs...)
+
+	// User config: ports
+	cfgPortArgs, err := configPortArgs(opts.Config.Ports)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	all = append(all, cfgPortArgs...)
+
+	// User config: volumes
+	cfgVolArgs, err := configVolumeArgs(opts.Config.Volumes, home)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	all = append(all, cfgVolArgs...)
+
+	// User config: env vars
+	for _, k := range slices.Sorted(maps.Keys(opts.Config.Env)) {
+		if strings.ContainsAny(opts.Config.Env[k], "\n\r") {
+			return nil, nil, nil, fmt.Errorf("env var %q contains newlines, which Docker does not support", k)
+		}
+		all = append(all, kit.RunArg{Flag: "-e", Value: k + "=" + opts.Config.Env[k], Source: "user config (env)", Priority: kit.PriorityConfig})
+	}
+
+	// Sandbox rules for Claude
 	if opts.Agent.Name() == "claude" {
-		hostConfigDir, err := agent.ResolveConfigDir(
-			opts.Agent,
-			opts.Config.AgentIsolation(opts.Agent.Name()),
-			containerName,
-		)
-		if err == nil {
-			rulesSubdir := filepath.Join(hostConfigDir, "rules")
-			os.MkdirAll(rulesSubdir, 0755)
-			ensureMountpoint(filepath.Join(rulesSubdir, "asylum-sandbox.md"))
-			ensureMountpoint(filepath.Join(hostConfigDir, "asylum-reference.md"))
-		}
-
-		rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Version, opts.AllocatedPorts)
-		if err != nil {
-			log.Warn("could not generate sandbox rules: %v", err)
-		} else {
-			containerClaude := config.ExpandTilde(opts.Agent.ContainerConfigDir(), home)
-			args = append(args,
-				"-v", filepath.Join(rulesDir, "asylum-sandbox.md")+":"+filepath.Join(containerClaude, "rules", "asylum-sandbox.md")+":ro",
-				"-v", filepath.Join(rulesDir, "asylum-reference.md")+":"+filepath.Join(containerClaude, "asylum-reference.md")+":ro",
-			)
-		}
+		rulesArgs := claudeSandboxRulesArgs(home, containerName, opts, all)
+		all = append(all, rulesArgs...)
 	}
 
-	args = append(args, opts.ImageTag)
-	args = append(args, "sleep", "infinity")
+	// Resolve: dedup, conflict detection
+	resolved, overrides, err := ResolveArgs(all)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	return args, nil
+	// Flatten to []string, then append image + command (not subject to dedup)
+	flat := FlattenArgs(resolved)
+	flat = append(flat, opts.ImageTag)
+	flat = append(flat, "sleep", "infinity")
+
+	return flat, resolved, overrides, nil
 }
 
 func ContainerName(projectDir string) string {
@@ -192,31 +224,34 @@ func MigrateProjectDir(projectDir string) error {
 	return nil
 }
 
-func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, error) {
+// coreVolumes produces RunArgs for all core volume mounts.
+func coreVolumes(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
+	var args []kit.RunArg
 	vol := func(host, container, mode string) {
 		mount := host + ":" + container
 		if mode != "" {
 			mount += ":" + mode
 		}
-		args = append(args, "-v", mount)
+		args = append(args, kit.RunArg{Flag: "-v", Value: mount, Source: "core", Priority: kit.PriorityCore})
+	}
+	mnt := func(value string) {
+		args = append(args, kit.RunArg{Flag: "--mount", Value: value, Source: "core", Priority: kit.PriorityCore})
 	}
 
 	// Project directory at real path
 	vol(opts.ProjectDir, opts.ProjectDir, "z")
 
-	// Shadow node_modules with named volumes so host OS-specific
-	// binaries aren't visible inside the container. Named volumes
-	// persist across container restarts so npm install isn't lost.
+	// Shadow node_modules with named volumes
 	if !opts.Config.ShadowNodeModulesOff() {
 		for _, nm := range FindNodeModulesDirs(opts.ProjectDir) {
 			rel, _ := filepath.Rel(opts.ProjectDir, nm)
 			hash := fmt.Sprintf("%x", sha256.Sum256([]byte(rel)))[:11]
 			volName := cname + "-npm-" + hash
-			args = append(args, "--mount", "type=volume,src="+volName+",dst="+nm)
+			mnt("type=volume,src=" + volName + ",dst=" + nm)
 		}
 	}
 
-	// Git worktree: mount both the worktree gitdir and main repo's .git
+	// Git worktree
 	if wtDir, commonDir := resolveGitWorktree(opts.ProjectDir); wtDir != "" {
 		vol(wtDir, wtDir, "z")
 		if commonDir != wtDir {
@@ -234,18 +269,81 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 	for _, name := range slices.Sorted(maps.Keys(opts.CacheDirs)) {
 		volName := cname + "-cache-" + name
 		dst := config.ExpandTilde(opts.CacheDirs[name], home)
-		args = append(args, "--mount", "type=volume,src="+volName+",dst="+dst)
+		mnt("type=volume,src=" + volName + ",dst=" + dst)
 	}
 
-	// Kit credentials — must come after cache volumes so bind mounts overlay named volumes
+	// Shell history
+	histDir := filepath.Join(home, ".asylum", "projects", cname, "history")
+	if err := os.MkdirAll(histDir, 0755); err != nil {
+		return nil, fmt.Errorf("create history dir: %w", err)
+	}
+	vol(histDir, filepath.Join(home, ".shell_history"), "rw")
+
+	// Agent config — mount depends on isolation level
+	containerConfigDir := config.ExpandTilde(opts.Agent.ContainerConfigDir(), home)
+	hostConfigDir, err := agent.ResolveConfigDir(
+		opts.Agent,
+		opts.Config.AgentIsolation(opts.Agent.Name()),
+		cname,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("resolve agent config dir: %w", err)
+	}
+	os.MkdirAll(hostConfigDir, 0755)
+	if resolved, err := filepath.EvalSymlinks(hostConfigDir); err == nil {
+		hostConfigDir = resolved
+	}
+	vol(hostConfigDir, containerConfigDir, "")
+
+	// Direnv
+	envrc := filepath.Join(opts.ProjectDir, ".envrc")
+	if fileExists(envrc) {
+		direnvAllow := filepath.Join(home, ".local", "share", "direnv", "allow")
+		if dirExists(direnvAllow) {
+			vol(direnvAllow, "/tmp/host_direnv_allow", "ro")
+		}
+	}
+
+	return args, nil
+}
+
+// coreEnvVars produces RunArgs for agent and core environment variables.
+func coreEnvVars(home string, opts RunOpts) ([]kit.RunArg, error) {
+	var args []kit.RunArg
+	env := func(k, v string) {
+		args = append(args, kit.RunArg{Flag: "-e", Value: k + "=" + v, Source: "core", Priority: kit.PriorityCore})
+	}
+
+	// Agent env vars
+	agentEnv := opts.Agent.EnvVars()
+	for _, k := range slices.Sorted(maps.Keys(agentEnv)) {
+		env(k, agentEnv[k])
+	}
+
+	env("COLORTERM", "truecolor")
+	env("TERM", "xterm-256color")
+	if !opts.Config.AllowAgentTermTitle() {
+		env("CLAUDE_CODE_DISABLE_TERMINAL_TITLE", "1")
+	}
+	env("HISTFILE", filepath.Join(home, ".shell_history", "zsh_history"))
+	env("HOST_PROJECT_DIR", opts.ProjectDir)
+
+	if java := opts.Config.JavaVersion(); java != "" {
+		env("ASYLUM_JAVA_VERSION", java)
+	}
+
+	return args, nil
+}
+
+// kitCredentialArgs produces RunArgs for kit credential mounts.
+func kitCredentialArgs(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
+	var args []kit.RunArg
 	credDir := filepath.Join(home, ".asylum", "projects", cname, "credentials")
+
 	for _, k := range opts.Kits {
 		if k.CredentialFunc == nil {
 			continue
 		}
-		// Determine credential mode from the kit's config entry.
-		// Sub-kits (e.g. java/maven) check the parent kit's config.
-		// Always-on kits default to auto when not explicitly configured.
 		kitName, _, _ := strings.Cut(k.Name, "/")
 		mode := opts.Config.KitCredentialMode(kitName)
 		if mode == "none" {
@@ -280,21 +378,25 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 			log.Warn("credentials for %s: %v", k.Name, err)
 			continue
 		}
+		source := k.Name + " kit (credentials)"
 		for _, m := range mounts {
 			dst := config.ExpandTilde(m.Destination, home)
-			mode := "ro"
+			volMode := "ro"
 			if m.Writable {
-				mode = ""
+				volMode = ""
 			}
 			if m.HostPath != "" {
-				vol(m.HostPath, dst, mode)
+				mount := m.HostPath + ":" + dst
+				if volMode != "" {
+					mount += ":" + volMode
+				}
+				args = append(args, kit.RunArg{Flag: "-v", Value: mount, Source: source, Priority: kit.PriorityKit})
 				continue
 			}
 			if err := os.MkdirAll(credDir, 0755); err != nil {
 				return nil, fmt.Errorf("create credentials dir: %w", err)
 			}
 			if m.FileName != "" {
-				// Write content into a subdirectory, mount the directory
 				subDir := filepath.Join(credDir, filepath.Base(dst))
 				if err := os.MkdirAll(subDir, 0755); err != nil {
 					return nil, fmt.Errorf("create credential subdir: %w", err)
@@ -302,20 +404,31 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 				if err := os.WriteFile(filepath.Join(subDir, m.FileName), m.Content, 0600); err != nil {
 					return nil, fmt.Errorf("write credential file: %w", err)
 				}
-				vol(subDir, dst, mode)
+				mount := subDir + ":" + dst
+				if volMode != "" {
+					mount += ":" + volMode
+				}
+				args = append(args, kit.RunArg{Flag: "-v", Value: mount, Source: source, Priority: kit.PriorityKit})
 			} else {
-				// Write content as a single file, mount the file
 				filename := filepath.Base(dst)
 				hostPath := filepath.Join(credDir, filename)
 				if err := os.WriteFile(hostPath, m.Content, 0600); err != nil {
 					return nil, fmt.Errorf("write credential file: %w", err)
 				}
-				vol(hostPath, dst, mode)
+				mount := hostPath + ":" + dst
+				if volMode != "" {
+					mount += ":" + volMode
+				}
+				args = append(args, kit.RunArg{Flag: "-v", Value: mount, Source: source, Priority: kit.PriorityKit})
 			}
 		}
 	}
+	return args, nil
+}
 
-	// Kit volume mounts (non-credential, e.g. SSH keys)
+// kitMountArgs produces RunArgs for kit volume mounts (non-credential).
+func kitMountArgs(home, cname string, opts RunOpts) []kit.RunArg {
+	var args []kit.RunArg
 	for _, k := range opts.Kits {
 		if k.MountFunc == nil {
 			continue
@@ -334,119 +447,105 @@ func appendVolumes(args []string, home, cname string, opts RunOpts) ([]string, e
 			log.Warn("mounts for %s: %v", k.Name, err)
 			continue
 		}
+		source := k.Name + " kit (mounts)"
 		for _, m := range mounts {
 			dst := config.ExpandTilde(m.Destination, home)
 			mode := "ro"
 			if m.Writable {
 				mode = ""
 			}
-			vol(m.HostPath, dst, mode)
+			mount := m.HostPath + ":" + dst
+			if mode != "" {
+				mount += ":" + mode
+			}
+			args = append(args, kit.RunArg{Flag: "-v", Value: mount, Source: source, Priority: kit.PriorityKit})
 		}
 	}
-
-	// Shell history
-	histDir := filepath.Join(home, ".asylum", "projects", cname, "history")
-	if err := os.MkdirAll(histDir, 0755); err != nil {
-		return nil, fmt.Errorf("create history dir: %w", err)
-	}
-	vol(histDir, filepath.Join(home, ".shell_history"), "rw")
-
-	// Agent config — mount depends on isolation level
-	containerConfigDir := config.ExpandTilde(opts.Agent.ContainerConfigDir(), home)
-	hostConfigDir, err := agent.ResolveConfigDir(
-		opts.Agent,
-		opts.Config.AgentIsolation(opts.Agent.Name()),
-		cname,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("resolve agent config dir: %w", err)
-	}
-	os.MkdirAll(hostConfigDir, 0755)
-	// Resolve symlinks so Docker doesn't fail with "mkdir … file exists"
-	// when the agent config dir is a symlink (e.g. ~/.claude on macOS).
-	if resolved, err := filepath.EvalSymlinks(hostConfigDir); err == nil {
-		hostConfigDir = resolved
-	}
-	vol(hostConfigDir, containerConfigDir, "")
-
-	// Direnv
-	envrc := filepath.Join(opts.ProjectDir, ".envrc")
-	if fileExists(envrc) {
-		direnvAllow := filepath.Join(home, ".local", "share", "direnv", "allow")
-		if dirExists(direnvAllow) {
-			vol(direnvAllow, "/tmp/host_direnv_allow", "ro")
-		}
-	}
-
-	for _, v := range opts.Config.Volumes {
-		parsed, err := config.ParseVolume(v, home)
-		if err != nil {
-			return nil, fmt.Errorf("invalid volume %q: %w", v, err)
-		}
-		vol(parsed.Host, parsed.Container, parsed.Options)
-	}
-
-	return args, nil
+	return args
 }
 
-func appendEnvVars(args []string, home string, opts RunOpts) ([]string, error) {
-	env := func(k, v string) {
-		args = append(args, "-e", k+"="+v)
-	}
-
-	for _, k := range slices.Sorted(maps.Keys(opts.Config.Env)) {
-		if strings.ContainsAny(opts.Config.Env[k], "\n\r") {
-			return nil, fmt.Errorf("env var %q contains newlines, which Docker does not support", k)
-		}
-		env(k, opts.Config.Env[k])
-	}
-
-	// Agent env vars before hardcoded vars so hardcoded values win
-	// (Docker uses last-wins semantics for -e flags).
-	agentEnv := opts.Agent.EnvVars()
-	for _, k := range slices.Sorted(maps.Keys(agentEnv)) {
-		env(k, agentEnv[k])
-	}
-
-	if opts.Config.KitActive("docker") {
-		env("ASYLUM_DOCKER", "1")
-	}
-	env("COLORTERM", "truecolor")
-	env("TERM", "xterm-256color")
-	if !opts.Config.AllowAgentTermTitle() {
-		env("CLAUDE_CODE_DISABLE_TERMINAL_TITLE", "1")
-	}
-	env("HISTFILE", filepath.Join(home, ".shell_history", "zsh_history"))
-	env("HOST_PROJECT_DIR", opts.ProjectDir)
-
-	if java := opts.Config.JavaVersion(); java != "" {
-		env("ASYLUM_JAVA_VERSION", java)
-	}
-
-	return args, nil
-}
-
-func validPort(s string) bool {
-	n, err := strconv.Atoi(s)
-	return err == nil && n > 0 && n <= 65535
-}
-
-func appendPorts(args []string, ports []string) ([]string, error) {
-	for _, p := range ports {
+// configPortArgs produces RunArgs for user-configured port mappings.
+func configPortArgs(cfgPorts []string) ([]kit.RunArg, error) {
+	var args []kit.RunArg
+	for _, p := range cfgPorts {
 		if strings.Contains(p, ":") {
 			parts := strings.SplitN(p, ":", 2)
 			if !validPort(parts[0]) || !validPort(parts[1]) {
 				return nil, fmt.Errorf("invalid port mapping %q: ports must be between 1 and 65535", p)
 			}
-			args = append(args, "-p", p)
+			args = append(args, kit.RunArg{Flag: "-p", Value: p, Source: "user config (ports)", Priority: kit.PriorityConfig})
 		} else {
 			if !validPort(p) {
 				return nil, fmt.Errorf("invalid port %q: must be between 1 and 65535", p)
 			}
-			args = append(args, "-p", p+":"+p)
+			args = append(args, kit.RunArg{Flag: "-p", Value: p + ":" + p, Source: "user config (ports)", Priority: kit.PriorityConfig})
 		}
 	}
 	return args, nil
+}
+
+// configVolumeArgs produces RunArgs for user-configured volume mounts.
+func configVolumeArgs(volumes []string, home string) ([]kit.RunArg, error) {
+	var args []kit.RunArg
+	for _, v := range volumes {
+		parsed, err := config.ParseVolume(v, home)
+		if err != nil {
+			return nil, fmt.Errorf("invalid volume %q: %w", v, err)
+		}
+		mount := parsed.Host + ":" + parsed.Container
+		if parsed.Options != "" {
+			mount += ":" + parsed.Options
+		}
+		args = append(args, kit.RunArg{Flag: "-v", Value: mount, Source: "user config (volumes)", Priority: kit.PriorityConfig})
+	}
+	return args, nil
+}
+
+// claudeSandboxRulesArgs generates sandbox rules and returns the volume mount RunArgs.
+// It extracts allocated ports from the collected RunArgs to include in the rules.
+func claudeSandboxRulesArgs(home, containerName string, opts RunOpts, collected []kit.RunArg) []kit.RunArg {
+	// Pre-create mountpoints for Docker/runc compatibility
+	hostConfigDir, err := agent.ResolveConfigDir(
+		opts.Agent,
+		opts.Config.AgentIsolation(opts.Agent.Name()),
+		containerName,
+	)
+	if err == nil {
+		rulesSubdir := filepath.Join(hostConfigDir, "rules")
+		os.MkdirAll(rulesSubdir, 0755)
+		ensureMountpoint(filepath.Join(rulesSubdir, "asylum-sandbox.md"))
+		ensureMountpoint(filepath.Join(hostConfigDir, "asylum-reference.md"))
+	}
+
+	// Extract allocated ports from kit-produced -p args
+	var allocatedPorts []int
+	for _, a := range collected {
+		if a.Flag == "-p" && a.Source == "ports kit" {
+			// Value is "port:port", extract the container port
+			if i := strings.LastIndex(a.Value, ":"); i >= 0 {
+				if p, err := strconv.Atoi(a.Value[i+1:]); err == nil {
+					allocatedPorts = append(allocatedPorts, p)
+				}
+			}
+		}
+	}
+
+	rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Version, allocatedPorts)
+	if err != nil {
+		log.Warn("could not generate sandbox rules: %v", err)
+		return nil
+	}
+
+	containerClaude := config.ExpandTilde(opts.Agent.ContainerConfigDir(), home)
+	return []kit.RunArg{
+		{Flag: "-v", Value: filepath.Join(rulesDir, "asylum-sandbox.md") + ":" + filepath.Join(containerClaude, "rules", "asylum-sandbox.md") + ":ro", Source: "core", Priority: kit.PriorityCore},
+		{Flag: "-v", Value: filepath.Join(rulesDir, "asylum-reference.md") + ":" + filepath.Join(containerClaude, "asylum-reference.md") + ":ro", Source: "core", Priority: kit.PriorityCore},
+	}
+}
+
+func validPort(s string) bool {
+	n, err := strconv.Atoi(s)
+	return err == nil && n > 0 && n <= 65535
 }
 
 const sandboxRulesTemplate = `# Asylum Sandbox (v%s)
@@ -576,11 +675,7 @@ func agentCommand(opts ExecOpts) []string {
 		opts.ContainerName,
 	)
 	resume := err == nil && !opts.NewSession && opts.Agent.HasSession(configDir, opts.ProjectDir)
-	extra := opts.ExtraArgs
-	if opts.Config.KitActive("title") && opts.Agent.Name() == "claude" && !resume {
-		extra = append([]string{"--name", filepath.Base(opts.ProjectDir)}, extra...)
-	}
-	return opts.Agent.Command(resume, extra)
+	return opts.Agent.Command(resume, opts.ExtraArgs)
 }
 
 // EnsureAgentConfig returns true if the config was freshly created (first run).
