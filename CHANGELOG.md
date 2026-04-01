@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+## 0.6.5 — 2026-04-01
+
+macOS binaries are now code-signed and notarized, eliminating Gatekeeper warnings for users downloading asylum from GitHub Releases. All release binaries now include SHA256 checksums and GitHub build provenance attestation for supply chain verification.
+
+### Added
+- macOS code signing with Developer ID certificate and Apple notarization for darwin binaries
+- SHA256 checksums file (`checksums.txt`) published with every release
+- GitHub build provenance attestation for all release binaries
+- Checksum verification in install script with graceful fallback
+
+### Changed
+- Release and dev-release workflows split into platform-specific build jobs with a shared reusable workflow for darwin signing
+
 ## 0.6.4 — 2026-04-01
 
 Fixes the rtk kit failing to build due to the `rtk` binary not being on PATH during Docker image assembly.
