@@ -512,34 +512,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../commands/ssh-init/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ssh-init
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../commands/self-update/" class="md-nav__link">
         
   
@@ -1094,6 +1066,34 @@
   
   
     <li class="md-nav__item">
+      <a href="ssh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSH
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="shell/" class="md-nav__link">
         
   
@@ -1178,7 +1178,7 @@
   
   
     <li class="md-nav__item">
-      <a href="browser/" class="md-nav__link">
+      <a href="browser.md" class="md-nav__link">
         
   
   
@@ -1718,6 +1718,11 @@
 <td>Default</td>
 </tr>
 <tr>
+<td><a href="ssh/">ssh</a></td>
+<td>SSH key management and mounting</td>
+<td>Always on</td>
+</tr>
+<tr>
 <td><a href="shell/">shell</a></td>
 <td>oh-my-zsh, tmux, direnv</td>
 <td>Always on</td>
@@ -1733,8 +1738,8 @@
 <td>Opt-in</td>
 </tr>
 <tr>
-<td><a href="browser/">browser</a></td>
-<td>Chromium browser via Playwright</td>
+<td><a href="agent-browser/">agent-browser</a></td>
+<td>Browser automation via agent-browser</td>
 <td>Opt-in</td>
 </tr>
 <tr>
@@ -1787,7 +1792,7 @@
 <span class="w">  </span><span class="nt">github</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">disabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 </code></pre></div>
-<p>Always-on kits (node, shell, ports) cannot be disabled.</p>
+<p>Always-on kits (node, ssh, shell, ports) cannot be disabled.</p>
 <h2 id="kit-resolution">Kit Resolution<a class="headerlink" href="#kit-resolution" title="Permanent link">&para;</a></h2>
 <p>When kits are configured explicitly (via config or <code>--kits</code> flag):</p>
 <ul>

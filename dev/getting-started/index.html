@@ -417,10 +417,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ssh-setup" class="md-nav__link">
+  <a href="#ssh" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SSH Setup
+        SSH
       
     </span>
   </a>
@@ -627,34 +627,6 @@
     
   
     version
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../commands/ssh-init/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ssh-init
   
 
     
@@ -1105,6 +1077,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../kits/ssh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSH
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../kits/shell/" class="md-nav__link">
         
   
@@ -1189,7 +1189,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../kits/browser/" class="md-nav__link">
+      <a href="../kits/browser.md" class="md-nav__link">
         
   
   
@@ -1656,10 +1656,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#ssh-setup" class="md-nav__link">
+  <a href="#ssh" class="md-nav__link">
     <span class="md-ellipsis">
       
-        SSH Setup
+        SSH
       
     </span>
   </a>
@@ -1751,11 +1751,15 @@ asylum<span class="w"> </span>-a<span class="w"> </span>codex<span class="w">   
 <span class="w">  </span><span class="nt">DEBUG</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
 </code></pre></div>
 <p>See <a href="../configuration/">Configuration</a> for all options, and <a href="../kits/">Kits</a> for available language and tool kits.</p>
-<h2 id="ssh-setup">SSH Setup<a class="headerlink" href="#ssh-setup" title="Permanent link">&para;</a></h2>
-<p>To use git over SSH inside containers:</p>
-<div class="highlight"><pre><span></span><code>asylum<span class="w"> </span>ssh-init
+<h2 id="ssh">SSH<a class="headerlink" href="#ssh" title="Permanent link">&para;</a></h2>
+<p>SSH keys are managed automatically by the always-on <a href="../kits/ssh/">SSH kit</a>. On first container start, an Ed25519 key pair is generated at <code>~/.asylum/ssh/</code> and mounted into <code>~/.ssh/</code>. Add the printed public key to GitHub/GitLab.</p>
+<p>You can configure SSH isolation in your config:</p>
+<div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">ssh</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">isolation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">isolated</span><span class="w">   </span><span class="c1"># default — generated keys in ~/.asylum/ssh/</span>
+<span class="w">    </span><span class="c1"># isolation: shared   # mount host ~/.ssh/ directly</span>
+<span class="w">    </span><span class="c1"># isolation: project  # per-project keys</span>
 </code></pre></div>
-<p>This creates an Ed25519 key pair in <code>~/.asylum/ssh/</code>. Add the public key to GitHub/GitLab. The keys are mounted into every container automatically.</p>
 <h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li><a href="../commands/">Commands</a> — all available commands and flags</li>

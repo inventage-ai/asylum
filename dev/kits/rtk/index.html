@@ -10,13 +10,9 @@
       
       
       
-        <link rel="canonical" href="https://asylum.inventage.ai/dev/kits/browser/">
+        <link rel="canonical" href="https://asylum.inventage.ai/dev/kits/rtk/">
       
       
-        <link rel="prev" href="../ast-grep/">
-      
-      
-        <link rel="next" href="../cx/">
       
       
         
@@ -27,7 +23,7 @@
     
     
       
-        <title>Browser - Asylum</title>
+        <title>rtk Kit - Asylum</title>
       
     
     
@@ -78,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#agent-browser-kit" class="md-skip">
+        <a href="#rtk-kit" class="md-skip">
           Skip to content
         </a>
       
@@ -118,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Browser
+              rtk Kit
             
           </span>
         </div>
@@ -512,34 +508,6 @@
   
   
     <li class="md-nav__item">
-      <a href="../../commands/ssh-init/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    ssh-init
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="../../commands/self-update/" class="md-nav__link">
         
   
@@ -717,8 +685,6 @@
       
   
   
-    
-  
   
   
     
@@ -731,11 +697,13 @@
       
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -756,7 +724,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -970,6 +938,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../ssh/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSH
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../shell/" class="md-nav__link">
         
   
@@ -1051,37 +1047,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Browser
-  
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../browser.md" class="md-nav__link">
         
   
   
@@ -1097,70 +1066,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#whats-included" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        What's Included
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#configuration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Configuration
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#dependencies" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Dependencies
-      
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#usage" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Usage
-      
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1568,10 +1473,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#dependencies" class="md-nav__link">
+  <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Dependencies
+        How It Works
       
     </span>
   </a>
@@ -1609,37 +1514,32 @@
   
 
 
-<h1 id="agent-browser-kit">Agent-Browser Kit<a class="headerlink" href="#agent-browser-kit" title="Permanent link">&para;</a></h1>
-<p>Browser automation via <a href="https://github.com/vercel-labs/agent-browser">agent-browser</a> — an AI-native browser automation CLI.</p>
+<h1 id="rtk-kit">rtk Kit<a class="headerlink" href="#rtk-kit" title="Permanent link">&para;</a></h1>
+<p>Token-reduction proxy via <a href="https://github.com/rtk-ai/rtk">RTK</a> — intercepts shell commands and compresses output to reduce LLM token usage by 60-90%.</p>
 <p><strong>Activation: Opt-in</strong> — only active if explicitly enabled in your config.</p>
 <h2 id="whats-included">What's Included<a class="headerlink" href="#whats-included" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>agent-browser</strong> CLI for browser automation</li>
-<li><strong>Chrome</strong> (Chrome for Testing, installed via <code>agent-browser install</code>)</li>
-<li><strong>Claude Code skill</strong> — auto-mounted from the upstream project, teaching Claude the snapshot-ref interaction pattern</li>
+<li><strong>rtk</strong> — CLI proxy that rewrites command outputs to strip noise (comments, whitespace, boilerplate)</li>
+<li><strong>Claude Code hooks</strong> — auto-mounted PreToolUse hook that transparently intercepts Bash commands</li>
 </ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">agent-browser</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
+<span class="w">  </span><span class="nt">rtk</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
 </code></pre></div>
-<p>The old <code>browser:</code> key still works as an alias.</p>
-<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
-<p>Depends on the <a href="../node/">Node.js</a> kit (agent-browser is installed via npm).</p>
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<p>RTK registers a PreToolUse hook that intercepts every Bash command the agent runs. Commands like <code>git status</code>, <code>ls</code>, <code>grep</code>, etc. are transparently rewritten through RTK, which strips noise and compresses the output before the agent sees it.</p>
+<p>The hook and awareness doc are generated at image build time and mounted into <code>~/.claude/</code> at container start.</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><span class="c1"># Navigate to a page</span>
-agent-browser<span class="w"> </span>open<span class="w"> </span>https://example.com
+<div class="highlight"><pre><span></span><code><span class="c1"># Check token savings</span>
+rtk<span class="w"> </span>gain
 
-<span class="c1"># Get interactive elements with refs</span>
-agent-browser<span class="w"> </span>snapshot<span class="w"> </span>-i
+<span class="c1"># See savings over time</span>
+rtk<span class="w"> </span>gain<span class="w"> </span>--graph
 
-<span class="c1"># Interact using refs</span>
-agent-browser<span class="w"> </span>click<span class="w"> </span>@e1
-agent-browser<span class="w"> </span>fill<span class="w"> </span>@e2<span class="w"> </span><span class="s2">&quot;search query&quot;</span>
-
-<span class="c1"># Re-snapshot after page changes</span>
-agent-browser<span class="w"> </span>snapshot<span class="w"> </span>-i
+<span class="c1"># Discover optimization opportunities</span>
+rtk<span class="w"> </span>discover
 </code></pre></div>
-<p>Run <code>agent-browser --help</code> for all commands.</p>
+<p>RTK supports 100+ commands across files, git, testing, build/lint, and containers. See the <a href="https://github.com/rtk-ai/rtk">RTK documentation</a> for the full list.</p>
 
 
 
