@@ -33,9 +33,34 @@ fi
 
 URL="https://github.com/${REPO}/releases/download/${VERSION}/${BINARY}"
 
+CHECKSUMS_URL="https://github.com/${REPO}/releases/download/${VERSION}/checksums.txt"
+
 echo "Downloading asylum ${VERSION} for ${OS}/${ARCH}..."
 curl -fsSL -o /tmp/asylum "$URL"
 chmod +x /tmp/asylum
+
+# Verify checksum if checksums.txt is available
+if curl -fsSL -o /tmp/asylum-checksums.txt "$CHECKSUMS_URL" 2>/dev/null; then
+    EXPECTED=$(grep "${BINARY}$" /tmp/asylum-checksums.txt | awk '{print $1}')
+    if [ -n "$EXPECTED" ]; then
+        if command -v sha256sum >/dev/null 2>&1; then
+            ACTUAL=$(sha256sum /tmp/asylum | awk '{print $1}')
+        elif command -v shasum >/dev/null 2>&1; then
+            ACTUAL=$(shasum -a 256 /tmp/asylum | awk '{print $1}')
+        else
+            echo "Warning: no sha256sum or shasum available, skipping checksum verification"
+            ACTUAL=""
+        fi
+        if [ -n "$ACTUAL" ] && [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Checksum verification failed!" >&2
+            echo "  Expected: $EXPECTED" >&2
+            echo "  Actual:   $ACTUAL" >&2
+            rm -f /tmp/asylum /tmp/asylum-checksums.txt
+            exit 1
+        fi
+    fi
+    rm -f /tmp/asylum-checksums.txt
+fi
 
 mkdir -p "$INSTALL_DIR"
 mv /tmp/asylum "${INSTALL_DIR}/asylum"

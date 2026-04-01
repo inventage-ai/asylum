@@ -6,9 +6,11 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
-  release:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -16,14 +18,56 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: Build all targets
-        run: VERSION=${GITHUB_REF_NAME#v} COMMIT=${{ github.sha }} make build-all
+      - name: Build linux targets
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          GOOS=linux GOARCH=amd64 go build -ldflags "-X main.version=$VERSION -X main.commit=${{ github.sha }}" -o build/asylum-linux-amd64 ./cmd/asylum
+          GOOS=linux GOARCH=arm64 go build -ldflags "-X main.version=$VERSION -X main.commit=${{ github.sha }}" -o build/asylum-linux-arm64 ./cmd/asylum
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-linux
+          path: build/asylum-*
+
+  build-darwin:
+    uses: ./.github/workflows/build-sign-darwin.yml
+    with:
+      version: ${{ github.ref_name }}
+      commit: ${{ github.sha }}
+    secrets:
+      APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+      APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+      APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-darwin]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: build
+          pattern: binaries-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: cd build && sha256sum asylum-* > checksums.txt
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'build/asylum-*'
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
-          files: build/asylum-*
+          files: |
+            build/asylum-*
+            build/checksums.txt
 
   docs:
     runs-on: ubuntu-latest

@@ -1,0 +1,72 @@
+name: Build and Sign Darwin Binaries
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      commit:
+        required: true
+        type: string
+    secrets:
+      APPLE_CERTIFICATE_P12:
+        required: true
+      APPLE_CERTIFICATE_PASSWORD:
+        required: true
+      APPLE_API_KEY:
+        required: true
+      APPLE_API_KEY_ID:
+        required: true
+      APPLE_API_ISSUER_ID:
+        required: true
+
+jobs:
+  build-darwin:
+    runs-on: macos-latest
+    environment: codesign
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
+      - name: Build darwin targets
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          GOOS=darwin GOARCH=amd64 go build -ldflags "-X main.version=$VERSION -X main.commit=${{ inputs.commit }}" -o build/asylum-darwin-amd64 ./cmd/asylum
+          GOOS=darwin GOARCH=arm64 go build -ldflags "-X main.version=$VERSION -X main.commit=${{ inputs.commit }}" -o build/asylum-darwin-arm64 ./cmd/asylum
+
+      - uses: apple-actions/import-codesign-certs@v3
+        with:
+          p12-file-base64: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          p12-password: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+
+      - name: Sign darwin binaries
+        run: |
+          for bin in build/asylum-darwin-*; do
+            codesign --sign "Developer ID Application: Inventage AG" \
+              --options runtime --timestamp "$bin"
+            codesign --verify --deep --strict "$bin"
+          done
+
+      - name: Notarize darwin binaries
+        run: |
+          mkdir -p ~/private_keys
+          echo "${{ secrets.APPLE_API_KEY }}" > ~/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
+
+          for bin in build/asylum-darwin-*; do
+            zip "${bin}.zip" "$bin"
+            xcrun notarytool submit "${bin}.zip" \
+              --key ~/private_keys/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8 \
+              --key-id "${{ secrets.APPLE_API_KEY_ID }}" \
+              --issuer "${{ secrets.APPLE_API_ISSUER_ID }}" \
+              --wait
+            rm "${bin}.zip"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binaries-darwin
+          path: build/asylum-*
