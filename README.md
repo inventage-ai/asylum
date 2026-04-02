@@ -17,7 +17,7 @@ Asylum wraps Docker to give your AI coding agent a fully-equipped Linux environm
 curl -fsSL https://raw.githubusercontent.com/inventage-ai/asylum/main/install.sh | sh
 ```
 
-Or download a binary from the [releases page](https://github.com/inventage-ai/asylum/releases).
+Or download a binary from the [releases page](https://github.com/inventage-ai/asylum/releases) (you'll need to `chmod +x` it before use).
 
 **Requires:** [Docker](https://docs.docker.com/get-docker/) installed and running.
 

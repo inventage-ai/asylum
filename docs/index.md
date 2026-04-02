@@ -10,7 +10,7 @@ Asylum wraps Docker to give [Claude Code](https://claude.ai) a full development 
 curl -fsSL https://raw.githubusercontent.com/inventage-ai/asylum/main/install.sh | sh
 ```
 
-Or download a binary from the [releases page](https://github.com/inventage-ai/asylum/releases) and put it in your PATH.
+Or download a binary from the [releases page](https://github.com/inventage-ai/asylum/releases) and put it in your PATH (you'll need to `chmod +x` it before use).
 
 **Requires**: [Docker](https://docs.docker.com/get-docker/) installed and running.
 
