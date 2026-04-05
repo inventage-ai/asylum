@@ -175,6 +175,14 @@ func (c Config) JavaVersion() string {
 	return ""
 }
 
+// JavaVersions returns the configured java versions from the java kit.
+func (c Config) JavaVersions() []string {
+	if kc := c.KitOption("java"); kc != nil {
+		return kc.Versions
+	}
+	return nil
+}
+
 // TabTitle returns the tab title from the title kit, or empty string.
 func (c Config) TabTitle() string {
 	if kc := c.KitOption("title"); kc != nil {

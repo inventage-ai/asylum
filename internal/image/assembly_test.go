@@ -255,7 +255,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 
 func TestGenerateProjectDockerfile_WithProfileSnippets(t *testing.T) {
 	snippet := "RUN echo 'from-profile'\n"
-	df, err := generateProjectDockerfile(snippet, nil, "", "testuser", false)
+	df, err := generateProjectDockerfile(snippet, nil, "", nil, "testuser", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +268,7 @@ func TestGenerateProjectDockerfile_WithProfileSnippets(t *testing.T) {
 }
 
 func TestGenerateProjectDockerfile_EmptyReturnsMinimal(t *testing.T) {
-	df, err := generateProjectDockerfile("", nil, "", "testuser", false)
+	df, err := generateProjectDockerfile("", nil, "", nil, "testuser", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,7 +355,7 @@ func TestAssembleProjectEntrypoint(t *testing.T) {
 }
 
 func TestGenerateProjectDockerfile_WithProjectEntrypoint(t *testing.T) {
-	df, err := generateProjectDockerfile("", nil, "", "testuser", true)
+	df, err := generateProjectDockerfile("", nil, "", nil, "testuser", true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -365,7 +365,7 @@ func TestGenerateProjectDockerfile_WithProjectEntrypoint(t *testing.T) {
 }
 
 func TestGenerateProjectDockerfile_WithoutProjectEntrypoint(t *testing.T) {
-	df, err := generateProjectDockerfile("", nil, "", "testuser", false)
+	df, err := generateProjectDockerfile("", nil, "", nil, "testuser", false)
 	if err != nil {
 		t.Fatal(err)
 	}
