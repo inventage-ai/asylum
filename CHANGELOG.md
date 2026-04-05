@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Mount host `~/.agents` directory into the container in shared agent mode
+
 ## 0.6.5 — 2026-04-01
 
 macOS binaries are now code-signed and notarized, eliminating Gatekeeper warnings for users downloading asylum from GitHub Releases. All release binaries now include SHA256 checksums and GitHub build provenance attestation for supply chain verification.

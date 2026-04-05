@@ -297,6 +297,14 @@ func coreVolumes(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 	}
 	vol(hostConfigDir, containerConfigDir, "")
 
+	// ~/.agents — shared agent registry (only in shared mode)
+	if opts.Config.AgentIsolation(opts.Agent.Name()) == "shared" {
+		agentsDir := filepath.Join(home, ".agents")
+		if dirExists(agentsDir) {
+			vol(agentsDir, agentsDir, "")
+		}
+	}
+
 	// Direnv
 	envrc := filepath.Join(opts.ProjectDir, ".envrc")
 	if fileExists(envrc) {
