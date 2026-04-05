@@ -296,8 +296,9 @@ func main() {
 
 		// Fix ownership of shadow node_modules volumes (Docker creates them as root)
 		if !cfg.ShadowNodeModulesOff() {
+			uid := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 			for _, nm := range container.FindNodeModulesDirs(projectDir) {
-				docker.Exec(cname, "root", "chown", "claude", nm)
+				docker.Exec(cname, "root", "chown", uid, nm)
 			}
 		}
 
