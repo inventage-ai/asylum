@@ -20,8 +20,8 @@ RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && 
     cd /tmp && npx skills add ast-grep/agent-skill --skill ast-grep --yes --copy && \
     mv .claude/skills/ast-grep /tmp/asylum-kit-skills-ast-grep' || true
 `,
-		EntrypointSnippet: `# Mount ast-grep skill into Claude skills directory
-if [ -d /tmp/asylum-kit-skills-ast-grep ] && [ -d "$HOME/.claude" ]; then
+		EntrypointSnippet: `# Mount ast-grep skill into Claude skills directory (skip if already present, e.g. shared config)
+if [ -d /tmp/asylum-kit-skills-ast-grep ] && [ -d "$HOME/.claude" ] && [ ! -e "$HOME/.claude/skills/ast-grep" ] && [ ! -L "$HOME/.claude/skills/ast-grep" ]; then
     mkdir -p "$HOME/.claude/skills/ast-grep"
     sudo mount --bind /tmp/asylum-kit-skills-ast-grep "$HOME/.claude/skills/ast-grep"
 fi
