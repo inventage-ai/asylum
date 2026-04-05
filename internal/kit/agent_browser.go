@@ -29,8 +29,8 @@ RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && 
 if [ "$(uname -m)" = "aarch64" ] && command -v chromium >/dev/null 2>&1; then
     export AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
 fi
-# Mount agent-browser skill into Claude skills directory
-if [ -d /tmp/asylum-kit-skills-agent-browser ] && [ -d "$HOME/.claude" ]; then
+# Mount agent-browser skill into Claude skills directory (skip if already present, e.g. shared config)
+if [ -d /tmp/asylum-kit-skills-agent-browser ] && [ -d "$HOME/.claude" ] && [ ! -e "$HOME/.claude/skills/agent-browser" ] && [ ! -L "$HOME/.claude/skills/agent-browser" ]; then
     mkdir -p "$HOME/.claude/skills/agent-browser"
     sudo mount --bind /tmp/asylum-kit-skills-agent-browser "$HOME/.claude/skills/agent-browser"
 fi
