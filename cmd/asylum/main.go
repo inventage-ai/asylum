@@ -161,6 +161,15 @@ func main() {
 		die("%v", err)
 	}
 
+	// Apply kit-specific config (e.g. java versions)
+	for _, k := range allKits {
+		if k.ConfigureFunc != nil {
+			if kc := cfg.KitOption(k.Name); kc != nil {
+				k.ConfigureFunc(kc.Versions, kc.DefaultVersion)
+			}
+		}
+	}
+
 	// Resolve global-tier kits (from ~/.asylum/config.yaml only) for base image.
 	globalKits, projectKits := resolveKitTiers(projectDir, allKits)
 
@@ -929,7 +938,7 @@ func ensureImages(globalKits, projectKits []*kit.Kit, agentInstalls []*agent.Age
 		stateChanged = true
 	}
 
-	imageTag, err = image.EnsureProject(projectKits, collectPackages(cfg), cfg.JavaVersion(), version, baseRebuilt, noCache)
+	imageTag, err = image.EnsureProject(projectKits, collectPackages(cfg), cfg.JavaVersion(), cfg.JavaVersions(), version, baseRebuilt, noCache)
 	if err != nil {
 		if containerRunning {
 			log.Warn("image check: %v (using running container)", err)

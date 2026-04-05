@@ -1,9 +1,14 @@
 package kit
 
-import "gopkg.in/yaml.v3"
+import (
+	"fmt"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
 
 func init() {
-	Register(&Kit{
+	k := &Kit{
 		Name:           "java",
 		Description:    "Java via mise with JDK 17/21/25",
 		DockerPriority: 10,
@@ -66,5 +71,30 @@ RUN ~/.local/bin/mise install gradle@latest && \
 				CacheDirs: map[string]string{"gradle": "~/.gradle"},
 			},
 		},
-	})
+	}
+
+	k.ConfigureFunc = func(versions []string, defaultVersion string) {
+		if len(versions) == 0 {
+			return
+		}
+		if defaultVersion == "" {
+			defaultVersion = versions[0]
+		}
+
+		// Build "java@17 java@21" style args
+		var installs []string
+		for _, v := range versions {
+			installs = append(installs, "java@"+v)
+		}
+
+		k.DockerSnippet = fmt.Sprintf("# Install Java versions via mise\nRUN ~/.local/bin/mise install %s && \\\n    ~/.local/bin/mise use --global java@%s\n",
+			strings.Join(installs, " "), defaultVersion)
+
+		k.RulesSnippet = fmt.Sprintf("### Java (java kit)\nJDK %s installed via mise. The default is %s. Switch versions with `mise use java@<version>`.\n",
+			strings.Join(versions, ", "), defaultVersion)
+
+		k.Description = fmt.Sprintf("Java via mise with JDK %s", strings.Join(versions, "/"))
+	}
+
+	Register(k)
 }

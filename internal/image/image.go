@@ -191,13 +191,15 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, versio
 	return true, orderedIDs, nil
 }
 
-// Pre-installed Java versions in the base image.
-var preinstalledJava = map[string]bool{"17": true, "21": true, "25": true}
-
-func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, javaVersion string, version string, baseRebuilt bool, noCache bool) (string, error) {
+func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, javaVersion string, javaVersions []string, version string, baseRebuilt bool, noCache bool) (string, error) {
 	profileSnippets := kit.AssembleDockerSnippets(projectProfiles)
 	projectEntrypoint := assembleProjectEntrypoint(projectProfiles)
-	needsCustomJava := javaVersion != "" && !preinstalledJava[javaVersion]
+
+	preinstalled := map[string]bool{}
+	for _, v := range javaVersions {
+		preinstalled[v] = true
+	}
+	needsCustomJava := javaVersion != "" && !preinstalled[javaVersion]
 
 	if len(packages) == 0 && !needsCustomJava && profileSnippets == "" && projectEntrypoint == nil {
 		return baseTag, nil
@@ -207,7 +209,7 @@ func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, jav
 	if u, err := user.Current(); err == nil {
 		username = u.Username
 	}
-	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, javaVersion, username, projectEntrypoint != nil)
+	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, javaVersion, preinstalled, username, projectEntrypoint != nil)
 	if err != nil {
 		return "", err
 	}
@@ -256,7 +258,7 @@ func validatePackageNames(pkgType string, names []string) error {
 	return nil
 }
 
-func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string, username string, hasProjectEntrypoint bool) (string, error) {
+func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string, preinstalledJava map[string]bool, username string, hasProjectEntrypoint bool) (string, error) {
 	for k := range packages {
 		if !knownPackageTypes[k] {
 			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, cx-lang, run)", k)

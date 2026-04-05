@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- Java kit now respects configured `versions` — only the versions listed in config are installed instead of always installing JDK 17, 21, and 25
+
 ## 0.6.5 — 2026-04-01
 
 macOS binaries are now code-signed and notarized, eliminating Gatekeeper warnings for users downloading asylum from GitHub Releases. All release binaries now include SHA256 checksums and GitHub build provenance attestation for supply chain verification.
