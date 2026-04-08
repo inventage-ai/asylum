@@ -552,7 +552,7 @@ func ParseVolume(raw string, homeDir string) (Volume, error) {
 }
 
 // ConfigHash computes a deterministic hash of runtime-relevant config values
-// (volumes, env, ports) for detecting config drift against a running container.
+// (volumes, env, ports, kit credentials) for detecting config drift against a running container.
 func ConfigHash(cfg Config) string {
 	h := sha256.New()
 
@@ -570,6 +570,20 @@ func ConfigHash(cfg Config) string {
 	slices.Sort(ps)
 	for _, p := range ps {
 		fmt.Fprintf(h, "p:%s\n", p)
+	}
+
+	for _, kitName := range slices.Sorted(maps.Keys(cfg.Kits)) {
+		kc := cfg.Kits[kitName]
+		if kc == nil || kc.Credentials == nil {
+			continue
+		}
+		if kc.Credentials.Auto {
+			fmt.Fprintf(h, "c:%s=auto\n", kitName)
+		} else {
+			ids := slices.Clone(kc.Credentials.Explicit)
+			slices.Sort(ids)
+			fmt.Fprintf(h, "c:%s=%s\n", kitName, strings.Join(ids, ","))
+		}
 	}
 
 	return fmt.Sprintf("%x", h.Sum(nil))

@@ -58,7 +58,7 @@ kits:
 
 The filtered `settings.xml` is mounted read-only at `~/.m2/settings.xml` inside the container. If `~/.m2/settings.xml` does not exist on the host, or no referenced server IDs match, nothing is mounted. If a server ID is referenced in `pom.xml` but missing from `settings.xml`, a comment is added in its place in the generated file.
 
-Credentials are enabled via `asylum config` (interactive) or by editing `.asylum` directly.
+Credentials are enabled via `asylum config` (interactive) or by editing `.asylum` directly. Changes to credentials take effect on the next fresh container start — if a container is already running, use `asylum --rebuild` to apply them.
 
 ### java/gradle
 
