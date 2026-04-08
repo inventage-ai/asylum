@@ -416,6 +416,9 @@ func mergeKitConfig(base, overlay *KitConfig) *KitConfig {
 	if overlay.Count != 0 {
 		result.Count = overlay.Count
 	}
+	if overlay.Credentials != nil {
+		result.Credentials = overlay.Credentials
+	}
 	// Accumulating lists: concatenate
 	result.Packages = slices.Concat(base.Packages, overlay.Packages)
 	result.Build = slices.Concat(base.Build, overlay.Build)

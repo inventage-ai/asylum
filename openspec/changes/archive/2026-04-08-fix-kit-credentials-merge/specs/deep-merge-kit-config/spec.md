@@ -1,30 +1,4 @@
-## ADDED Requirements
-
-### Requirement: Per-key kit map merge
-When merging two config layers, the `Kits` map SHALL be merged per-key: overlay keys add to or override base keys, and base keys not present in the overlay SHALL be preserved.
-
-#### Scenario: Project config adds kit without losing global kits
-- **WHEN** global config has `kits: {node: {}, openspec: {}}` and project config has `kits: {shell: {build: ["curl ..."]}}}`
-- **THEN** the merged result has kits `node`, `openspec`, and `shell` all active
-
-#### Scenario: Project config overrides a global kit's options
-- **WHEN** global config has `kits: {java: {default-version: "17"}}` and project config has `kits: {java: {default-version: "21"}}`
-- **THEN** the merged result has `java` with `default-version: "21"`
-
-#### Scenario: Overlay with nil KitConfig preserves base KitConfig
-- **WHEN** global config has `kits: {node: {packages: ["tsx"]}}` and project config has `kits: {node:}` (nil value)
-- **THEN** the merged result has `node` with `packages: ["tsx"]`
-
-#### Scenario: Base kit absent from overlay is preserved
-- **WHEN** global config has `kits: {openspec: {}}` and project config has `kits: {shell: {}}`
-- **THEN** the merged result contains both `openspec` and `shell`
-
-### Requirement: Per-key agent map merge
-When merging two config layers, the `Agents` map SHALL be merged per-key with the same semantics as kits.
-
-#### Scenario: Project adds agent without losing global agents
-- **WHEN** global config has `agents: {claude: {}}` and project config has `agents: {gemini: {}}`
-- **THEN** the merged result has both `claude` and `gemini` active
+## MODIFIED Requirements
 
 ### Requirement: KitConfig field-level merge
 When two KitConfig values exist for the same kit key, their fields SHALL be merged with field-appropriate semantics.

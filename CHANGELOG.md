@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixed
+- Kit credential configuration in overlay config files (`.asylum`, `.asylum.local`) was silently dropped during config merge
+- Credential config changes did not trigger the stale container warning because kit credentials were excluded from the config hash
+
 ## 0.6.5 — 2026-04-01
 
 macOS binaries are now code-signed and notarized, eliminating Gatekeeper warnings for users downloading asylum from GitHub Releases. All release binaries now include SHA256 checksums and GitHub build provenance attestation for supply chain verification.
