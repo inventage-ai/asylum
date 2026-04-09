@@ -960,6 +960,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="java/maven">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#maven-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maven Credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1711,6 +1728,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="java/maven">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#maven-credentials" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Maven Credentials
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1807,6 +1841,24 @@
 <h2 id="sub-kits">Sub-Kits<a class="headerlink" href="#sub-kits" title="Permanent link">&para;</a></h2>
 <h3 id="javamaven">java/maven<a class="headerlink" href="#javamaven" title="Permanent link">&para;</a></h3>
 <p>Installs Maven via apt. Dependency cache persisted at <code>~/.m2</code>.</p>
+<h4 id="maven-credentials">Maven Credentials<a class="headerlink" href="#maven-credentials" title="Permanent link">&para;</a></h4>
+<p>The <code>java/maven</code> kit can inject credentials from your host's <code>~/.m2/settings.xml</code> into the container. Rather than mounting the full file, it generates a filtered <code>settings.xml</code> containing only the server entries that your project's <code>pom.xml</code> actually references — so unrelated credentials stay on the host.</p>
+<p>Configure credentials under the <code>java</code> kit:</p>
+<p><strong>Auto mode</strong> (default when credentials are enabled): Asylum reads the <code>pom.xml</code> in your project root, extracts all referenced server IDs (from <code>repositories</code>, <code>pluginRepositories</code>, <code>distributionManagement</code>, and profiles), and injects the matching entries.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">java</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">credentials</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">auto</span>
+</code></pre></div>
+<p><strong>Explicit mode</strong>: Specify server IDs directly, bypassing <code>pom.xml</code> discovery. Useful for multi-module projects or when the root <code>pom.xml</code> doesn't declare all repositories.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">java</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">credentials</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nexus-releases</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">nexus-snapshots</span>
+</code></pre></div>
+<p><strong>Disabling</strong>: Set <code>credentials: false</code> to prevent any credential injection.</p>
+<p>The filtered <code>settings.xml</code> is mounted read-only at <code>~/.m2/settings.xml</code> inside the container. If <code>~/.m2/settings.xml</code> does not exist on the host, or no referenced server IDs match, nothing is mounted. If a server ID is referenced in <code>pom.xml</code> but missing from <code>settings.xml</code>, a comment is added in its place in the generated file.</p>
+<p>Credentials are enabled via <code>asylum config</code> (interactive) or by editing <code>.asylum</code> directly. Changes to credentials take effect on the next fresh container start — if a container is already running, use <code>asylum --rebuild</code> to apply them.</p>
 <h3 id="javagradle">java/gradle<a class="headerlink" href="#javagradle" title="Permanent link">&para;</a></h3>
 <p>Installs Gradle via mise. Dependency cache persisted at <code>~/.gradle</code>.</p>
 <h2 id="version-switching">Version Switching<a class="headerlink" href="#version-switching" title="Permanent link">&para;</a></h2>
