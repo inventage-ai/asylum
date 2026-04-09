@@ -974,6 +974,80 @@ func TestKitCredentialArgsFuncError(t *testing.T) {
 	}
 }
 
+func TestMavenCredentialsEndToEnd(t *testing.T) {
+	home := t.TempDir()
+	projectDir := t.TempDir()
+	t.Setenv("HOME", home)
+	cname := ContainerName(projectDir)
+
+	// Create fake ~/.m2/settings.xml with a "progress" server
+	m2Dir := filepath.Join(home, ".m2")
+	os.MkdirAll(m2Dir, 0755)
+	os.WriteFile(filepath.Join(m2Dir, "settings.xml"), []byte(`<?xml version="1.0"?>
+<settings>
+  <servers>
+    <server>
+      <id>progress</id>
+      <username>user</username>
+      <password>pass</password>
+    </server>
+  </servers>
+</settings>`), 0644)
+
+	// Write .asylum.local with explicit credentials (simulating the user's config)
+	os.WriteFile(filepath.Join(projectDir, ".asylum.local"), []byte(`kits:
+  java:
+    credentials:
+      - progress
+`), 0644)
+
+	cfg, err := config.Load(projectDir, config.CLIFlags{}, "")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.KitCredentialMode("java") != "explicit" {
+		t.Fatalf("KitCredentialMode = %q, want explicit", cfg.KitCredentialMode("java"))
+	}
+
+	// Use the real java/maven kit
+	allKits, err := kit.Resolve(cfg.KitNames(), cfg.DisabledKits())
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+
+	opts := RunOpts{
+		Config:     cfg,
+		Agent:      stubAgent{},
+		ProjectDir: projectDir,
+		Kits:       allKits,
+	}
+
+	args, err := kitCredentialArgs(home, cname, opts)
+	if err != nil {
+		t.Fatalf("kitCredentialArgs: %v", err)
+	}
+
+	credFound := false
+	for _, a := range args {
+		if a.Flag == "-v" && strings.Contains(a.Value, "settings.xml") {
+			credFound = true
+		}
+	}
+	if !credFound {
+		t.Fatalf("no settings.xml credential mount in args: %v", args)
+	}
+
+	// Verify only "progress" is in the generated file, not other servers
+	credFile := filepath.Join(home, ".asylum", "projects", cname, "credentials", "settings.xml")
+	data, err := os.ReadFile(credFile)
+	if err != nil {
+		t.Fatalf("credential file not written: %v", err)
+	}
+	if !strings.Contains(string(data), "<id>progress</id>") {
+		t.Errorf("expected progress server in credential file, got:\n%s", data)
+	}
+}
+
 func TestCoreVolumesNodeModulesShadowed(t *testing.T) {
 	home := t.TempDir()
 	projectDir := t.TempDir()

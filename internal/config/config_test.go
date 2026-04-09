@@ -658,6 +658,26 @@ func TestMergeKitConfig(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "credentials overlay replaces base",
+			base: &KitConfig{Credentials: &Credentials{Auto: true}},
+			over: &KitConfig{Credentials: &Credentials{Explicit: []string{"nexus"}}},
+			check: func(t *testing.T, kc *KitConfig) {
+				if kc.Credentials == nil || kc.Credentials.Auto || len(kc.Credentials.Explicit) != 1 || kc.Credentials.Explicit[0] != "nexus" {
+					t.Errorf("credentials = %+v, want explicit [nexus]", kc.Credentials)
+				}
+			},
+		},
+		{
+			name: "absent credentials in overlay preserves base",
+			base: &KitConfig{Credentials: &Credentials{Auto: true}},
+			over: &KitConfig{},
+			check: func(t *testing.T, kc *KitConfig) {
+				if kc.Credentials == nil || !kc.Credentials.Auto {
+					t.Errorf("credentials = %+v, want auto", kc.Credentials)
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -784,6 +804,44 @@ func TestConfigHash(t *testing.T) {
 		}
 		if ConfigHash(a) != ConfigHash(b) {
 			t.Error("same values in different order should produce same hash")
+		}
+	})
+
+	t.Run("credential change detected", func(t *testing.T) {
+		auto := Config{Kits: map[string]*KitConfig{
+			"java": {Credentials: &Credentials{Auto: true}},
+		}}
+		explicit := Config{Kits: map[string]*KitConfig{
+			"java": {Credentials: &Credentials{Explicit: []string{"nexus"}}},
+		}}
+		if ConfigHash(auto) == ConfigHash(explicit) {
+			t.Error("different credential configs should produce different hashes")
+		}
+	})
+
+	t.Run("nil kit config differs from absent kit", func(t *testing.T) {
+		withKit := Config{Kits: map[string]*KitConfig{
+			"java": nil,
+		}}
+		without := Config{}
+		if ConfigHash(withKit) == ConfigHash(without) {
+			t.Error("declared kit (even with nil config) should differ from absent kit")
+		}
+	})
+
+	t.Run("non-runtime fields excluded", func(t *testing.T) {
+		base := Config{}
+		varied := Config{Agent: "claude", Version: "2", ReleaseChannel: "dev", Agents: map[string]*AgentConfig{"claude": {Config: "shared"}}}
+		if ConfigHash(base) != ConfigHash(varied) {
+			t.Error("non-runtime fields (Agent, Version, ReleaseChannel, Agents) should not affect hash")
+		}
+	})
+
+	t.Run("new kit config fields included automatically", func(t *testing.T) {
+		without := Config{Kits: map[string]*KitConfig{"java": {}}}
+		with := Config{Kits: map[string]*KitConfig{"java": {Isolation: "project"}}}
+		if ConfigHash(without) == ConfigHash(with) {
+			t.Error("any non-zero config field should affect hash without explicit code changes")
 		}
 	})
 }

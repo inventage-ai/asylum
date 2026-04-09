@@ -6,6 +6,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -44,19 +45,22 @@ func (c *Credentials) UnmarshalYAML(value *yaml.Node) error {
 }
 
 // KitConfig holds per-kit configuration options.
+// Fields tagged merge:"concat" are accumulated (base + overlay) during config
+// merge. All other fields use last-wins semantics (overlay replaces base when
+// non-zero). Adding a new field requires no merge code changes.
 type KitConfig struct {
 	Disabled            *bool        `yaml:"disabled,omitempty"`
 	Versions            []string     `yaml:"versions,omitempty"`
 	DefaultVersion      string       `yaml:"default-version,omitempty"`
-	Packages            []string     `yaml:"packages,omitempty"`
+	Packages            []string     `yaml:"packages,omitempty" merge:"concat"`
 	ShadowNodeModules   *bool        `yaml:"shadow-node-modules,omitempty"`
 	Onboarding          *bool        `yaml:"onboarding,omitempty"`
 	TabTitle            string       `yaml:"tab-title,omitempty"`
 	AllowAgentTermTitle *bool        `yaml:"allow-agent-terminal-title,omitempty"`
-	Build               []string     `yaml:"build,omitempty"`
+	Build               []string     `yaml:"build,omitempty" merge:"concat"`
 	Count               int          `yaml:"count,omitempty"`
 	Credentials         *Credentials `yaml:"credentials,omitempty"`
-	Isolation           string       `yaml:"isolation,omitempty"` // shared, isolated, project
+	Isolation           string       `yaml:"isolation,omitempty"`
 }
 
 // AgentConfig holds per-agent configuration.
@@ -385,8 +389,9 @@ func Merge(base, overlay Config) Config {
 	return result
 }
 
-// mergeKitConfig deep-merges two KitConfig values. Scalars use last-wins,
-// Packages and Build concatenate, Versions replaces.
+// mergeKitConfig deep-merges two KitConfig values using struct tags.
+// Fields tagged merge:"concat" are accumulated (base + overlay).
+// All other fields use last-wins: overlay replaces base when non-zero.
 func mergeKitConfig(base, overlay *KitConfig) *KitConfig {
 	if base == nil {
 		return overlay
@@ -395,33 +400,16 @@ func mergeKitConfig(base, overlay *KitConfig) *KitConfig {
 		return base
 	}
 	result := *base
-	if overlay.Disabled != nil {
-		result.Disabled = overlay.Disabled
-	}
-	if overlay.DefaultVersion != "" {
-		result.DefaultVersion = overlay.DefaultVersion
-	}
-	if overlay.ShadowNodeModules != nil {
-		result.ShadowNodeModules = overlay.ShadowNodeModules
-	}
-	if overlay.Onboarding != nil {
-		result.Onboarding = overlay.Onboarding
-	}
-	if overlay.TabTitle != "" {
-		result.TabTitle = overlay.TabTitle
-	}
-	if overlay.AllowAgentTermTitle != nil {
-		result.AllowAgentTermTitle = overlay.AllowAgentTermTitle
-	}
-	if overlay.Count != 0 {
-		result.Count = overlay.Count
-	}
-	// Accumulating lists: concatenate
-	result.Packages = slices.Concat(base.Packages, overlay.Packages)
-	result.Build = slices.Concat(base.Build, overlay.Build)
-	// Replacing list: last-wins
-	if overlay.Versions != nil {
-		result.Versions = overlay.Versions
+	rv := reflect.ValueOf(&result).Elem()
+	ov := reflect.ValueOf(overlay).Elem()
+	for i := range rv.NumField() {
+		of := ov.Field(i)
+		tag := rv.Type().Field(i).Tag.Get("merge")
+		if tag == "concat" {
+			rv.Field(i).Set(reflect.AppendSlice(rv.Field(i), of))
+		} else if !of.IsZero() {
+			rv.Field(i).Set(of)
+		}
 	}
 	return &result
 }
@@ -551,26 +539,24 @@ func ParseVolume(raw string, homeDir string) (Volume, error) {
 	}
 }
 
-// ConfigHash computes a deterministic hash of runtime-relevant config values
-// (volumes, env, ports) for detecting config drift against a running container.
+// ConfigHash computes a deterministic hash of the config for detecting drift
+// against a running container. It serializes the full config to YAML (which
+// sorts map keys deterministically) after clearing non-runtime fields and
+// normalizing order-insensitive lists. New fields are included automatically.
 func ConfigHash(cfg Config) string {
-	h := sha256.New()
+	// Clear fields that don't affect the running container.
+	cfg.Version = ""
+	cfg.Agent = ""
+	cfg.ReleaseChannel = ""
+	cfg.Agents = nil
 
-	vols := slices.Clone(cfg.Volumes)
-	slices.Sort(vols)
-	for _, v := range vols {
-		fmt.Fprintf(h, "v:%s\n", v)
+	// Sort order-insensitive lists so the hash is stable regardless of YAML order.
+	slices.Sort(cfg.Volumes)
+	slices.Sort(cfg.Ports)
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return ""
 	}
-
-	for _, k := range slices.Sorted(maps.Keys(cfg.Env)) {
-		fmt.Fprintf(h, "e:%s=%s\n", k, cfg.Env[k])
-	}
-
-	ps := slices.Clone(cfg.Ports)
-	slices.Sort(ps)
-	for _, p := range ps {
-		fmt.Fprintf(h, "p:%s\n", p)
-	}
-
-	return fmt.Sprintf("%x", h.Sum(nil))
+	return fmt.Sprintf("%x", sha256.Sum256(data))
 }
