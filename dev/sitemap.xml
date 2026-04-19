@@ -2,138 +2,138 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://asylum.inventage.ai/dev/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/getting-started/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/commands/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/commands/cleanup/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/commands/config/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/commands/run/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/commands/self-update/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/commands/shell/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/commands/version/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/concepts/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/concepts/agents/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/concepts/images/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/concepts/isolation/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/concepts/mounts/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/concepts/sessions/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/configuration/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/configuration/flags/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/configuration/packages/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/development/building-from-source/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/agent-browser/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/apt/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/ast-grep/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/cx/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/docker/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/github/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/java/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/node/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/openspec/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/ports/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/python/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/rtk/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/shell/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
     <url>
          <loc>https://asylum.inventage.ai/dev/kits/ssh/</loc>
-         <lastmod>2026-04-09</lastmod>
+         <lastmod>2026-04-19</lastmod>
     </url>
 </urlset>

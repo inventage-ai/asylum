@@ -1722,11 +1722,11 @@
 </tbody>
 </table>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p>Each project gets a unique range of consecutive ports starting from port 10000. The allocation is tracked globally in <code>~/.asylum/state.json</code> to prevent collisions between projects.</p>
-<p>For example, if your project gets ports 10000-10004:</p>
+<p>Each project gets a unique range of consecutive ports starting from port 7001. The allocation is tracked globally in <code>~/.asylum/state.json</code> to prevent collisions between projects. The range sits below 10000 because most browsers block access to the 10000+ range by default.</p>
+<p>For example, if your project gets ports 7001-7005:</p>
 <ul>
-<li>Start a server on port 10000 inside the container</li>
-<li>Access it at <code>localhost:10000</code> on your host</li>
+<li>Start a server on port 7001 inside the container</li>
+<li>Access it at <code>localhost:7001</code> on your host</li>
 </ul>
 <p>The allocation is deterministic — the same project always gets the same port range (unless it's been freed and reallocated).</p>
 <h2 id="additional-ports">Additional Ports<a class="headerlink" href="#additional-ports" title="Permanent link">&para;</a></h2>
