@@ -1811,6 +1811,10 @@
 </tbody>
 </table>
 <p><a href="flags/">CLI flags</a> override all config files. You can also use <a href="../commands/config/"><code>asylum config</code></a> to interactively manage kits, credentials, and isolation.</p>
+<div class="admonition tip">
+<p class="admonition-title">YAML extension alias</p>
+<p>Both project config files also accept a <code>.yaml</code> suffix — <code>.asylum.yaml</code> and <code>.asylum.local.yaml</code> — so editors recognize them as YAML for syntax highlighting. The canonical names without the extension remain the default; pick whichever you prefer per repo (but don't keep both copies of the same layer, asylum errors out to avoid silent ambiguity).</p>
+</div>
 <h2 id="example-asylum">Example <code>.asylum</code><a class="headerlink" href="#example-asylum" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">agent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini</span>
 
