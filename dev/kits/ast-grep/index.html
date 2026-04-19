@@ -1727,7 +1727,7 @@
 <h2 id="whats-included">What's Included<a class="headerlink" href="#whats-included" title="Permanent link">&para;</a></h2>
 <ul>
 <li><strong>sg</strong> — CLI for searching, linting, and rewriting code using abstract syntax tree patterns</li>
-<li><strong>Claude Code skill</strong> — auto-mounted from the upstream <a href="https://github.com/ast-grep/agent-skill">agent-skill</a> project, teaching Claude how to write ast-grep rules</li>
+<li><strong>Claude Code skill</strong> — staged inside the container at <code>/opt/asylum-skills/.claude/skills/ast-grep/</code> and loaded via Claude's <code>--add-dir</code> flag, teaching Claude how to write ast-grep rules (sourced from the upstream <a href="https://github.com/ast-grep/agent-skill">agent-skill</a> project). Nothing is written to your host <code>~/.claude/</code>.</li>
 </ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>

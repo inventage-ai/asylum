@@ -1728,7 +1728,7 @@
 <ul>
 <li><strong>agent-browser</strong> CLI for browser automation</li>
 <li><strong>Chrome</strong> (Chrome for Testing, installed via <code>agent-browser install</code>)</li>
-<li><strong>Claude Code skill</strong> — auto-mounted from the upstream project, teaching Claude the snapshot-ref interaction pattern</li>
+<li><strong>Claude Code skill</strong> — staged inside the container at <code>/opt/asylum-skills/.claude/skills/agent-browser/</code> and loaded via Claude's <code>--add-dir</code> flag, teaching Claude the snapshot-ref interaction pattern. Nothing is written to your host <code>~/.claude/</code>.</li>
 </ul>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
