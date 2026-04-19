@@ -330,8 +330,9 @@ func coreEnvVars(home string, opts RunOpts) ([]kit.RunArg, error) {
 	env("HISTFILE", filepath.Join(home, ".shell_history", "zsh_history"))
 	env("HOST_PROJECT_DIR", opts.ProjectDir)
 
-	if java := opts.Config.JavaVersion(); java != "" {
-		env("ASYLUM_JAVA_VERSION", java)
+	// Collect env vars from kits that provide an EnvFunc.
+	for k, v := range kit.AssembleEnvVars(opts.Kits, opts.Config.KitSnippetConfig) {
+		args = append(args, kit.RunArg{Flag: "-e", Value: k + "=" + v, Source: "kit", Priority: kit.PriorityKit})
 	}
 
 	return args, nil
@@ -532,7 +533,7 @@ func claudeSandboxRulesArgs(home, containerName string, opts RunOpts, collected 
 		}
 	}
 
-	rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Version, allocatedPorts)
+	rulesDir, err := generateSandboxRules(home, containerName, opts.Kits, opts.Config.KitSnippetConfig, opts.Version, allocatedPorts)
 	if err != nil {
 		log.Warn("could not generate sandbox rules: %v", err)
 		return nil
@@ -573,7 +574,7 @@ git, docker, curl, wget, jq, yq, ripgrep (rg), fd, direnv, make, cmake, gcc/g++,
 
 // generateSandboxRules writes the rules file and reference doc to
 // ~/.asylum/projects/<container>/ and returns the directory path.
-func generateSandboxRules(home, containerName string, kits []*kit.Kit, version string, allocatedPorts []int) (string, error) {
+func generateSandboxRules(home, containerName string, kits []*kit.Kit, kitConfig func(string) *kit.SnippetConfig, version string, allocatedPorts []int) (string, error) {
 	dir := filepath.Join(home, ".asylum", "projects", containerName)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", fmt.Errorf("create rules dir: %w", err)
@@ -601,7 +602,7 @@ func generateSandboxRules(home, containerName string, kits []*kit.Kit, version s
 		}
 	}
 
-	if kitSnippets := kit.AssembleRulesSnippets(kits); kitSnippets != "" {
+	if kitSnippets := kit.AssembleRulesSnippets(kits, kitConfig); kitSnippets != "" {
 		b.WriteString("\n## Active Kits\n\n")
 		b.WriteString(kitSnippets)
 	}

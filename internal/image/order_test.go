@@ -141,7 +141,7 @@ func TestOrderingAgentsBeforeKits(t *testing.T) {
 		t.Fatal(err)
 	}
 	agents := allAgentInstalls(t)
-	sources := collectSources(profiles, agents)
+	sources := collectSources(profiles, nil, agents)
 	orderedIDs := computeSourceOrder(sources, nil)
 
 	lastAgent := -1
@@ -162,7 +162,7 @@ func TestOrderingAgentsBeforeKits(t *testing.T) {
 func TestOrderingClaudeBeforeOtherAgents(t *testing.T) {
 	agents := allAgentInstalls(t)
 	profiles, _ := kit.Resolve(nil, nil)
-	sources := collectSources(profiles, agents)
+	sources := collectSources(profiles, nil, agents)
 	orderedIDs := computeSourceOrder(sources, nil)
 
 	claudeIdx := -1
@@ -185,7 +185,7 @@ func TestOrderingClaudeBeforeOtherAgents(t *testing.T) {
 func TestOrderingNewKitAppendedLast(t *testing.T) {
 	profiles, _ := kit.Resolve(nil, nil)
 	agents := claudeOnlyInstalls(t)
-	sources := collectSources(profiles, agents)
+	sources := collectSources(profiles, nil, agents)
 
 	order1 := computeSourceOrder(sources, nil)
 
@@ -207,7 +207,7 @@ func TestOrderingNewKitAppendedLast(t *testing.T) {
 func TestOrderingStateRoundTrip(t *testing.T) {
 	profiles, _ := kit.Resolve(nil, nil)
 	agents := claudeOnlyInstalls(t)
-	sources := collectSources(profiles, agents)
+	sources := collectSources(profiles, nil, agents)
 
 	order1 := computeSourceOrder(sources, nil)
 	order2 := computeSourceOrder(sources, order1)

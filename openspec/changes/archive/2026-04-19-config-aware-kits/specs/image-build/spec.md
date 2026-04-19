@@ -1,23 +1,4 @@
-## ADDED Requirements
-
-### Requirement: Base image auto-rebuild
-The image package SHALL detect when the embedded Dockerfile or entrypoint.sh has changed and rebuild the base image automatically. `EnsureBase` SHALL be called on every asylum invocation regardless of container state. When a running container exists and `docker inspect` fails, asylum SHALL treat images as up to date rather than erroring out.
-
-#### Scenario: First build
-- **WHEN** no `asylum:latest` image exists
-- **THEN** the base image is built with hash and version labels
-
-#### Scenario: Hash matches
-- **WHEN** the `asylum.hash` label on `asylum:latest` matches the current asset hash
-- **THEN** no rebuild occurs
-
-#### Scenario: Hash differs
-- **WHEN** the `asylum.hash` label differs from the current asset hash
-- **THEN** the base image is rebuilt and dangling images are pruned
-
-#### Scenario: Called with running container
-- **WHEN** a container is already running
-- **THEN** `EnsureBase` SHALL still be called and return the expected tag for comparison
+## MODIFIED Requirements
 
 ### Requirement: Project image generation
 The image package SHALL generate a project-specific Dockerfile from the packages config, kit project snippets, and project kit entrypoint/banner snippets, and build it when any of these are present. `EnsureProject` SHALL be called on every asylum invocation regardless of container state. `EnsureProject` SHALL NOT accept kit-specific parameters (e.g., java version); kit-specific project image contributions SHALL be provided by kits via `ProjectSnippetFunc`.
@@ -45,10 +26,3 @@ The image package SHALL generate a project-specific Dockerfile from the packages
 #### Scenario: Called with running container
 - **WHEN** a container is already running
 - **THEN** `EnsureProject` SHALL still be called and return the expected tag for comparison
-
-### Requirement: Project Dockerfile format
-The generated project Dockerfile SHALL install apt packages as root, and npm/pip/run commands as the claude user.
-
-#### Scenario: All package types
-- **WHEN** packages config has apt, npm, pip, and run entries
-- **THEN** the generated Dockerfile has apt-get as USER root, and npm/pip/run as USER claude

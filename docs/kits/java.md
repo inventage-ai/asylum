@@ -15,14 +15,16 @@ JDK 17, 21, and 25 via mise, with Maven and Gradle available as sub-kits.
 ```yaml
 kits:
   java:
-    default-version: "17"     # which JDK is the global default
+    versions: [17, 21, 25]    # which JDK versions to pre-install in the base image
+    default-version: "21"     # which JDK is the global default
 ```
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
+| `versions` | list | `[17, 21, 25]` | JDK versions installed in the base image via mise |
 | `default-version` | string | `"21"` | JDK version to set as the global default |
 
-JDK 17, 21, and 25 are always pre-installed. You can install additional versions at runtime with `mise install java@<version>`.
+If `default-version` is not in `versions`, it is installed in the project image instead of the base image. You can also install additional versions at runtime with `mise install java@<version>`.
 
 ## Sub-Kits
 

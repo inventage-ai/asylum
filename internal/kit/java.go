@@ -1,6 +1,32 @@
 package kit
 
-import "gopkg.in/yaml.v3"
+import (
+	"fmt"
+	"strings"
+
+	"gopkg.in/yaml.v3"
+)
+
+var (
+	defaultJavaVersions       = []string{"17", "21", "25"}
+	defaultJavaDefaultVersion = "21"
+)
+
+// javaVersions returns the configured versions or the defaults.
+func javaVersions(sc *SnippetConfig) (versions []string, defaultVersion string) {
+	versions = defaultJavaVersions
+	defaultVersion = defaultJavaDefaultVersion
+	if sc == nil {
+		return
+	}
+	if len(sc.Versions) > 0 {
+		versions = sc.Versions
+	}
+	if sc.DefaultVersion != "" {
+		defaultVersion = sc.DefaultVersion
+	}
+	return
+}
 
 func init() {
 	Register(&Kit{
@@ -21,13 +47,35 @@ func init() {
 			ScalarNode("default-version", ""),
 			IntNode(21),
 		}),
-		DockerSnippet: `# Install Java versions via mise
-RUN ~/.local/bin/mise install java@17 java@21 java@25 && \
-    ~/.local/bin/mise use --global java@21
-`,
-		RulesSnippet: `### Java (java kit)
-JDK 17, 21, and 25 are installed via mise. The default is 21. Switch versions with ` + "`mise use java@<version>`" + `.
-`,
+		DockerSnippetFunc: func(sc *SnippetConfig) string {
+			versions, defaultVersion := javaVersions(sc)
+			var installs []string
+			for _, v := range versions {
+				installs = append(installs, "java@"+v)
+			}
+			return fmt.Sprintf("# Install Java versions via mise\nRUN ~/.local/bin/mise install %s && \\\n    ~/.local/bin/mise use --global java@%s\n",
+				strings.Join(installs, " "), defaultVersion)
+		},
+		RulesSnippetFunc: func(sc *SnippetConfig) string {
+			versions, defaultVersion := javaVersions(sc)
+			return fmt.Sprintf("### Java (java kit)\nJDK %s installed via mise. The default is %s. Switch versions with `mise use java@<version>`.\n",
+				strings.Join(versions, ", "), defaultVersion)
+		},
+		EnvFunc: func(sc *SnippetConfig) map[string]string {
+			_, defaultVersion := javaVersions(sc)
+			return map[string]string{"ASYLUM_JAVA_VERSION": defaultVersion}
+		},
+		ProjectSnippetFunc: func(sc *SnippetConfig) string {
+			versions, defaultVersion := javaVersions(sc)
+			// If the default version is already in the base image versions, nothing to do.
+			for _, v := range versions {
+				if v == defaultVersion {
+					return ""
+				}
+			}
+			return fmt.Sprintf("# Install non-pre-installed Java version\nRUN ~/.local/bin/mise install java@%s && \\\n    ~/.local/bin/mise use --global java@%s\n",
+				defaultVersion, defaultVersion)
+		},
 		EntrypointSnippet: `# Select Java version if configured
 if [ -n "${ASYLUM_JAVA_VERSION:-}" ] && command -v mise >/dev/null 2>&1; then
     mise use --global java@"${ASYLUM_JAVA_VERSION}" >/dev/null 2>&1
@@ -55,7 +103,7 @@ USER ${USERNAME}
 				Name:           "java/gradle",
 				Description:    "Gradle via mise with dependency caching",
 				DockerPriority: 10,
-				Tools:       []string{"gradle"},
+				Tools:          []string{"gradle"},
 				RulesSnippet: `### Gradle (java/gradle kit)
 Gradle is installed via mise. Dependencies are cached across container restarts.
 `,

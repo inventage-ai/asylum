@@ -353,6 +353,7 @@ func TestCoreEnvVars(t *testing.T) {
 			Config:     cfg,
 			Agent:      stubAgent{envVars: map[string]string{}},
 			ProjectDir: "/work/proj",
+			Kits:       []*kit.Kit{kit.Get("java")},
 		}
 		got, err := coreEnvVars(home, opts)
 		if err != nil {
@@ -1176,7 +1177,7 @@ func TestGenerateSandboxRules(t *testing.T) {
 		{Name: "python"}, // no snippet, no tools
 	}
 
-	dir, err := generateSandboxRules(home, cname, kits, "1.2.3", nil)
+	dir, err := generateSandboxRules(home, cname, kits, nil, "1.2.3", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1246,7 +1247,7 @@ func TestGenerateSandboxRules_NoKits(t *testing.T) {
 	home := t.TempDir()
 	cname := "asylum-rules-nokits"
 
-	dir, err := generateSandboxRules(home, cname, nil, "dev", nil)
+	dir, err := generateSandboxRules(home, cname, nil, nil, "dev", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1331,7 +1332,7 @@ func TestGenerateSandboxRules_WithPorts(t *testing.T) {
 	home := t.TempDir()
 	cname := "asylum-ports-test"
 
-	dir, err := generateSandboxRules(home, cname, nil, "dev", []int{7001, 7002, 7003})
+	dir, err := generateSandboxRules(home, cname, nil, nil, "dev", []int{7001, 7002, 7003})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1360,7 +1361,7 @@ func TestGenerateSandboxRules_WithoutPorts(t *testing.T) {
 	home := t.TempDir()
 	cname := "asylum-noports-test"
 
-	dir, err := generateSandboxRules(home, cname, nil, "dev", nil)
+	dir, err := generateSandboxRules(home, cname, nil, nil, "dev", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
