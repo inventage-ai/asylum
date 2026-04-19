@@ -12,6 +12,9 @@ Asylum uses a layered YAML config system. Settings are merged from multiple sour
 
 [CLI flags](flags.md) override all config files. You can also use [`asylum config`](../commands/config.md) to interactively manage kits, credentials, and isolation.
 
+!!! tip "YAML extension alias"
+    Both project config files also accept a `.yaml` suffix — `.asylum.yaml` and `.asylum.local.yaml` — so editors recognize them as YAML for syntax highlighting. The canonical names without the extension remain the default; pick whichever you prefer per repo (but don't keep both copies of the same layer, asylum errors out to avoid silent ambiguity).
+
 ## Example `.asylum`
 
 ```yaml

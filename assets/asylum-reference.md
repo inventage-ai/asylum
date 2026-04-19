@@ -21,8 +21,8 @@ Asylum uses layered YAML configuration. Each layer overrides the previous:
 
 1. `~/.asylum/config.yaml` — global defaults (created on first run)
 2. `.tool-versions` — Java version from asdf/mise format (overrides global, overridden by project)
-3. `<project>/.asylum` — project-specific config (commit to repo)
-4. `<project>/.asylum.local` — local overrides (gitignore this)
+3. `<project>/.asylum` — project-specific config (commit to repo); `.asylum.yaml` is also accepted as an editor-friendly alias
+4. `<project>/.asylum.local` — local overrides (gitignore this); `.asylum.local.yaml` is also accepted
 5. CLI flags — highest priority
 
 ### Merge Rules

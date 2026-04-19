@@ -301,25 +301,60 @@ func Load(projectDir string, flags CLIFlags, kitSnippets string) (Config, error)
 		setJavaVersion(&cfg, java)
 	}
 
-	// Load project configs (override .tool-versions)
-	for _, path := range []string{
-		filepath.Join(projectDir, ".asylum"),
-		filepath.Join(projectDir, ".asylum.local"),
+	// Load project configs (override .tool-versions). Each layer accepts either
+	// a canonical filename or its `.yaml`-suffixed alias — the alias exists so
+	// editors recognize the file as YAML for syntax highlighting.
+	for _, layer := range []struct{ canonical, alias string }{
+		{".asylum", ".asylum.yaml"},
+		{".asylum.local", ".asylum.local.yaml"},
 	} {
+		path, err := resolveProjectConfigPath(projectDir, layer.canonical, layer.alias)
+		if err != nil {
+			return Config{}, err
+		}
+		if path == "" {
+			continue
+		}
 		if NeedsMigration(path) {
 			if err := MigrateV1ToV2(path, kitSnippets); err != nil {
 				return Config{}, fmt.Errorf("migrate %s: %w", path, err)
 			}
 		}
-		layer, err := LoadFile(path)
+		loaded, err := LoadFile(path)
 		if err != nil {
 			return Config{}, fmt.Errorf("%s: %w", path, err)
 		}
-		cfg = Merge(cfg, layer)
+		cfg = Merge(cfg, loaded)
 	}
 
 	cfg = applyFlags(cfg, flags)
 	return cfg, nil
+}
+
+// resolveProjectConfigPath returns the path to load for a project config layer,
+// accepting either the canonical filename or its `.yaml` alias. Returns the
+// empty string when neither is present, and an error when both exist (the user
+// must remove one to disambiguate).
+func resolveProjectConfigPath(projectDir, canonical, alias string) (string, error) {
+	canonicalPath := filepath.Join(projectDir, canonical)
+	aliasPath := filepath.Join(projectDir, alias)
+	canonicalExists := fileExists(canonicalPath)
+	aliasExists := fileExists(aliasPath)
+	if canonicalExists && aliasExists {
+		return "", fmt.Errorf("both %s and %s exist in %s; remove one", canonical, alias, projectDir)
+	}
+	if aliasExists {
+		return aliasPath, nil
+	}
+	if canonicalExists {
+		return canonicalPath, nil
+	}
+	return "", nil
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 // LoadFile reads a single config file and returns its parsed Config.

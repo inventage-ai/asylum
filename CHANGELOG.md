@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Project config files now accept a `.yaml` extension alias (`.asylum.yaml`, `.asylum.local.yaml`) so editors apply YAML syntax highlighting; `.asylum` and `.asylum.local` remain the defaults (#15)
+
 ### Changed
 - Ports kit now allocates starting at port 7001 instead of 10000 — most browsers block access to the 10000+ range. Projects with an existing allocation at or above 10000 are automatically reassigned a new range on their next session.
 

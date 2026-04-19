@@ -845,3 +845,111 @@ func TestConfigHash(t *testing.T) {
 		}
 	})
 }
+
+func TestResolveProjectConfigPath(t *testing.T) {
+	t.Run("only canonical present", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".asylum"), []byte("agent: claude\n"), 0644)
+		got, err := resolveProjectConfigPath(dir, ".asylum", ".asylum.yaml")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != filepath.Join(dir, ".asylum") {
+			t.Errorf("got %q, want canonical path", got)
+		}
+	})
+
+	t.Run("only alias present", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".asylum.yaml"), []byte("agent: claude\n"), 0644)
+		got, err := resolveProjectConfigPath(dir, ".asylum", ".asylum.yaml")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != filepath.Join(dir, ".asylum.yaml") {
+			t.Errorf("got %q, want alias path", got)
+		}
+	})
+
+	t.Run("both present returns error", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".asylum"), []byte("agent: claude\n"), 0644)
+		os.WriteFile(filepath.Join(dir, ".asylum.yaml"), []byte("agent: gemini\n"), 0644)
+		_, err := resolveProjectConfigPath(dir, ".asylum", ".asylum.yaml")
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), ".asylum") || !strings.Contains(err.Error(), ".asylum.yaml") {
+			t.Errorf("error should name both files, got: %v", err)
+		}
+	})
+
+	t.Run("neither present returns empty", func(t *testing.T) {
+		dir := t.TempDir()
+		got, err := resolveProjectConfigPath(dir, ".asylum", ".asylum.yaml")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got != "" {
+			t.Errorf("got %q, want empty string", got)
+		}
+	})
+}
+
+func TestLoad_YAMLAlias(t *testing.T) {
+	t.Run("project layer uses .yaml alias", func(t *testing.T) {
+		homeDir := t.TempDir()
+		t.Setenv("HOME", homeDir)
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".asylum.yaml"), []byte("agent: gemini\n"), 0644)
+
+		cfg, err := Load(dir, CLIFlags{}, "")
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if cfg.Agent != "gemini" {
+			t.Errorf("agent = %q, want %q", cfg.Agent, "gemini")
+		}
+	})
+
+	t.Run("mixed canonical project and alias local", func(t *testing.T) {
+		homeDir := t.TempDir()
+		t.Setenv("HOME", homeDir)
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".asylum"), []byte("agent: gemini\nports:\n  - \"8080\"\n"), 0644)
+		os.WriteFile(filepath.Join(dir, ".asylum.local.yaml"), []byte("agent: codex\n"), 0644)
+
+		cfg, err := Load(dir, CLIFlags{}, "")
+		if err != nil {
+			t.Fatalf("Load: %v", err)
+		}
+		if cfg.Agent != "codex" {
+			t.Errorf("agent = %q, want %q (local should win)", cfg.Agent, "codex")
+		}
+		found := false
+		for _, p := range cfg.Ports {
+			if p == "8080" {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("ports %v missing 8080 from project layer", cfg.Ports)
+		}
+	})
+
+	t.Run("both canonical and alias in same layer errors", func(t *testing.T) {
+		homeDir := t.TempDir()
+		t.Setenv("HOME", homeDir)
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".asylum"), []byte("agent: gemini\n"), 0644)
+		os.WriteFile(filepath.Join(dir, ".asylum.yaml"), []byte("agent: codex\n"), 0644)
+
+		_, err := Load(dir, CLIFlags{}, "")
+		if err == nil {
+			t.Fatal("expected error from Load, got nil")
+		}
+		if !strings.Contains(err.Error(), ".asylum.yaml") {
+			t.Errorf("error should mention conflicting filenames, got: %v", err)
+		}
+	})
+}

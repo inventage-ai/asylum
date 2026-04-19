@@ -61,7 +61,7 @@ Everything is modular via [Kits](https://asylum.inventage.ai/latest/kits/) — e
 
 ## Configuration
 
-Layered YAML: `~/.asylum/config.yaml` (global) &rarr; `.asylum` (project) &rarr; `.asylum.local` (local) &rarr; CLI flags.
+Layered YAML: `~/.asylum/config.yaml` (global) &rarr; `.asylum` (project) &rarr; `.asylum.local` (local) &rarr; CLI flags. The project files also accept a `.yaml` suffix (`.asylum.yaml`, `.asylum.local.yaml`) for editor syntax highlighting.
 
 ```yaml
 agent: gemini

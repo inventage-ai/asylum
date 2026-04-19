@@ -49,7 +49,7 @@ Each agent runs in YOLO mode by default (auto-approve all actions). Agent config
 
 ## Project Configuration
 
-Create a `.asylum` file in your project root to customize the environment:
+Create a `.asylum` file in your project root to customize the environment (or name it `.asylum.yaml` if you want editor YAML highlighting — both work):
 
 ```yaml
 agent: gemini
