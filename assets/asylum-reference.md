@@ -132,6 +132,10 @@ kits:
     disabled: true
 ```
 
+### Kit-Provided Claude Skills
+
+Kits that bundle Claude Code skills (e.g. `agent-browser`, `ast-grep`) stage them inside the container at `/opt/asylum-skills/.claude/skills/<skill-name>/`. Asylum launches `claude` with `--add-dir /opt/asylum-skills`, and a shell wrapper installed by the entrypoint adds the same flag to any interactive `claude` invocation from a secondary shell — so skills are discoverable both ways without asylum touching `~/.claude/skills/`.
+
 ## Installing Additional Tools
 
 To install additional tools in the container, prefer system packages over shell build commands. Packages are cached by Docker's layer system and install faster on rebuilds.

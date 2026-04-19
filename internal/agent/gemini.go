@@ -24,8 +24,8 @@ RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && 
 
 type Gemini struct{}
 
-func (Gemini) Name() string             { return "gemini" }
-func (Gemini) Binary() string           { return "gemini" }
+func (Gemini) Name() string               { return "gemini" }
+func (Gemini) Binary() string             { return "gemini" }
 func (Gemini) NativeConfigDir() string    { return "~/.gemini" }
 func (Gemini) ContainerConfigDir() string { return "~/.gemini" }
 func (Gemini) AsylumConfigDir() string    { return "~/.asylum/agents/gemini" }
@@ -60,7 +60,7 @@ func (Gemini) HasSession(configDir, projectPath string) bool {
 	return false
 }
 
-func (Gemini) Command(resume bool, extraArgs []string) []string {
+func (Gemini) Command(resume bool, extraArgs []string, _ CmdOpts) []string {
 	parts := []string{"gemini", "--yolo"}
 	if resume {
 		parts = append(parts, "--resume")

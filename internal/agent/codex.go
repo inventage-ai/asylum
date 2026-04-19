@@ -25,8 +25,8 @@ RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && 
 
 type Codex struct{}
 
-func (Codex) Name() string             { return "codex" }
-func (Codex) Binary() string           { return "codex" }
+func (Codex) Name() string               { return "codex" }
+func (Codex) Binary() string             { return "codex" }
 func (Codex) NativeConfigDir() string    { return "~/.codex" }
 func (Codex) ContainerConfigDir() string { return "~/.codex" }
 func (Codex) AsylumConfigDir() string    { return "~/.asylum/agents/codex" }
@@ -56,7 +56,7 @@ func (c Codex) WriteMarker(configDir, projectPath string) error {
 	return os.WriteFile(filepath.Join(dir, ".has_session"), nil, 0644)
 }
 
-func (Codex) Command(resume bool, extraArgs []string) []string {
+func (Codex) Command(resume bool, extraArgs []string, _ CmdOpts) []string {
 	if resume {
 		if len(extraArgs) == 0 {
 			return wrapZsh("codex resume --last --yolo")

@@ -11,13 +11,13 @@ import (
 
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/config"
-	"github.com/inventage-ai/asylum/internal/firstrun"
 	"github.com/inventage-ai/asylum/internal/container"
 	"github.com/inventage-ai/asylum/internal/docker"
+	"github.com/inventage-ai/asylum/internal/firstrun"
 	"github.com/inventage-ai/asylum/internal/image"
+	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/onboarding"
-	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/term"
 	"github.com/inventage-ai/asylum/internal/tui"
@@ -143,13 +143,13 @@ func main() {
 	}
 
 	cfg, err := config.Load(projectDir, config.CLIFlags{
-		Agent:    flags.Agent,
-		Kits: flags.Kits,
-		Agents:   flags.Agents,
-		Ports:    flags.Ports,
-		Volumes:  flags.Volumes,
-		Env:      flags.Env,
-		Java:     flags.Java,
+		Agent:   flags.Agent,
+		Kits:    flags.Kits,
+		Agents:  flags.Agents,
+		Ports:   flags.Ports,
+		Volumes: flags.Volumes,
+		Env:     flags.Env,
+		Java:    flags.Java,
 	}, kitSnippets)
 	if err != nil {
 		die("load config: %v", err)
@@ -348,6 +348,7 @@ func main() {
 		ExtraArgs:     extraArgs,
 		NewSession:    newSession,
 		Config:        cfg,
+		Kits:          allKits,
 	})
 
 	setTabTitle(cfg.TabTitle(), projectDir, agentName, containerMode)
@@ -362,19 +363,19 @@ func main() {
 }
 
 type cliFlags struct {
-	Agent    string
-	Kits *[]string
-	Agents   *[]string
-	Ports    []string
-	Volumes  []string
-	Env      map[string]string
-	Java     string
-	New      bool
-	Rebuild bool
-	Cleanup bool
-	Help    bool
-	Version bool
-	Short   bool
+	Agent          string
+	Kits           *[]string
+	Agents         *[]string
+	Ports          []string
+	Volumes        []string
+	Env            map[string]string
+	Java           string
+	New            bool
+	Rebuild        bool
+	Cleanup        bool
+	Help           bool
+	Version        bool
+	Short          bool
 	All            bool
 	Admin          bool
 	Dev            bool
@@ -1059,9 +1060,9 @@ func runOnboarding(cfg *config.Config, a agent.Agent, allKits []*kit.Kit, home s
 		steps = append(steps, tui.WizardStep{
 			Title:       "Credentials",
 			Description: "Allow the sandbox to access host credentials for private registries and repositories (scoped to what the project needs, where possible).",
-			Kind:       tui.StepMultiSelect,
-			Options:    options,
-			DefaultSel: preSelected,
+			Kind:        tui.StepMultiSelect,
+			Options:     options,
+			DefaultSel:  preSelected,
 		})
 		appliers = append(appliers, func(result tui.StepResult) {
 			cfgPath := filepath.Join(home, ".asylum", "config.yaml")

@@ -70,7 +70,7 @@ type CredentialOpts struct {
 	ProjectDir    string
 	HomeDir       string
 	ContainerName string
-	Isolation     string         // kit-specific isolation level from config
+	Isolation     string // kit-specific isolation level from config
 	Mode          CredentialMode
 	Explicit      []string // identifiers when Mode is CredentialExplicit
 }
@@ -97,32 +97,33 @@ const (
 // Kit groups all concerns for a tool or language: installation,
 // environment setup, caching, onboarding, and config defaults.
 type Kit struct {
-	Name              string
-	Description       string
-	DockerSnippet     string
-	EntrypointSnippet string
-	BannerLines       string            // shell commands for welcome banner version lines
-	RulesSnippet      string            // markdown fragment for sandbox rules file
-	Tools             []string          // commands this kit makes available
-	CacheDirs         map[string]string  // name → container path
-	OnboardingTasks   []onboarding.Task
-	SubKits           map[string]*Kit
-	Deps              []string // kit names this kit depends on
-	Tier              Tier              // activation tier (TierDefault, TierAlwaysOn, TierOptIn)
+	Name               string
+	Description        string
+	DockerSnippet      string
+	EntrypointSnippet  string
+	BannerLines        string            // shell commands for welcome banner version lines
+	RulesSnippet       string            // markdown fragment for sandbox rules file
+	Tools              []string          // commands this kit makes available
+	CacheDirs          map[string]string // name → container path
+	OnboardingTasks    []onboarding.Task
+	SubKits            map[string]*Kit
+	Deps               []string                                        // kit names this kit depends on
+	Tier               Tier                                            // activation tier (TierDefault, TierAlwaysOn, TierOptIn)
 	CredentialFunc     func(CredentialOpts) ([]CredentialMount, error) // optional credential provider
-	CredentialLabel    string            // display label for onboarding (e.g. "Java/Maven")
+	CredentialLabel    string                                          // display label for onboarding (e.g. "Java/Maven")
 	MountFunc          func(CredentialOpts) ([]CredentialMount, error) // volume mounts without credential UI
-	ContainerFunc      func(ContainerOpts) ([]RunArg, error)          // docker run args contributed at container creation
-	DockerSnippetFunc  func(*SnippetConfig) string                    // config-driven Docker snippet (overrides DockerSnippet)
-	RulesSnippetFunc   func(*SnippetConfig) string                    // config-driven rules snippet (overrides RulesSnippet)
-	EnvFunc            func(*SnippetConfig) map[string]string         // container env vars contributed by this kit
-	ProjectSnippetFunc func(*SnippetConfig) string                    // Dockerfile commands for the project image
-	Hidden             bool              // exclude from interactive selection UIs (config TUI, kit sync prompt, sandbox rules disabled list)
-	NeedsMount        bool              // kit uses mount --bind at runtime (requires SYS_ADMIN)
-	DockerPriority    int               // lower = earlier in Dockerfile (stable/expensive first); 0 means default (50)
-	ConfigSnippet     string            // YAML snippet for default config (indented at 2 spaces under kits:)
-	ConfigNodes       []*yaml.Node      // structured key+value nodes for kits mapping (len 2: key, value)
-	ConfigComment     string            // comment text for opt-in/always-on kits shown in config
+	ContainerFunc      func(ContainerOpts) ([]RunArg, error)           // docker run args contributed at container creation
+	DockerSnippetFunc  func(*SnippetConfig) string                     // config-driven Docker snippet (overrides DockerSnippet)
+	RulesSnippetFunc   func(*SnippetConfig) string                     // config-driven rules snippet (overrides RulesSnippet)
+	EnvFunc            func(*SnippetConfig) map[string]string          // container env vars contributed by this kit
+	ProjectSnippetFunc func(*SnippetConfig) string                     // Dockerfile commands for the project image
+	Hidden             bool                                            // exclude from interactive selection UIs (config TUI, kit sync prompt, sandbox rules disabled list)
+	NeedsMount         bool                                            // kit uses mount --bind at runtime (requires SYS_ADMIN)
+	ProvidesSkills     bool                                            // kit stages Claude skills under /opt/asylum-skills/.claude/skills/<name>/ at build time
+	DockerPriority     int                                             // lower = earlier in Dockerfile (stable/expensive first); 0 means default (50)
+	ConfigSnippet      string                                          // YAML snippet for default config (indented at 2 spaces under kits:)
+	ConfigNodes        []*yaml.Node                                    // structured key+value nodes for kits mapping (len 2: key, value)
+	ConfigComment      string                                          // comment text for opt-in/always-on kits shown in config
 }
 
 var registry = map[string]*Kit{}
@@ -338,6 +339,17 @@ func AggregateOnboardingTasks(kits []*Kit) []onboarding.Task {
 func AnyNeedsMount(kits []*Kit) bool {
 	for _, k := range kits {
 		if k.NeedsMount {
+			return true
+		}
+	}
+	return false
+}
+
+// AnyProvidesSkills reports whether any kit stages Claude skills under the
+// shared kit-skills root.
+func AnyProvidesSkills(kits []*Kit) bool {
+	for _, k := range kits {
+		if k.ProvidesSkills {
 			return true
 		}
 	}

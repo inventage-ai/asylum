@@ -10,6 +10,12 @@ import (
 	"github.com/inventage-ai/asylum/internal/config"
 )
 
+// CmdOpts carries context from the container layer into agent command
+// generation. Fields are optional; agents ignore what they don't use.
+type CmdOpts struct {
+	KitSkillsDir string // shared container path holding kit-provided Claude skills; empty means no skill kits active
+}
+
 type Agent interface {
 	Name() string
 	Binary() string
@@ -18,7 +24,7 @@ type Agent interface {
 	AsylumConfigDir() string
 	EnvVars() map[string]string
 	HasSession(configDir, projectPath string) bool
-	Command(resume bool, extraArgs []string) []string
+	Command(resume bool, extraArgs []string, opts CmdOpts) []string
 }
 
 var agents = map[string]Agent{}

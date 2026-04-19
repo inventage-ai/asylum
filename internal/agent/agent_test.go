@@ -59,18 +59,22 @@ func TestClaudeCommand(t *testing.T) {
 		name      string
 		resume    bool
 		extra     []string
+		opts      CmdOpts
 		wantParts []string
 	}{
-		{"default with session", true, nil, []string{"claude", "--dangerously-skip-permissions", "--continue"}},
-		{"default no session", false, nil, []string{"claude", "--dangerously-skip-permissions"}},
-		{"new session", false, nil, []string{"claude", "--dangerously-skip-permissions"}},
-		{"with args resume", true, []string{"fix", "the", "bug"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "'fix'", "'the'", "'bug'"}},
-		{"with args no resume", false, []string{"fix", "bug"}, []string{"claude", "--dangerously-skip-permissions", "'fix'", "'bug'"}},
+		{"default with session", true, nil, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions", "--continue"}},
+		{"default no session", false, nil, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions"}},
+		{"new session", false, nil, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions"}},
+		{"with args resume", true, []string{"fix", "the", "bug"}, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions", "--continue", "'fix'", "'the'", "'bug'"}},
+		{"with args no resume", false, []string{"fix", "bug"}, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions", "'fix'", "'bug'"}},
+		{"skills dir no resume", false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--add-dir", "/opt/asylum-skills"}},
+		{"skills dir with resume", true, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "--add-dir", "/opt/asylum-skills"}},
+		{"skills dir with args", true, []string{"fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "--add-dir", "/opt/asylum-skills", "'fix'"}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := a.Command(tt.resume, tt.extra)
+			cmd := a.Command(tt.resume, tt.extra, tt.opts)
 			assertZshWrapped(t, cmd, tt.wantParts)
 		})
 	}
@@ -91,10 +95,15 @@ func TestGeminiCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := a.Command(tt.resume, tt.extra)
+			cmd := a.Command(tt.resume, tt.extra, CmdOpts{})
 			assertZshWrapped(t, cmd, tt.wantParts)
 		})
 	}
+
+	t.Run("ignores kit skills dir", func(t *testing.T) {
+		cmd := a.Command(false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"})
+		assertZshWrapped(t, cmd, []string{"gemini", "--yolo"})
+	})
 }
 
 func TestCodexCommand(t *testing.T) {
@@ -112,10 +121,23 @@ func TestCodexCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := a.Command(tt.resume, tt.extra)
+			cmd := a.Command(tt.resume, tt.extra, CmdOpts{})
 			assertZshWrapped(t, cmd, tt.wantParts)
 		})
 	}
+
+	t.Run("ignores kit skills dir", func(t *testing.T) {
+		cmd := a.Command(false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"})
+		assertZshWrapped(t, cmd, []string{"codex", "--yolo"})
+	})
+}
+
+func TestOpencodeCommand(t *testing.T) {
+	a := Opencode{}
+	t.Run("ignores kit skills dir", func(t *testing.T) {
+		cmd := a.Command(false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"})
+		assertZshWrapped(t, cmd, []string{"opencode"})
+	})
 }
 
 func assertZshWrapped(t *testing.T, cmd []string, wantParts []string) {
@@ -255,21 +277,27 @@ func TestCodexHasSession(t *testing.T) {
 func TestEchoCommand(t *testing.T) {
 	a := Echo{}
 	t.Run("with args", func(t *testing.T) {
-		cmd := a.Command(false, []string{"hello", "world"})
+		cmd := a.Command(false, []string{"hello", "world"}, CmdOpts{})
 		if len(cmd) != 3 || cmd[0] != "echo" || cmd[1] != "hello" || cmd[2] != "world" {
 			t.Errorf("got %v, want [echo hello world]", cmd)
 		}
 	})
 	t.Run("without args", func(t *testing.T) {
-		cmd := a.Command(false, nil)
+		cmd := a.Command(false, nil, CmdOpts{})
 		if len(cmd) != 1 || cmd[0] != "echo" {
 			t.Errorf("got %v, want [echo]", cmd)
 		}
 	})
 	t.Run("resume ignored", func(t *testing.T) {
-		cmd := a.Command(true, []string{"test"})
+		cmd := a.Command(true, []string{"test"}, CmdOpts{})
 		if len(cmd) != 2 || cmd[0] != "echo" {
 			t.Errorf("resume should be ignored, got %v", cmd)
+		}
+	})
+	t.Run("ignores kit skills dir", func(t *testing.T) {
+		cmd := a.Command(false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"})
+		if len(cmd) != 1 || cmd[0] != "echo" {
+			t.Errorf("KitSkillsDir should be ignored, got %v", cmd)
 		}
 	})
 }

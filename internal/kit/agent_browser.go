@@ -6,9 +6,9 @@ func init() {
 		Description:    "Browser automation via agent-browser",
 		DockerPriority: 34,
 		Tier:           TierOptIn,
-		Deps:        []string{"node"},
-		Tools:       []string{"agent-browser"},
-		NeedsMount:  true,
+		Deps:           []string{"node"},
+		Tools:          []string{"agent-browser"},
+		ProvidesSkills: true,
 		ConfigSnippet: `  # agent-browser:      # Browser automation via agent-browser
 `,
 		ConfigNodes:   configNodes("agent-browser", "Browser automation via agent-browser", nil),
@@ -21,18 +21,15 @@ RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && 
     else \
         sudo env "PATH=$PATH" agent-browser install --with-deps; \
     fi'
-RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && \
-    cd /tmp && npx skills add vercel-labs/agent-browser --skill agent-browser --yes --copy && \
-    mv .claude/skills/agent-browser /tmp/asylum-kit-skills-agent-browser' || true
+RUN sudo mkdir -p /opt/asylum-skills/.claude/skills && \
+    sudo chown -R "$(id -u):$(id -g)" /opt/asylum-skills && \
+    bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && \
+        cd /tmp && npx skills add vercel-labs/agent-browser --skill agent-browser --yes --copy && \
+        mv .claude/skills/agent-browser /opt/asylum-skills/.claude/skills/agent-browser' || true
 `,
 		EntrypointSnippet: `# On ARM64, point agent-browser at system Chromium
 if [ "$(uname -m)" = "aarch64" ] && command -v chromium >/dev/null 2>&1; then
     export AGENT_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
-fi
-# Mount agent-browser skill into Claude skills directory (skip if already present, e.g. shared config)
-if [ -d /tmp/asylum-kit-skills-agent-browser ] && [ -d "$HOME/.claude" ] && [ ! -e "$HOME/.claude/skills/agent-browser" ] && [ ! -L "$HOME/.claude/skills/agent-browser" ]; then
-    mkdir -p "$HOME/.claude/skills/agent-browser"
-    sudo mount --bind /tmp/asylum-kit-skills-agent-browser "$HOME/.claude/skills/agent-browser"
 fi
 `,
 		RulesSnippet: `### Browser (agent-browser kit)

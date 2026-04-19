@@ -7,7 +7,7 @@ AST-based code search, lint, and rewrite via [ast-grep](https://ast-grep.github.
 ## What's Included
 
 - **sg** — CLI for searching, linting, and rewriting code using abstract syntax tree patterns
-- **Claude Code skill** — auto-mounted from the upstream [agent-skill](https://github.com/ast-grep/agent-skill) project, teaching Claude how to write ast-grep rules
+- **Claude Code skill** — staged inside the container at `/opt/asylum-skills/.claude/skills/ast-grep/` and loaded via Claude's `--add-dir` flag, teaching Claude how to write ast-grep rules (sourced from the upstream [agent-skill](https://github.com/ast-grep/agent-skill) project). Nothing is written to your host `~/.claude/`.
 
 ## Configuration
 

@@ -13,6 +13,7 @@
 - Java kit now honors the configured `versions` list instead of always installing JDK 17, 21, and 25 (#26)
 - Kit credential configuration in overlay config files (`.asylum`, `.asylum.local`) was silently dropped during config merge
 - Credential config changes did not trigger the stale container warning because kit credentials were excluded from the config hash
+- Kit-provided Claude skills (`agent-browser`, `ast-grep`) no longer create empty directories in the user's host `~/.claude/skills/` in shared agent-config mode. Skills are now staged under `/opt/asylum-skills` inside the container and loaded via `--add-dir`. Users may safely remove any existing empty `~/.claude/skills/agent-browser/` or `~/.claude/skills/ast-grep/` directories left over from previous versions. (#24, #25)
 
 ## 0.6.5 — 2026-04-01
 
