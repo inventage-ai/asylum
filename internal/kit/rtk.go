@@ -13,45 +13,33 @@ func init() {
 		ConfigComment: "rtk:                  # Token-reduction proxy (rtk)",
 		DockerSnippet: `# Install rtk
 RUN curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
-# Generate rtk hooks for Claude Code
+# Stage RTK.md awareness doc. rtk init -g writes it into ~/.claude/.
+# Recent rtk no longer creates a hooks/ directory — it expects its hook to be
+# registered as the command "rtk hook claude" in settings.json (handled below).
 RUN mkdir -p "$HOME/.claude" && \
     $HOME/.local/bin/rtk init -g && \
     mkdir -p /tmp/asylum-kit-rtk && \
-    cp -r "$HOME/.claude/hooks" /tmp/asylum-kit-rtk/hooks && \
     cp "$HOME/.claude/RTK.md" /tmp/asylum-kit-rtk/RTK.md && \
     rm -rf "$HOME/.claude"
 `,
-		EntrypointSnippet: `# Mount rtk hooks into Claude config directory
+		EntrypointSnippet: `# Mount RTK.md and register rtk's PreToolUse hook in settings.json
 if [ -d /tmp/asylum-kit-rtk ] && [ -d "$HOME/.claude" ]; then
-    # Mount hook script
-    if [ -d /tmp/asylum-kit-rtk/hooks ]; then
-        mkdir -p "$HOME/.claude/hooks"
-        for f in /tmp/asylum-kit-rtk/hooks/*; do
-            [ -f "$f" ] && touch "$HOME/.claude/hooks/$(basename "$f")" && \
-                sudo mount --bind "$f" "$HOME/.claude/hooks/$(basename "$f")"
-        done
-    fi
-
-    # Mount RTK.md awareness doc
     if [ -f /tmp/asylum-kit-rtk/RTK.md ]; then
         touch "$HOME/.claude/RTK.md"
         sudo mount --bind /tmp/asylum-kit-rtk/RTK.md "$HOME/.claude/RTK.md"
     fi
 
-    # Register PreToolUse hook in settings.json
     settings="$HOME/.claude/settings.json"
-    hook_path="$HOME/.claude/hooks/rtk-rewrite.sh"
-    if [ -f "$hook_path" ]; then
-        if [ ! -f "$settings" ]; then
-            echo '{}' > "$settings"
-        fi
-        jq --arg cmd "$hook_path" '
-            .hooks.PreToolUse //= [] |
-            if (.hooks.PreToolUse | map(select(.matcher == "Bash" and (.hooks // [] | any(.command | test("rtk"))))) | length) == 0 then
-                .hooks.PreToolUse += [{"matcher": "Bash", "hooks": [{"type": "command", "command": $cmd}]}]
-            else . end
-        ' "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
+    if [ ! -f "$settings" ]; then
+        echo '{}' > "$settings"
     fi
+    # Drop any existing rtk PreToolUse Bash entry (upgrades stale file-path
+    # hooks from older asylum versions) and append the canonical command.
+    jq '
+        .hooks.PreToolUse //= [] |
+        .hooks.PreToolUse |= [.[] | select(.matcher != "Bash" or ((.hooks // []) | any(.command | test("rtk")) | not))] |
+        .hooks.PreToolUse += [{"matcher": "Bash", "hooks": [{"type": "command", "command": "rtk hook claude"}]}]
+    ' "$settings" > "${settings}.tmp" && mv "${settings}.tmp" "$settings"
 fi
 `,
 		RulesSnippet: `### rtk (rtk kit)

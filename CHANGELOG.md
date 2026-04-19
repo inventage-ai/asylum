@@ -14,6 +14,7 @@
 - Kit credential configuration in overlay config files (`.asylum`, `.asylum.local`) was silently dropped during config merge
 - Credential config changes did not trigger the stale container warning because kit credentials were excluded from the config hash
 - Kit-provided Claude skills (`agent-browser`, `ast-grep`) no longer create empty directories in the user's host `~/.claude/skills/` in shared agent-config mode. Skills are now staged under `/opt/asylum-skills` inside the container and loaded via `--add-dir`. Users may safely remove any existing empty `~/.claude/skills/agent-browser/` or `~/.claude/skills/ast-grep/` directories left over from previous versions. (#24, #25)
+- `rtk` kit works again with recent rtk versions. Newer `rtk init -g` no longer creates a `~/.claude/hooks/` directory and instead expects the hook to be registered as the command `rtk hook claude` in `settings.json`. The kit now follows that pattern: the obsolete hook-script mounting is gone, and the entrypoint registers `rtk hook claude` directly as the PreToolUse hook command. The shared-mode pollution of the host `~/.claude/settings.json` tracked in #29 is not addressed by this change.
 
 ## 0.6.5 — 2026-04-01
 

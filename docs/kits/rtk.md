@@ -7,7 +7,7 @@ Token-reduction proxy via [RTK](https://github.com/rtk-ai/rtk) — intercepts sh
 ## What's Included
 
 - **rtk** — CLI proxy that rewrites command outputs to strip noise (comments, whitespace, boilerplate)
-- **Claude Code hooks** — auto-mounted PreToolUse hook that transparently intercepts Bash commands
+- **Claude Code PreToolUse hook** — registered in `~/.claude/settings.json` to run `rtk hook claude` on every Bash tool call, transparently intercepting commands
 
 ## Configuration
 
@@ -20,7 +20,7 @@ kits:
 
 RTK registers a PreToolUse hook that intercepts every Bash command the agent runs. Commands like `git status`, `ls`, `grep`, etc. are transparently rewritten through RTK, which strips noise and compresses the output before the agent sees it.
 
-The hook and awareness doc are generated at image build time and mounted into `~/.claude/` at container start.
+At container start the entrypoint adds `rtk hook claude` to the `PreToolUse` hooks in `~/.claude/settings.json` (replacing any older file-path rtk entry from previous asylum versions), and mounts `RTK.md` so Claude picks up the usage notes. In shared agent-config mode this does modify your host `~/.claude/settings.json`.
 
 ## Usage
 
