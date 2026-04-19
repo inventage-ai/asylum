@@ -32,7 +32,7 @@ func (Opencode) EnvVars() map[string]string { return nil }
 
 func (Opencode) HasSession(_, _ string) bool { return false }
 
-func (Opencode) Command(resume bool, extraArgs []string) []string {
+func (Opencode) Command(resume bool, extraArgs []string, _ CmdOpts) []string {
 	if resume {
 		log.Warn("opencode: resume not supported, starting fresh session")
 	}

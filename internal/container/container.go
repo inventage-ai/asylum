@@ -654,6 +654,7 @@ type ExecOpts struct {
 	ExtraArgs     []string
 	NewSession    bool
 	Config        config.Config
+	Kits          []*kit.Kit
 }
 
 func ExecArgs(opts ExecOpts) []string {
@@ -686,7 +687,11 @@ func agentCommand(opts ExecOpts) []string {
 		opts.ContainerName,
 	)
 	resume := err == nil && !opts.NewSession && opts.Agent.HasSession(configDir, opts.ProjectDir)
-	return opts.Agent.Command(resume, opts.ExtraArgs)
+	cmdOpts := agent.CmdOpts{}
+	if kit.AnyProvidesSkills(opts.Kits) {
+		cmdOpts.KitSkillsDir = "/opt/asylum-skills"
+	}
+	return opts.Agent.Command(resume, opts.ExtraArgs, cmdOpts)
 }
 
 // EnsureAgentConfig returns true if the config was freshly created (first run).

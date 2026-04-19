@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/config"
 	"github.com/inventage-ai/asylum/internal/kit"
 )
@@ -25,8 +26,8 @@ type stubAgent struct {
 	nativeConfigDir string
 }
 
-func (s stubAgent) Name() string    { return "stub" }
-func (s stubAgent) Binary() string  { return "stub-bin" }
+func (s stubAgent) Name() string   { return "stub" }
+func (s stubAgent) Binary() string { return "stub-bin" }
 func (s stubAgent) NativeConfigDir() string {
 	if s.nativeConfigDir != "" {
 		return s.nativeConfigDir
@@ -40,13 +41,18 @@ func (s stubAgent) AsylumConfigDir() string {
 	}
 	return "~/.asylum/agents/stub"
 }
-func (s stubAgent) EnvVars() map[string]string            { return s.envVars }
-func (s stubAgent) HasSession(_, _ string) bool            { return s.hasSession }
-func (s stubAgent) Command(resume bool, extra []string) []string {
+func (s stubAgent) EnvVars() map[string]string  { return s.envVars }
+func (s stubAgent) HasSession(_, _ string) bool { return s.hasSession }
+func (s stubAgent) Command(resume bool, extra []string, opts agent.CmdOpts) []string {
+	prefix := "stub"
 	if resume {
-		return append([]string{"stub-resume"}, extra...)
+		prefix = "stub-resume"
 	}
-	return append([]string{"stub"}, extra...)
+	out := []string{prefix}
+	if opts.KitSkillsDir != "" {
+		out = append(out, "--add-dir", opts.KitSkillsDir)
+	}
+	return append(out, extra...)
 }
 
 // claudeStubAgent wraps stubAgent but returns "claude" for Name().
@@ -1374,5 +1380,3 @@ func TestGenerateSandboxRules_WithoutPorts(t *testing.T) {
 		t.Error("should not have Forwarded Ports section when no ports allocated")
 	}
 }
-
-

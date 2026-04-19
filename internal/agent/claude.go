@@ -24,8 +24,8 @@ RUN curl -fsSL https://claude.ai/install.sh | bash && \
 
 type Claude struct{}
 
-func (Claude) Name() string             { return "claude" }
-func (Claude) Binary() string           { return "claude" }
+func (Claude) Name() string               { return "claude" }
+func (Claude) Binary() string             { return "claude" }
 func (Claude) NativeConfigDir() string    { return "~/.claude" }
 func (Claude) ContainerConfigDir() string { return "~/.claude" }
 func (Claude) AsylumConfigDir() string    { return "~/.asylum/agents/claude" }
@@ -53,10 +53,13 @@ func (Claude) HasSession(configDir, projectPath string) bool {
 	return false
 }
 
-func (Claude) Command(resume bool, extraArgs []string) []string {
+func (Claude) Command(resume bool, extraArgs []string, opts CmdOpts) []string {
 	parts := []string{"claude", "--dangerously-skip-permissions"}
 	if resume {
 		parts = append(parts, "--continue")
+	}
+	if opts.KitSkillsDir != "" {
+		parts = append(parts, "--add-dir", opts.KitSkillsDir)
 	}
 	parts = append(parts, term.ShellQuoteArgs(extraArgs)...)
 	return wrapZsh(strings.Join(parts, " "))

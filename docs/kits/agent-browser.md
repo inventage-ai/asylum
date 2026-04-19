@@ -8,7 +8,7 @@ Browser automation via [agent-browser](https://github.com/vercel-labs/agent-brow
 
 - **agent-browser** CLI for browser automation
 - **Chrome** (Chrome for Testing, installed via `agent-browser install`)
-- **Claude Code skill** — auto-mounted from the upstream project, teaching Claude the snapshot-ref interaction pattern
+- **Claude Code skill** — staged inside the container at `/opt/asylum-skills/.claude/skills/agent-browser/` and loaded via Claude's `--add-dir` flag, teaching Claude the snapshot-ref interaction pattern. Nothing is written to your host `~/.claude/`.
 
 ## Configuration
 

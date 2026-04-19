@@ -83,6 +83,25 @@ if [ -n "$HOST_PROJECT_DIR" ] && { [ -f "$HOST_PROJECT_DIR/.mcp.json" ] || [ -f 
     echo "MCP configuration detected."
 fi
 
+# Install a `claude` shell wrapper so interactive invocations pick up kit-provided skills.
+# The wrapper only adds --add-dir when /opt/asylum-skills holds at least one skill.
+for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+    [ -f "$rc" ] || continue
+    if ! grep -q '# asylum-claude-wrapper' "$rc" 2>/dev/null; then
+        cat >> "$rc" <<'EOF'
+
+# asylum-claude-wrapper
+claude() {
+    if [ -d /opt/asylum-skills/.claude/skills ] && [ -n "$(ls -A /opt/asylum-skills/.claude/skills 2>/dev/null)" ]; then
+        command claude --add-dir /opt/asylum-skills "$@"
+    else
+        command claude "$@"
+    fi
+}
+EOF
+    fi
+done
+
 # Set terminal
 export TERM=xterm-256color
 
