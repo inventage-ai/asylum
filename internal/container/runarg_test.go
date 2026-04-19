@@ -92,7 +92,7 @@ func TestResolveArgsSamePrioritySameValueOK(t *testing.T) {
 func TestResolveArgsNoConflictDifferentKeys(t *testing.T) {
 	args := []kit.RunArg{
 		{Flag: "-p", Value: "3000:3000", Source: "user config", Priority: kit.PriorityConfig},
-		{Flag: "-p", Value: "10000:10000", Source: "ports kit", Priority: kit.PriorityKit},
+		{Flag: "-p", Value: "7001:7001", Source: "ports kit", Priority: kit.PriorityKit},
 	}
 	resolved, _, err := ResolveArgs(args)
 	if err != nil {
@@ -195,7 +195,7 @@ func TestResolveArgsSameSourceOrdering(t *testing.T) {
 func TestFormatDebugBasic(t *testing.T) {
 	resolved := []kit.RunArg{
 		{Flag: "--privileged", Value: "", Source: "docker kit", Priority: kit.PriorityKit},
-		{Flag: "-p", Value: "10000:10000", Source: "ports kit", Priority: kit.PriorityKit},
+		{Flag: "-p", Value: "7001:7001", Source: "ports kit", Priority: kit.PriorityKit},
 		{Flag: "-e", Value: "FOO=bar", Source: "core", Priority: kit.PriorityCore},
 	}
 	out := FormatDebug(resolved, nil)
@@ -206,7 +206,7 @@ func TestFormatDebugBasic(t *testing.T) {
 	if !strings.Contains(out, "--privileged") || !strings.Contains(out, "docker kit") {
 		t.Error("missing --privileged line with source")
 	}
-	if !strings.Contains(out, "-p 10000:10000") || !strings.Contains(out, "ports kit") {
+	if !strings.Contains(out, "-p 7001:7001") || !strings.Contains(out, "ports kit") {
 		t.Error("missing port line with source")
 	}
 	if !strings.Contains(out, "-e FOO=bar") || !strings.Contains(out, "core") {

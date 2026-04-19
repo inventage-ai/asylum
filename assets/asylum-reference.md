@@ -174,7 +174,7 @@ Build commands run during `docker build` (cached in the image layer), not on eve
 The `ports` kit (default-on) automatically allocates a range of high host ports per project and forwards them into the container. This allows agents to start web servers without manual port configuration.
 
 - **Default count**: 5 ports per project (configurable via `kits: { ports: { count: 10 } }`)
-- **Starting port**: 10000, allocated sequentially
+- **Starting port**: 7001, allocated sequentially (below the browser-restricted 10000+ range)
 - **Persistence**: Port assignments are stored in `~/.asylum/ports.json` and reused across container restarts
 - **No collisions**: Each project gets a unique, non-overlapping range
 

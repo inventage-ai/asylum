@@ -1331,7 +1331,7 @@ func TestGenerateSandboxRules_WithPorts(t *testing.T) {
 	home := t.TempDir()
 	cname := "asylum-ports-test"
 
-	dir, err := generateSandboxRules(home, cname, nil, "dev", []int{10000, 10001, 10002})
+	dir, err := generateSandboxRules(home, cname, nil, "dev", []int{7001, 7002, 7003})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1345,11 +1345,11 @@ func TestGenerateSandboxRules_WithPorts(t *testing.T) {
 	if !strings.Contains(content, "## Forwarded Ports") {
 		t.Error("missing Forwarded Ports section")
 	}
-	if !strings.Contains(content, "- 10000") {
-		t.Error("missing port 10000")
+	if !strings.Contains(content, "- 7001") {
+		t.Error("missing port 7001")
 	}
-	if !strings.Contains(content, "- 10002") {
-		t.Error("missing port 10002")
+	if !strings.Contains(content, "- 7003") {
+		t.Error("missing port 7003")
 	}
 	if !strings.Contains(content, "http://localhost:<port>") {
 		t.Error("missing localhost instructions")

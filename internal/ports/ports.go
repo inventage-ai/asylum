@@ -8,7 +8,12 @@ import (
 	"syscall"
 )
 
-const BasePort = 10000
+const BasePort = 7001
+
+// legacyBasePort marks the previous default (10000+). Browsers block the
+// 10000+ range by default, so any existing allocation at or above this port
+// is treated as stale and reassigned from BasePort on next allocate.
+const legacyBasePort = 10000
 
 type Range struct {
 	Project   string `json:"project"`
@@ -52,6 +57,11 @@ func Allocate(projectDir, containerName string, count int) (Range, error) {
 	// Check for existing allocation
 	for i, r := range reg.Ranges {
 		if r.Project == projectDir {
+			if r.Start >= legacyBasePort {
+				// Stale legacy range — drop it and fall through to fresh allocation.
+				reg.Ranges = append(reg.Ranges[:i], reg.Ranges[i+1:]...)
+				break
+			}
 			if r.Count >= count {
 				return r, nil
 			}
@@ -117,6 +127,12 @@ func RenameContainer(oldName, newName string) error {
 func nextStart(ranges []Range) int {
 	highest := BasePort
 	for _, r := range ranges {
+		if r.Start >= legacyBasePort {
+			// Legacy entries will be reclaimed on their project's next
+			// allocate; don't let them push new allocations past the browser
+			// block.
+			continue
+		}
 		if end := r.Start + r.Count; end > highest {
 			highest = end
 		}

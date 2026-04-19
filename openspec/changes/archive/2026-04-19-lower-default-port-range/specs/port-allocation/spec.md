@@ -1,3 +1,5 @@
+## MODIFIED Requirements
+
 ### Requirement: Global port registry
 The system SHALL maintain a global port registry at `~/.asylum/ports.json` that maps project directories to allocated port ranges. The file SHALL be locked during read/write operations to prevent concurrent corruption. New allocations SHALL start from base port `7001` to avoid the browser-restricted range at and above `10000`.
 
@@ -50,25 +52,6 @@ A `ports` kit SHALL be registered with tier `TierAlwaysOn`. It SHALL have no `Do
 #### Scenario: ContainerFunc handles allocation failure
 - **WHEN** port allocation fails (e.g., port space exhausted)
 - **THEN** the ContainerFunc SHALL return an error, which the pipeline SHALL log as a warning and continue
-
-### Requirement: Configurable port count
-The number of allocated ports SHALL default to 5 and be configurable via `KitConfig`. The config key SHALL be `count` under the `ports` kit.
-
-#### Scenario: Default count
-- **WHEN** no count is specified in config
-- **THEN** 5 ports SHALL be allocated
-
-#### Scenario: Custom count
-- **WHEN** the user configures `kits: { ports: { count: 10 } }`
-- **THEN** 10 ports SHALL be allocated for the project
-
-#### Scenario: Count increase for existing project
-- **WHEN** a project's configured count increases from 5 to 8 and the 3 ports after its range are unallocated
-- **THEN** the range SHALL be extended to 8 ports
-
-#### Scenario: Count increase blocked by neighbor
-- **WHEN** a project's configured count increases but the adjacent ports belong to another project
-- **THEN** the system SHALL warn and keep the existing count
 
 ### Requirement: Port forwarding in container
 The allocated ports SHALL be produced by the ports kit's ContainerFunc as RunArgs. They SHALL coexist with user-configured ports from the `ports:` config via the unified deduplication pipeline.

@@ -22,12 +22,12 @@ kits:
 
 ## How It Works
 
-Each project gets a unique range of consecutive ports starting from port 10000. The allocation is tracked globally in `~/.asylum/state.json` to prevent collisions between projects.
+Each project gets a unique range of consecutive ports starting from port 7001. The allocation is tracked globally in `~/.asylum/state.json` to prevent collisions between projects. The range sits below 10000 because most browsers block access to the 10000+ range by default.
 
-For example, if your project gets ports 10000-10004:
+For example, if your project gets ports 7001-7005:
 
-- Start a server on port 10000 inside the container
-- Access it at `localhost:10000` on your host
+- Start a server on port 7001 inside the container
+- Access it at `localhost:7001` on your host
 
 The allocation is deterministic — the same project always gets the same port range (unless it's been freed and reallocated).
 

@@ -23,7 +23,7 @@ const (
 // RunArg represents a single docker run argument with provenance.
 type RunArg struct {
 	Flag     string // e.g. "-p", "-v", "-e", "--privileged", "--mount", "--cap-add"
-	Value    string // e.g. "10000:10000", "/host:/ctr:ro", "FOO=bar", "" for boolean flags
+	Value    string // e.g. "7001:7001", "/host:/ctr:ro", "FOO=bar", "" for boolean flags
 	Source   string // e.g. "core", "ports kit", "user config (ports)"
 	Priority int    // higher wins on dedup key collision
 }
