@@ -34,6 +34,12 @@ asylum shell        # Interactive shell (no agent)
 
 On first run, Asylum builds a Docker image (~5 min) and seeds agent config from your host. Subsequent runs start in seconds.
 
+## Security Model
+
+An asylum is not a high-security prison. It keeps agents running in YOLO mode from accidentally damaging your host, but it is not a hard sandbox: it does not contain malicious code, does not firewall network access, and gives the agent full control over your project directory.
+
+**[Read the full security model &rarr;](https://asylum.inventage.ai/latest/concepts/security-model/)**
+
 ## Why Asylum?
 
 - **Built for Claude Code** — first-class support, with experimental Gemini CLI and Codex support

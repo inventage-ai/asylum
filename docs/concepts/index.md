@@ -7,3 +7,4 @@ How Asylum works under the hood.
 - [Sessions](sessions.md) — multi-session support and agent resume
 - [Agents](agents.md) — supported agents, config seeding, and resume behavior
 - [Config Isolation](isolation.md) — shared, isolated, and project isolation modes
+- [Security Model](security-model.md) — what Asylum protects against, and what it doesn't
