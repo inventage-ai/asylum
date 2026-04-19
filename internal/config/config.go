@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/inventage-ai/asylum/internal/kit"
 	"gopkg.in/yaml.v3"
 )
 
@@ -132,6 +133,18 @@ func (c Config) KitOption(name string) *KitConfig {
 	return c.Kits[name]
 }
 
+// KitSnippetConfig returns a kit.SnippetConfig for the named kit, or nil.
+func (c Config) KitSnippetConfig(name string) *kit.SnippetConfig {
+	kc := c.KitOption(name)
+	if kc == nil {
+		return nil
+	}
+	return &kit.SnippetConfig{
+		Versions:       kc.Versions,
+		DefaultVersion: kc.DefaultVersion,
+	}
+}
+
 // SSHIsolation returns the SSH kit isolation level.
 // Returns "isolated" when not configured.
 func (c Config) SSHIsolation() string {
@@ -169,14 +182,6 @@ func (c Config) AgentNames() []string {
 		return nil
 	}
 	return slices.Sorted(maps.Keys(c.Agents))
-}
-
-// JavaVersion returns the effective java version from the java kit's DefaultVersion.
-func (c Config) JavaVersion() string {
-	if kc := c.KitOption("java"); kc != nil {
-		return kc.DefaultVersion
-	}
-	return ""
 }
 
 // TabTitle returns the tab title from the title kit, or empty string.

@@ -140,8 +140,8 @@ func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag stri
 // for optimal Docker layer caching. previousOrder is the source order from the
 // last successful build (from state.json). Returns (rebuilt, newOrder, err)
 // where newOrder should be saved to state on success.
-func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, version string, noCache bool, previousOrder []string) (bool, []string, error) {
-	sources := collectSources(profiles, agentInstalls)
+func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitConfig func(string) *kit.SnippetConfig, version string, noCache bool, previousOrder []string) (bool, []string, error) {
+	sources := collectSources(profiles, kitConfig, agentInstalls)
 	orderedIDs := computeSourceOrder(sources, previousOrder)
 
 	snippetOf := map[string]string{}
@@ -191,15 +191,12 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, versio
 	return true, orderedIDs, nil
 }
 
-// Pre-installed Java versions in the base image.
-var preinstalledJava = map[string]bool{"17": true, "21": true, "25": true}
-
-func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, javaVersion string, version string, baseRebuilt bool, noCache bool) (string, error) {
-	profileSnippets := kit.AssembleDockerSnippets(projectProfiles)
+func EnsureProject(projectProfiles []*kit.Kit, allKits []*kit.Kit, packages map[string][]string, kitConfig func(string) *kit.SnippetConfig, version string, baseRebuilt bool, noCache bool) (string, error) {
+	profileSnippets := kit.AssembleDockerSnippets(projectProfiles, kitConfig)
 	projectEntrypoint := assembleProjectEntrypoint(projectProfiles)
-	needsCustomJava := javaVersion != "" && !preinstalledJava[javaVersion]
+	kitProjectSnippets := kit.AssembleProjectSnippets(allKits, kitConfig)
 
-	if len(packages) == 0 && !needsCustomJava && profileSnippets == "" && projectEntrypoint == nil {
+	if len(packages) == 0 && kitProjectSnippets == "" && profileSnippets == "" && projectEntrypoint == nil {
 		return baseTag, nil
 	}
 
@@ -207,7 +204,7 @@ func EnsureProject(projectProfiles []*kit.Kit, packages map[string][]string, jav
 	if u, err := user.Current(); err == nil {
 		username = u.Username
 	}
-	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, javaVersion, username, projectEntrypoint != nil)
+	dockerfile, err := generateProjectDockerfile(profileSnippets, packages, kitProjectSnippets, username, projectEntrypoint != nil)
 	if err != nil {
 		return "", err
 	}
@@ -245,7 +242,6 @@ var knownPackageTypes = map[string]bool{
 }
 
 var validPackageName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9+\-.@:/~_]*$`)
-var validJavaVersion = regexp.MustCompile(`^[0-9]+(\.[0-9]+)*$`)
 
 func validatePackageNames(pkgType string, names []string) error {
 	for _, name := range names {
@@ -256,7 +252,7 @@ func validatePackageNames(pkgType string, names []string) error {
 	return nil
 }
 
-func generateProjectDockerfile(profileSnippets string, packages map[string][]string, javaVersion string, username string, hasProjectEntrypoint bool) (string, error) {
+func generateProjectDockerfile(profileSnippets string, packages map[string][]string, kitProjectSnippets string, username string, hasProjectEntrypoint bool) (string, error) {
 	for k := range packages {
 		if !knownPackageTypes[k] {
 			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, cx-lang, run)", k)
@@ -316,12 +312,9 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 	writeUserRuns("cx lang add ", packages["cx-lang"])
 	writeUserRuns("", packages["run"])
 
-	if javaVersion != "" && !preinstalledJava[javaVersion] {
-		if !validJavaVersion.MatchString(javaVersion) {
-			return "", fmt.Errorf("invalid java version %q", javaVersion)
-		}
+	if kitProjectSnippets != "" {
 		b.WriteString("\nUSER " + username + "\n")
-		b.WriteString("RUN $HOME/.local/bin/mise install java@" + javaVersion + " && $HOME/.local/bin/mise use --global java@" + javaVersion + "\n")
+		b.WriteString(kitProjectSnippets)
 	}
 
 	if hasProjectEntrypoint {

@@ -58,6 +58,13 @@ type ContainerOpts struct {
 	Config        interface{ PortCount() int } // avoid circular import with config package
 }
 
+// SnippetConfig holds the kit config fields needed by snippet functions.
+// Defined here (not in config package) to avoid import cycles.
+type SnippetConfig struct {
+	Versions       []string
+	DefaultVersion string
+}
+
 // CredentialOpts is passed to a kit's CredentialFunc.
 type CredentialOpts struct {
 	ProjectDir    string
@@ -102,11 +109,15 @@ type Kit struct {
 	SubKits           map[string]*Kit
 	Deps              []string // kit names this kit depends on
 	Tier              Tier              // activation tier (TierDefault, TierAlwaysOn, TierOptIn)
-	CredentialFunc    func(CredentialOpts) ([]CredentialMount, error) // optional credential provider
-	CredentialLabel   string            // display label for onboarding (e.g. "Java/Maven")
-	MountFunc         func(CredentialOpts) ([]CredentialMount, error) // volume mounts without credential UI
-	ContainerFunc     func(ContainerOpts) ([]RunArg, error)          // docker run args contributed at container creation
-	Hidden            bool              // exclude from interactive selection UIs (config TUI, kit sync prompt, sandbox rules disabled list)
+	CredentialFunc     func(CredentialOpts) ([]CredentialMount, error) // optional credential provider
+	CredentialLabel    string            // display label for onboarding (e.g. "Java/Maven")
+	MountFunc          func(CredentialOpts) ([]CredentialMount, error) // volume mounts without credential UI
+	ContainerFunc      func(ContainerOpts) ([]RunArg, error)          // docker run args contributed at container creation
+	DockerSnippetFunc  func(*SnippetConfig) string                    // config-driven Docker snippet (overrides DockerSnippet)
+	RulesSnippetFunc   func(*SnippetConfig) string                    // config-driven rules snippet (overrides RulesSnippet)
+	EnvFunc            func(*SnippetConfig) map[string]string         // container env vars contributed by this kit
+	ProjectSnippetFunc func(*SnippetConfig) string                    // Dockerfile commands for the project image
+	Hidden             bool              // exclude from interactive selection UIs (config TUI, kit sync prompt, sandbox rules disabled list)
 	NeedsMount        bool              // kit uses mount --bind at runtime (requires SYS_ADMIN)
 	DockerPriority    int               // lower = earlier in Dockerfile (stable/expensive first); 0 means default (50)
 	ConfigSnippet     string            // YAML snippet for default config (indented at 2 spaces under kits:)
@@ -333,13 +344,28 @@ func AnyNeedsMount(kits []*Kit) bool {
 	return false
 }
 
+// snippetFor returns the effective Docker snippet for a kit, preferring
+// DockerSnippetFunc (if set) over the static DockerSnippet string.
+func snippetFor(k *Kit, kitConfig func(string) *SnippetConfig) string {
+	if k.DockerSnippetFunc != nil {
+		var sc *SnippetConfig
+		if kitConfig != nil {
+			sc = kitConfig(k.Name)
+		}
+		return k.DockerSnippetFunc(sc)
+	}
+	return k.DockerSnippet
+}
+
 // AssembleDockerSnippets concatenates DockerSnippets from all provided kits.
-func AssembleDockerSnippets(kits []*Kit) string {
+// kitConfig may be nil; if non-nil it provides per-kit config for snippet funcs.
+func AssembleDockerSnippets(kits []*Kit, kitConfig func(string) *SnippetConfig) string {
 	var b strings.Builder
 	for _, k := range kits {
-		if k.DockerSnippet != "" {
-			b.WriteString(k.DockerSnippet)
-			if !strings.HasSuffix(k.DockerSnippet, "\n") {
+		s := snippetFor(k, kitConfig)
+		if s != "" {
+			b.WriteString(s)
+			if !strings.HasSuffix(s, "\n") {
 				b.WriteByte('\n')
 			}
 		}
@@ -458,24 +484,81 @@ func AssembleConfigSnippets() string {
 	return b.String()
 }
 
+// rulesSnippetFor returns the effective rules snippet for a kit, preferring
+// RulesSnippetFunc (if set) over the static RulesSnippet string.
+func rulesSnippetFor(k *Kit, kitConfig func(string) *SnippetConfig) string {
+	if k.RulesSnippetFunc != nil {
+		var sc *SnippetConfig
+		if kitConfig != nil {
+			sc = kitConfig(k.Name)
+		}
+		return k.RulesSnippetFunc(sc)
+	}
+	return k.RulesSnippet
+}
+
 // AssembleRulesSnippets concatenates RulesSnippets from all provided kits,
 // separated by blank lines.
-func AssembleRulesSnippets(kits []*Kit) string {
+func AssembleRulesSnippets(kits []*Kit, kitConfig func(string) *SnippetConfig) string {
 	var b strings.Builder
 	first := true
 	for _, k := range kits {
-		if k.RulesSnippet != "" {
+		s := rulesSnippetFor(k, kitConfig)
+		if s != "" {
 			if !first {
 				b.WriteByte('\n')
 			}
-			b.WriteString(k.RulesSnippet)
-			if !strings.HasSuffix(k.RulesSnippet, "\n") {
+			b.WriteString(s)
+			if !strings.HasSuffix(s, "\n") {
 				b.WriteByte('\n')
 			}
 			first = false
 		}
 	}
 	return b.String()
+}
+
+// AssembleProjectSnippets collects project Dockerfile snippets from kits
+// that provide a ProjectSnippetFunc.
+func AssembleProjectSnippets(kits []*Kit, kitConfig func(string) *SnippetConfig) string {
+	var b strings.Builder
+	for _, k := range kits {
+		if k.ProjectSnippetFunc == nil {
+			continue
+		}
+		var sc *SnippetConfig
+		if kitConfig != nil {
+			sc = kitConfig(k.Name)
+		}
+		if s := k.ProjectSnippetFunc(sc); s != "" {
+			b.WriteString(s)
+			if !strings.HasSuffix(s, "\n") {
+				b.WriteByte('\n')
+			}
+		}
+	}
+	return b.String()
+}
+
+// AssembleEnvVars collects environment variables from kits that provide an EnvFunc.
+func AssembleEnvVars(kits []*Kit, kitConfig func(string) *SnippetConfig) map[string]string {
+	env := map[string]string{}
+	for _, k := range kits {
+		if k.EnvFunc == nil {
+			continue
+		}
+		var sc *SnippetConfig
+		if kitConfig != nil {
+			sc = kitConfig(k.Name)
+		}
+		for key, val := range k.EnvFunc(sc) {
+			env[key] = val
+		}
+	}
+	if len(env) == 0 {
+		return nil
+	}
+	return env
 }
 
 // AssembleEntrypointSnippets concatenates EntrypointSnippets from all provided kits.

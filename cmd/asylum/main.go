@@ -207,7 +207,7 @@ func main() {
 	}
 
 	containerRunning := docker.IsRunning(cname)
-	imageTag, stateChanged := ensureImages(globalKits, projectKits, agentInstalls, cfg, version, flags.Rebuild, &state, containerRunning)
+	imageTag, stateChanged := ensureImages(globalKits, projectKits, allKits, agentInstalls, cfg, version, flags.Rebuild, &state, containerRunning)
 	if stateChanged {
 		if err := config.SaveState(asylumDir, state); err != nil {
 			log.Warn("save state: %v", err)
@@ -915,8 +915,8 @@ func collectOnboarding(cfg config.Config) map[string]bool {
 // ensureImages runs EnsureBase and EnsureProject unconditionally to determine
 // the expected image tag. When a container is already running and image checks
 // fail (e.g. docker inspect errors), it falls through gracefully.
-func ensureImages(globalKits, projectKits []*kit.Kit, agentInstalls []*agent.AgentInstall, cfg config.Config, version string, noCache bool, state *config.State, containerRunning bool) (imageTag string, stateChanged bool) {
-	baseRebuilt, newOrder, err := image.EnsureBase(globalKits, agentInstalls, version, noCache, state.DockerSourceOrder)
+func ensureImages(globalKits, projectKits, allKits []*kit.Kit, agentInstalls []*agent.AgentInstall, cfg config.Config, version string, noCache bool, state *config.State, containerRunning bool) (imageTag string, stateChanged bool) {
+	baseRebuilt, newOrder, err := image.EnsureBase(globalKits, agentInstalls, cfg.KitSnippetConfig, version, noCache, state.DockerSourceOrder)
 	if err != nil {
 		if containerRunning {
 			log.Warn("image check: %v (using running container)", err)
@@ -929,7 +929,7 @@ func ensureImages(globalKits, projectKits []*kit.Kit, agentInstalls []*agent.Age
 		stateChanged = true
 	}
 
-	imageTag, err = image.EnsureProject(projectKits, collectPackages(cfg), cfg.JavaVersion(), version, baseRebuilt, noCache)
+	imageTag, err = image.EnsureProject(projectKits, allKits, collectPackages(cfg), cfg.KitSnippetConfig, version, baseRebuilt, noCache)
 	if err != nil {
 		if containerRunning {
 			log.Warn("image check: %v (using running container)", err)

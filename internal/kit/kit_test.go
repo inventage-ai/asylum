@@ -199,7 +199,7 @@ func TestAssembleRulesSnippets(t *testing.T) {
 		{Name: "b", RulesSnippet: ""},
 		{Name: "c", RulesSnippet: "## C\nTools from C."},
 	}
-	got := AssembleRulesSnippets(kits)
+	got := AssembleRulesSnippets(kits, nil)
 	want := "## A\nTools from A.\n\n## C\nTools from C.\n"
 	if got != want {
 		t.Errorf("got %q, want %q", got, want)
@@ -207,9 +207,113 @@ func TestAssembleRulesSnippets(t *testing.T) {
 }
 
 func TestAssembleRulesSnippets_Empty(t *testing.T) {
-	got := AssembleRulesSnippets(nil)
+	got := AssembleRulesSnippets(nil, nil)
 	if got != "" {
 		t.Errorf("expected empty string, got %q", got)
+	}
+}
+
+func TestSnippetFuncFallback(t *testing.T) {
+	t.Run("func overrides static string", func(t *testing.T) {
+		kits := []*Kit{{
+			Name:          "test",
+			DockerSnippet: "STATIC\n",
+			DockerSnippetFunc: func(sc *SnippetConfig) string {
+				return "DYNAMIC\n"
+			},
+		}}
+		got := AssembleDockerSnippets(kits, nil)
+		if got != "DYNAMIC\n" {
+			t.Errorf("got %q, want DYNAMIC", got)
+		}
+	})
+
+	t.Run("static used when no func", func(t *testing.T) {
+		kits := []*Kit{{Name: "test", DockerSnippet: "STATIC\n"}}
+		got := AssembleDockerSnippets(kits, nil)
+		if got != "STATIC\n" {
+			t.Errorf("got %q, want STATIC", got)
+		}
+	})
+
+	t.Run("func receives nil config when no accessor", func(t *testing.T) {
+		var received *SnippetConfig
+		kits := []*Kit{{
+			Name: "test",
+			DockerSnippetFunc: func(sc *SnippetConfig) string {
+				received = sc
+				return "OK\n"
+			},
+		}}
+		AssembleDockerSnippets(kits, nil)
+		if received != nil {
+			t.Error("expected nil SnippetConfig when kitConfig accessor is nil")
+		}
+	})
+
+	t.Run("func receives config from accessor", func(t *testing.T) {
+		var received *SnippetConfig
+		kits := []*Kit{{
+			Name: "test",
+			DockerSnippetFunc: func(sc *SnippetConfig) string {
+				received = sc
+				return "OK\n"
+			},
+		}}
+		accessor := func(name string) *SnippetConfig {
+			if name == "test" {
+				return &SnippetConfig{Versions: []string{"1"}}
+			}
+			return nil
+		}
+		AssembleDockerSnippets(kits, accessor)
+		if received == nil || len(received.Versions) != 1 {
+			t.Error("expected SnippetConfig with versions to be passed to func")
+		}
+	})
+
+	t.Run("rules func fallback", func(t *testing.T) {
+		kits := []*Kit{{
+			Name:         "a",
+			RulesSnippet: "STATIC\n",
+			RulesSnippetFunc: func(sc *SnippetConfig) string {
+				return "DYNAMIC\n"
+			},
+		}}
+		got := AssembleRulesSnippets(kits, nil)
+		if got != "DYNAMIC\n" {
+			t.Errorf("got %q, want DYNAMIC", got)
+		}
+	})
+}
+
+func TestAssembleProjectSnippets(t *testing.T) {
+	kits := []*Kit{
+		{Name: "a", ProjectSnippetFunc: func(sc *SnippetConfig) string { return "RUN a\n" }},
+		{Name: "b"}, // no func
+		{Name: "c", ProjectSnippetFunc: func(sc *SnippetConfig) string { return "" }}, // empty return
+	}
+	got := AssembleProjectSnippets(kits, nil)
+	if got != "RUN a\n" {
+		t.Errorf("got %q, want %q", got, "RUN a\n")
+	}
+}
+
+func TestAssembleEnvVars(t *testing.T) {
+	kits := []*Kit{
+		{Name: "a", EnvFunc: func(sc *SnippetConfig) map[string]string { return map[string]string{"A": "1"} }},
+		{Name: "b"}, // no func
+		{Name: "c", EnvFunc: func(sc *SnippetConfig) map[string]string { return nil }},
+	}
+	got := AssembleEnvVars(kits, nil)
+	if len(got) != 1 || got["A"] != "1" {
+		t.Errorf("got %v, want {A: 1}", got)
+	}
+
+	// No kits with env funcs
+	got = AssembleEnvVars([]*Kit{{Name: "x"}}, nil)
+	if got != nil {
+		t.Errorf("expected nil, got %v", got)
 	}
 }
 
@@ -492,6 +596,66 @@ func TestAggregateContainerArgs(t *testing.T) {
 		}
 		if args[0].Source != "working" {
 			t.Errorf("expected working kit arg, got source %q", args[0].Source)
+		}
+	})
+}
+
+func TestJavaSnippetGeneration(t *testing.T) {
+	java := Get("java")
+	if java == nil {
+		t.Fatal("java kit not registered")
+	}
+
+	t.Run("default versions when nil config", func(t *testing.T) {
+		s := java.DockerSnippetFunc(nil)
+		if !strings.Contains(s, "java@17") || !strings.Contains(s, "java@21") || !strings.Contains(s, "java@25") {
+			t.Errorf("expected default versions 17/21/25, got: %s", s)
+		}
+		if !strings.Contains(s, "java@21\n") {
+			t.Errorf("expected default version 21, got: %s", s)
+		}
+	})
+
+	t.Run("custom versions from config", func(t *testing.T) {
+		sc := &SnippetConfig{Versions: []string{"21"}, DefaultVersion: "21"}
+		s := java.DockerSnippetFunc(sc)
+		if !strings.Contains(s, "java@21") {
+			t.Errorf("expected java@21, got: %s", s)
+		}
+		if strings.Contains(s, "java@17") || strings.Contains(s, "java@25") {
+			t.Errorf("should not contain non-configured versions, got: %s", s)
+		}
+	})
+
+	t.Run("rules reflect configured versions", func(t *testing.T) {
+		sc := &SnippetConfig{Versions: []string{"17", "25"}, DefaultVersion: "25"}
+		s := java.RulesSnippetFunc(sc)
+		if !strings.Contains(s, "17, 25") || !strings.Contains(s, "default is 25") {
+			t.Errorf("rules should reflect configured versions, got: %s", s)
+		}
+	})
+
+	t.Run("env func returns default version", func(t *testing.T) {
+		sc := &SnippetConfig{DefaultVersion: "25"}
+		env := java.EnvFunc(sc)
+		if env["ASYLUM_JAVA_VERSION"] != "25" {
+			t.Errorf("expected ASYLUM_JAVA_VERSION=25, got %v", env)
+		}
+	})
+
+	t.Run("project snippet empty when default in versions", func(t *testing.T) {
+		sc := &SnippetConfig{Versions: []string{"17", "21", "25"}, DefaultVersion: "21"}
+		s := java.ProjectSnippetFunc(sc)
+		if s != "" {
+			t.Errorf("expected empty project snippet, got: %s", s)
+		}
+	})
+
+	t.Run("project snippet installs non-preinstalled version", func(t *testing.T) {
+		sc := &SnippetConfig{Versions: []string{"17", "21", "25"}, DefaultVersion: "11"}
+		s := java.ProjectSnippetFunc(sc)
+		if !strings.Contains(s, "java@11") {
+			t.Errorf("expected mise install java@11, got: %s", s)
 		}
 	})
 }

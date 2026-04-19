@@ -81,8 +81,8 @@ func TestMerge(t *testing.T) {
 				"java": {DefaultVersion: "21"},
 			}},
 			check: func(t *testing.T, c Config) {
-				if c.JavaVersion() != "21" {
-					t.Errorf("java version = %q, want 21", c.JavaVersion())
+				if c.KitOption("java").DefaultVersion != "21" {
+					t.Errorf("java version = %q, want 21", c.KitOption("java").DefaultVersion)
 				}
 				if !c.KitActive("node") {
 					t.Error("node should still be active")
@@ -144,8 +144,8 @@ func TestApplyFlags(t *testing.T) {
 	if len(result.Ports) != 2 {
 		t.Errorf("ports = %v, want 2 entries", result.Ports)
 	}
-	if result.JavaVersion() != "17" {
-		t.Errorf("java = %q, want %q", result.JavaVersion(), "17")
+	if result.KitOption("java").DefaultVersion != "17" {
+		t.Errorf("java = %q, want %q", result.KitOption("java").DefaultVersion, "17")
 	}
 }
 
@@ -179,8 +179,8 @@ func TestKitHelpers(t *testing.T) {
 		},
 	}
 
-	if cfg.JavaVersion() != "21" {
-		t.Errorf("JavaVersion() = %q, want 21", cfg.JavaVersion())
+	if cfg.KitOption("java").DefaultVersion != "21" {
+		t.Errorf("JavaVersion() = %q, want 21", cfg.KitOption("java").DefaultVersion)
 	}
 	if cfg.TabTitle() != "test" {
 		t.Errorf("TabTitle() = %q, want test", cfg.TabTitle())
@@ -479,8 +479,8 @@ func TestToolVersionsJava(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.JavaVersion() != "21.0.2" {
-			t.Errorf("java = %q, want %q", cfg.JavaVersion(), "21.0.2")
+		if cfg.KitOption("java").DefaultVersion != "21.0.2" {
+			t.Errorf("java = %q, want %q", cfg.KitOption("java").DefaultVersion, "21.0.2")
 		}
 	})
 
@@ -491,8 +491,8 @@ func TestToolVersionsJava(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.JavaVersion() != "25" {
-			t.Errorf("java = %q, want %q", cfg.JavaVersion(), "25")
+		if cfg.KitOption("java").DefaultVersion != "25" {
+			t.Errorf("java = %q, want %q", cfg.KitOption("java").DefaultVersion, "25")
 		}
 	})
 
@@ -504,8 +504,8 @@ func TestToolVersionsJava(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.JavaVersion() != "17" {
-			t.Errorf("java = %q, want %q (project config should override .tool-versions)", cfg.JavaVersion(), "17")
+		if cfg.KitOption("java").DefaultVersion != "17" {
+			t.Errorf("java = %q, want %q (project config should override .tool-versions)", cfg.KitOption("java").DefaultVersion, "17")
 		}
 	})
 
@@ -520,8 +520,8 @@ func TestToolVersionsJava(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.JavaVersion() != "21.0.2" {
-			t.Errorf("java = %q, want %q (.tool-versions should override global config)", cfg.JavaVersion(), "21.0.2")
+		if cfg.KitOption("java").DefaultVersion != "21.0.2" {
+			t.Errorf("java = %q, want %q (.tool-versions should override global config)", cfg.KitOption("java").DefaultVersion, "21.0.2")
 		}
 	})
 }

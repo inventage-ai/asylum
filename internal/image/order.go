@@ -17,11 +17,25 @@ type dockerSource struct {
 	Snippet  string
 }
 
+// kitSnippet returns the effective Docker snippet for a kit, preferring
+// the dynamic DockerSnippetFunc over the static DockerSnippet string.
+func kitSnippet(k *kit.Kit, kitConfig func(string) *kit.SnippetConfig) string {
+	if k.DockerSnippetFunc != nil {
+		var sc *kit.SnippetConfig
+		if kitConfig != nil {
+			sc = kitConfig(k.Name)
+		}
+		return k.DockerSnippetFunc(sc)
+	}
+	return k.DockerSnippet
+}
+
 // collectSources builds a list of dockerfile sources from resolved kits and agents.
-func collectSources(kits []*kit.Kit, agents []*agent.AgentInstall) []dockerSource {
+func collectSources(kits []*kit.Kit, kitConfig func(string) *kit.SnippetConfig, agents []*agent.AgentInstall) []dockerSource {
 	var sources []dockerSource
 	for _, k := range kits {
-		if k.DockerSnippet == "" {
+		snippet := kitSnippet(k, kitConfig)
+		if snippet == "" {
 			continue
 		}
 		p := k.DockerPriority
@@ -31,7 +45,7 @@ func collectSources(kits []*kit.Kit, agents []*agent.AgentInstall) []dockerSourc
 		sources = append(sources, dockerSource{
 			ID:       "kit:" + k.Name,
 			Priority: p,
-			Snippet:  k.DockerSnippet,
+			Snippet:  snippet,
 		})
 	}
 	for _, a := range agents {

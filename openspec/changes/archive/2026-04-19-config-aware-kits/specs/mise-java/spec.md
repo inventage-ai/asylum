@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: Java versions managed by mise
 The java kit's `DockerSnippetFunc` SHALL generate the mise install command from the configured `Versions` list (defaulting to `[17, 21, 25]` when no config is provided). The default version SHALL be set from `DefaultVersion` config (defaulting to `21`).
@@ -18,20 +18,6 @@ The java kit's `DockerSnippetFunc` SHALL generate the mise install command from 
 #### Scenario: Default version not in versions list
 - **WHEN** `default-version` specifies a version not in `versions`
 - **THEN** the kit's `ProjectSnippetFunc` SHALL return a snippet that installs the missing version via mise
-
-### Requirement: Gradle managed by mise
-The Dockerfile SHALL install Gradle via mise.
-
-#### Scenario: Gradle available
-- **WHEN** the container starts
-- **THEN** `gradle --version` succeeds
-
-### Requirement: mise activation in entrypoint
-The entrypoint SHALL activate mise to make managed tools available in PATH.
-
-#### Scenario: mise activation
-- **WHEN** the entrypoint runs
-- **THEN** `mise` is on PATH and Java/Gradle are available without manual PATH setup
 
 ### Requirement: Java version selection via ASYLUM_JAVA_VERSION
 The java kit's `EnvFunc` SHALL return `{"ASYLUM_JAVA_VERSION": defaultVersion}` when a default version is configured. The entrypoint snippet is unchanged.

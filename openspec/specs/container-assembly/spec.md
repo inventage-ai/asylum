@@ -41,6 +41,21 @@ The container SHALL mount the agent's asylum config dir and set agent-specific e
 - **WHEN** agent is claude
 - **THEN** RunArgs for the config dir mount and env vars SHALL have source `core`
 
+### Requirement: Kit-contributed environment variables in container
+The container assembly SHALL collect environment variables from all active kits that provide an `EnvFunc`. These SHALL be represented as RunArgs with source `kit` and priority 1, and SHALL NOT be hardcoded per-kit in the container assembly code.
+
+#### Scenario: Java kit contributes ASYLUM_JAVA_VERSION
+- **WHEN** the java kit is active with `default-version: 21`
+- **THEN** the container run args SHALL include `-e ASYLUM_JAVA_VERSION=21` with source `kit`
+
+#### Scenario: Kit returns no env vars
+- **WHEN** a kit's `EnvFunc` returns an empty map
+- **THEN** no env args SHALL be added for that kit
+
+#### Scenario: No hardcoded kit env vars
+- **WHEN** the container is assembled
+- **THEN** the container assembly code SHALL NOT contain any kit-specific env var logic (e.g., no `if java` checks)
+
 ### Requirement: Port forwarding
 Ports from user config and kit-allocated ports SHALL both be represented as RunArgs in the unified pipeline. User-configured ports SHALL have priority 2 (config), kit-allocated ports SHALL have priority 1 (kit). Deduplication on container port SHALL prevent conflicts.
 
