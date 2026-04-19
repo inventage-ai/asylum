@@ -1817,7 +1817,8 @@
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">java</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">default-version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;17&quot;</span><span class="w">     </span><span class="c1"># which JDK is the global default</span>
+<span class="w">    </span><span class="nt">versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">17</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">21</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">25</span><span class="p p-Indicator">]</span><span class="w">    </span><span class="c1"># which JDK versions to pre-install in the base image</span>
+<span class="w">    </span><span class="nt">default-version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;21&quot;</span><span class="w">     </span><span class="c1"># which JDK is the global default</span>
 </code></pre></div>
 <table>
 <thead>
@@ -1830,6 +1831,12 @@
 </thead>
 <tbody>
 <tr>
+<td><code>versions</code></td>
+<td>list</td>
+<td><code>[17, 21, 25]</code></td>
+<td>JDK versions installed in the base image via mise</td>
+</tr>
+<tr>
 <td><code>default-version</code></td>
 <td>string</td>
 <td><code>"21"</code></td>
@@ -1837,7 +1844,7 @@
 </tr>
 </tbody>
 </table>
-<p>JDK 17, 21, and 25 are always pre-installed. You can install additional versions at runtime with <code>mise install java@&lt;version&gt;</code>.</p>
+<p>If <code>default-version</code> is not in <code>versions</code>, it is installed in the project image instead of the base image. You can also install additional versions at runtime with <code>mise install java@&lt;version&gt;</code>.</p>
 <h2 id="sub-kits">Sub-Kits<a class="headerlink" href="#sub-kits" title="Permanent link">&para;</a></h2>
 <h3 id="javamaven">java/maven<a class="headerlink" href="#javamaven" title="Permanent link">&para;</a></h3>
 <p>Installs Maven via apt. Dependency cache persisted at <code>~/.m2</code>.</p>
