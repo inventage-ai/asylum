@@ -2,19 +2,25 @@
 
 ## Unreleased
 
+## 0.6.6 — 2026-04-20
+
+Shared-mode hygiene and kit revivals. Kit-provided Claude skills (`agent-browser`, `ast-grep`) are no longer bind-mounted over the user's `~/.claude/skills/` — they're loaded from inside the container via Claude's `--add-dir` flag, so the host directory stays untouched. The `rtk` kit works again against current upstream rtk releases. Alongside: a new `~/.agents` host mount, `.yaml`-extension config files, a lowered default port range, and several credential and config-merge fixes.
+
 ### Added
+- Mount host `~/.agents` directory into the container in shared agent mode, so host-installed skills that symlink into `~/.agents/` resolve inside the container (#24)
 - Project config files now accept a `.yaml` extension alias (`.asylum.yaml`, `.asylum.local.yaml`) so editors apply YAML syntax highlighting; `.asylum` and `.asylum.local` remain the defaults (#15)
-- Mount host `~/.agents` directory into the container in shared agent mode
+- Security model documentation page describing what asylum protects against and its deliberate non-goals
 
 ### Changed
 - Ports kit now allocates starting at port 7001 instead of 10000 — most browsers block access to the 10000+ range. Projects with an existing allocation at or above 10000 are automatically reassigned a new range on their next session.
 
 ### Fixed
-- Java kit now honors the configured `versions` list instead of always installing JDK 17, 21, and 25 (#26)
-- Kit credential configuration in overlay config files (`.asylum`, `.asylum.local`) was silently dropped during config merge
-- Credential config changes did not trigger the stale container warning because kit credentials were excluded from the config hash
 - Kit-provided Claude skills (`agent-browser`, `ast-grep`) no longer create empty directories in the user's host `~/.claude/skills/` in shared agent-config mode. Skills are now staged under `/opt/asylum-skills` inside the container and loaded via `--add-dir`. Users may safely remove any existing empty `~/.claude/skills/agent-browser/` or `~/.claude/skills/ast-grep/` directories left over from previous versions. (#24, #25)
 - `rtk` kit works again with recent rtk versions. Newer `rtk init -g` no longer creates a `~/.claude/hooks/` directory and instead expects the hook to be registered as the command `rtk hook claude` in `settings.json`. The kit now follows that pattern: the obsolete hook-script mounting is gone, and the entrypoint registers `rtk hook claude` directly as the PreToolUse hook command. The shared-mode pollution of the host `~/.claude/settings.json` tracked in #29 is not addressed by this change.
+- Java kit now honors the configured `versions` list instead of always installing JDK 17, 21, and 25 (#26)
+- Kit credential configuration in overlay config files (`.asylum`, `.asylum.local`) was silently dropped during config merge (#28)
+- Credential config changes did not trigger the stale container warning because kit credentials were excluded from the config hash (#28)
+- Shadow `node_modules` volume chown used a hardcoded `claude` user name instead of the actual container UID, breaking permissions for hosts with a different username
 
 ## 0.6.5 — 2026-04-01
 
