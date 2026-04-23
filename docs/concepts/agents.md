@@ -11,6 +11,7 @@ All agents run in YOLO mode (auto-approve all actions) by default.
 | [Claude Code](https://claude.ai) | `claude` | `--dangerously-skip-permissions` | `~/.claude` |
 | [Gemini CLI](https://github.com/google-gemini/gemini-cli) | `gemini` | `--yolo` | `~/.gemini` |
 | [Codex](https://github.com/openai/codex) | `codex` | `--yolo` | `~/.codex` |
+| [Pi](https://github.com/mariozechner/pi-coding-agent) | `pi` | (none) | `~/.pi` |
 
 ## Selecting an Agent
 
@@ -18,6 +19,7 @@ All agents run in YOLO mode (auto-approve all actions) by default.
 asylum                # Claude Code (default)
 asylum -a gemini      # Gemini CLI
 asylum -a codex       # Codex
+asylum -a pi          # Pi
 ```
 
 Or set it in your config:
@@ -62,4 +64,4 @@ Or via CLI:
 asylum --agents claude,gemini
 ```
 
-Agent installation requires their kit dependencies (Gemini and Codex need the `node` kit).
+Agent installation requires their kit dependencies (Gemini, Codex, and Pi need the `node` kit).

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- Pi coding agent support (`pi` agent option, installed via npm through fnm)
+
+### Fixed
+- `--agent <name>` now always includes that agent in the image build, even when not listed in the config file
+
 ## 0.6.6 — 2026-04-20
 
 Shared-mode hygiene and kit revivals. Kit-provided Claude skills (`agent-browser`, `ast-grep`) are no longer bind-mounted over the user's `~/.claude/skills/` — they're loaded from inside the container via Claude's `--add-dir` flag, so the host directory stays untouched. The `rtk` kit works again against current upstream rtk releases. Alongside: a new `~/.agents` host mount, `.yaml`-extension config files, a lowered default port range, and several credential and config-merge fixes.
