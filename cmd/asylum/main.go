@@ -165,7 +165,17 @@ func main() {
 	globalKits, projectKits := resolveKitTiers(projectDir, allKits)
 
 	// Resolve agent installs (nil defaults to claude-only)
+	agentName := cfg.Agent
+	if agentName == "" {
+		agentName = "claude"
+	}
 	agentMap := agentConfigToMap(cfg.Agents)
+	// Ensure the active agent is in the install map so it gets baked into the image
+	if agentMap == nil {
+		agentMap = map[string]bool{agentName: true}
+	} else if !agentMap[agentName] {
+		agentMap[agentName] = true
+	}
 	kitNames := make([]string, len(allKits))
 	for i, k := range allKits {
 		kitNames[i] = k.Name
@@ -176,11 +186,6 @@ func main() {
 	}
 
 	cacheDirs := kit.AggregateCacheDirs(allKits)
-
-	agentName := cfg.Agent
-	if agentName == "" {
-		agentName = "claude"
-	}
 
 	a, err := agent.Get(agentName)
 	if err != nil {

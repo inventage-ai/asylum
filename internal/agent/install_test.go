@@ -29,13 +29,13 @@ func TestResolveInstalls_EmptyMeansNone(t *testing.T) {
 }
 
 func TestResolveInstalls_ExplicitAll(t *testing.T) {
-	all := map[string]bool{"claude": true, "codex": true, "gemini": true, "opencode": true}
+	all := map[string]bool{"claude": true, "codex": true, "gemini": true, "opencode": true, "pi": true}
 	result, err := ResolveInstalls(all, []string{"node"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(result) != 4 {
-		t.Fatalf("expected 4 installs, got %d", len(result))
+	if len(result) != 5 {
+		t.Fatalf("expected 5 installs, got %d", len(result))
 	}
 }
 
@@ -60,10 +60,10 @@ func TestResolveInstalls_UnknownAgent(t *testing.T) {
 
 func TestAllInstallNames(t *testing.T) {
 	names := AllInstallNames()
-	if len(names) != 4 {
-		t.Fatalf("expected 4 agent installs, got %d: %v", len(names), names)
+	if len(names) != 5 {
+		t.Fatalf("expected 5 agent installs, got %d: %v", len(names), names)
 	}
-	expected := []string{"claude", "codex", "gemini", "opencode"}
+	expected := []string{"claude", "codex", "gemini", "opencode", "pi"}
 	for i, name := range expected {
 		if names[i] != name {
 			t.Errorf("names[%d] = %q, want %q", i, names[i], name)
