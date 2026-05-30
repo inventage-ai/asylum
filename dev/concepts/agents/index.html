@@ -1797,12 +1797,19 @@
 <td><code>--yolo</code></td>
 <td><code>~/.codex</code></td>
 </tr>
+<tr>
+<td><a href="https://github.com/mariozechner/pi-coding-agent">Pi</a></td>
+<td><code>pi</code></td>
+<td>(none)</td>
+<td><code>~/.pi</code></td>
+</tr>
 </tbody>
 </table>
 <h2 id="selecting-an-agent">Selecting an Agent<a class="headerlink" href="#selecting-an-agent" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code>asylum<span class="w">                </span><span class="c1"># Claude Code (default)</span>
 asylum<span class="w"> </span>-a<span class="w"> </span>gemini<span class="w">      </span><span class="c1"># Gemini CLI</span>
 asylum<span class="w"> </span>-a<span class="w"> </span>codex<span class="w">       </span><span class="c1"># Codex</span>
+asylum<span class="w"> </span>-a<span class="w"> </span>pi<span class="w">          </span><span class="c1"># Pi</span>
 </code></pre></div>
 <p>Or set it in your config:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">agent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini</span>
@@ -1827,7 +1834,7 @@ asylum<span class="w"> </span>-a<span class="w"> </span>gemini<span class="w"> <
 <p>Or via CLI:</p>
 <div class="highlight"><pre><span></span><code>asylum<span class="w"> </span>--agents<span class="w"> </span>claude,gemini
 </code></pre></div>
-<p>Agent installation requires their kit dependencies (Gemini and Codex need the <code>node</code> kit).</p>
+<p>Agent installation requires their kit dependencies (Gemini, Codex, and Pi need the <code>node</code> kit).</p>
 
 
 
