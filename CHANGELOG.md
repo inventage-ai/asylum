@@ -7,6 +7,7 @@
 
 ### Fixed
 - `--agent <name>` now always includes that agent in the image build, even when not listed in the config file
+- Cache directory volumes (`~/.gradle`, `~/.m2`, `~/.npm`, `~/.cache/pip`) are now correctly owned by the container user, fixing agent write failures introduced when caches switched to named Docker volumes
 
 ## 0.6.6 — 2026-04-20
 

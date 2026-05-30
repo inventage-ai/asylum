@@ -299,12 +299,15 @@ func main() {
 		}
 		freshContainer = true
 
-		// Fix ownership of shadow node_modules volumes (Docker creates them as root)
+		// Fix ownership of named volumes (Docker creates them as root)
+		uid := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 		if !cfg.ShadowNodeModulesOff() {
-			uid := fmt.Sprintf("%d:%d", os.Getuid(), os.Getgid())
 			for _, nm := range container.FindNodeModulesDirs(projectDir) {
 				docker.Exec(cname, "root", "chown", uid, nm)
 			}
+		}
+		for _, dst := range cacheDirs {
+			docker.Exec(cname, "root", "chown", uid, config.ExpandTilde(dst, home))
 		}
 
 		// Migrate old bind-mounted caches to named volumes (temporary)
