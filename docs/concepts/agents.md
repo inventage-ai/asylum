@@ -65,3 +65,24 @@ asylum --agents claude,gemini
 ```
 
 Agent installation requires their kit dependencies (Gemini, Codex, and Pi need the `node` kit).
+
+## Companions
+
+A primary agent can declare other installed agents as **companions**. When the primary launches, each companion's config dir is also mounted (writable) and its env vars are merged into the container, but the companion itself is not launched. This enables Claude Code plugins that shell out to other agent CLIs — for example, the codex Claude Code plugin invokes `codex` from inside a Claude session and needs `~/.codex` to be present.
+
+```yaml
+agents:
+  claude:
+    config: shared
+    companions: [codex]
+  codex:
+    config: shared
+```
+
+Notes:
+
+- Companions are **one-directional**: declaring `codex` as a companion of `claude` does **not** make `claude` a companion of `codex`. Running `asylum codex` ignores Claude's companion list.
+- Each companion's own `config` (shared/isolated/project) is used to resolve where its config dir comes from. So a companion in `shared` mode mounts the host's `~/.codex`; in `isolated` mode it mounts `~/.asylum/agents/codex`.
+- Companions must be in the installed agent set. If a listed companion isn't installed, asylum errors before starting the container.
+- On env var collisions between primary and companion, the primary wins and a warning is logged.
+- The list merges last-wins across config layers. Set `companions: []` in `.asylum` or `.asylum.local` to clear a list inherited from `~/.asylum/config.yaml`.

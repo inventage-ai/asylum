@@ -35,14 +35,15 @@ const (
 )
 
 type RunOpts struct {
-	Config     config.Config
-	Agent      agent.Agent
-	ImageTag   string
-	ProjectDir string
-	CacheDirs  map[string]string // tool name → container path
-	Kits       []*kit.Kit
-	Version    string
-	ConfigHash string // stored as container label for drift detection
+	Config        config.Config
+	Agent         agent.Agent
+	AgentInstalls []*agent.AgentInstall // installed agents for the image; used to validate companions
+	ImageTag      string
+	ProjectDir    string
+	CacheDirs     map[string]string // tool name → container path
+	Kits          []*kit.Kit
+	Version       string
+	ConfigHash    string // stored as container label for drift detection
 }
 
 // RunArgs assembles docker run arguments via a unified RunArg pipeline.
@@ -297,6 +298,26 @@ func coreVolumes(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 	}
 	vol(hostConfigDir, containerConfigDir, "")
 
+	// Companion agents — mount each companion's config dir using its own isolation
+	for _, name := range opts.Config.AgentCompanions(opts.Agent.Name()) {
+		if !agentInstalled(opts.AgentInstalls, name) {
+			return nil, fmt.Errorf("companion %q listed in agents.%s.companions is not installed; add it to your agent install set", name, opts.Agent.Name())
+		}
+		companion, err := agent.Get(name)
+		if err != nil {
+			return nil, fmt.Errorf("companion %q: %w", name, err)
+		}
+		companionHost, err := agent.ResolveConfigDir(companion, opts.Config.AgentIsolation(name), cname)
+		if err != nil {
+			return nil, fmt.Errorf("resolve companion %q config dir: %w", name, err)
+		}
+		os.MkdirAll(companionHost, 0755)
+		if resolved, err := filepath.EvalSymlinks(companionHost); err == nil {
+			companionHost = resolved
+		}
+		vol(companionHost, config.ExpandTilde(companion.ContainerConfigDir(), home), "")
+	}
+
 	// ~/.agents — shared agent registry (only in shared mode)
 	if opts.Config.AgentIsolation(opts.Agent.Name()) == "shared" {
 		agentsDir := filepath.Join(home, ".agents")
@@ -317,6 +338,16 @@ func coreVolumes(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 	return args, nil
 }
 
+// agentInstalled reports whether the named agent is in the installed set.
+func agentInstalled(installs []*agent.AgentInstall, name string) bool {
+	for _, i := range installs {
+		if i != nil && i.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // coreEnvVars produces RunArgs for agent and core environment variables.
 func coreEnvVars(home string, opts RunOpts) ([]kit.RunArg, error) {
 	var args []kit.RunArg
@@ -324,10 +355,27 @@ func coreEnvVars(home string, opts RunOpts) ([]kit.RunArg, error) {
 		args = append(args, kit.RunArg{Flag: "-e", Value: k + "=" + v, Source: "core", Priority: kit.PriorityCore})
 	}
 
-	// Agent env vars
+	// Agent env vars (primary wins on key collisions with companions)
+	seen := map[string]string{}
 	agentEnv := opts.Agent.EnvVars()
 	for _, k := range slices.Sorted(maps.Keys(agentEnv)) {
 		env(k, agentEnv[k])
+		seen[k] = opts.Agent.Name()
+	}
+	for _, name := range opts.Config.AgentCompanions(opts.Agent.Name()) {
+		companion, err := agent.Get(name)
+		if err != nil {
+			continue
+		}
+		cEnv := companion.EnvVars()
+		for _, k := range slices.Sorted(maps.Keys(cEnv)) {
+			if owner, ok := seen[k]; ok {
+				log.Warn("env var %q from companion %q ignored (already set by %q)", k, name, owner)
+				continue
+			}
+			env(k, cEnv[k])
+			seen[k] = name
+		}
 	}
 
 	env("COLORTERM", "truecolor")

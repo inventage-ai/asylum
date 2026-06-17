@@ -267,14 +267,15 @@ func main() {
 		}
 
 		runArgs, resolved, overrides, err := container.RunArgs(container.RunOpts{
-			Config:     cfg,
-			Agent:      a,
-			ImageTag:   imageTag,
-			ProjectDir: projectDir,
-			CacheDirs:  cacheDirs,
-			Kits:       allKits,
-			Version:    version,
-			ConfigHash: cfgHash,
+			Config:        cfg,
+			Agent:         a,
+			AgentInstalls: agentInstalls,
+			ImageTag:      imageTag,
+			ProjectDir:    projectDir,
+			CacheDirs:     cacheDirs,
+			Kits:          allKits,
+			Version:       version,
+			ConfigHash:    cfgHash,
 		})
 		if err != nil {
 			die("%v", err)

@@ -232,6 +232,36 @@ func TestSafeHostname(t *testing.T) {
 	}
 }
 
+// captureStdout redirects os.Stdout while fn runs and returns whatever was written.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	orig := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdout = w
+	done := make(chan string, 1)
+	go func() {
+		buf := make([]byte, 0, 4096)
+		chunk := make([]byte, 1024)
+		for {
+			n, err := r.Read(chunk)
+			if n > 0 {
+				buf = append(buf, chunk[:n]...)
+			}
+			if err != nil {
+				break
+			}
+		}
+		done <- string(buf)
+	}()
+	fn()
+	w.Close()
+	os.Stdout = orig
+	return <-done
+}
+
 func hasRunArg(args []kit.RunArg, flag, value string) bool {
 	for _, a := range args {
 		if a.Flag == flag && a.Value == value {
@@ -1378,5 +1408,368 @@ func TestGenerateSandboxRules_WithoutPorts(t *testing.T) {
 	}
 	if strings.Contains(string(data), "Forwarded Ports") {
 		t.Error("should not have Forwarded Ports section when no ports allocated")
+	}
+}
+
+// codexInstall builds an AgentInstall matching the codex agent name so tests
+// can satisfy the companion install validation without depending on init order
+// of the real registration.
+func codexInstall() *agent.AgentInstall {
+	return &agent.AgentInstall{Name: "codex"}
+}
+
+func TestCoreVolumesCompanionMount(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Companions: &[]string{"codex"}},
+			"codex":  {Config: "isolated"},
+		},
+	}
+
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{},
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+
+	args, err := coreVolumes(home, cname, opts)
+	if err != nil {
+		t.Fatalf("coreVolumes: %v", err)
+	}
+
+	// Codex companion in isolated mode mounts ~/.asylum/agents/codex into ~/.codex
+	wantHost := filepath.Join(home, ".asylum", "agents", "codex")
+	wantContainer := filepath.Join(home, ".codex")
+	wantMount := wantHost + ":" + wantContainer
+	if !hasRunArg(args, "-v", wantMount) {
+		t.Errorf("expected RunArg{Flag:\"-v\", Value:%q} in %v", wantMount, args)
+	}
+}
+
+func TestCoreVolumesCompanionSharedMount(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	hostCodex := filepath.Join(home, ".codex")
+	os.MkdirAll(hostCodex, 0755)
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Companions: &[]string{"codex"}},
+			"codex":  {Config: "shared"},
+		},
+	}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{},
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+
+	args, err := coreVolumes(home, cname, opts)
+	if err != nil {
+		t.Fatalf("coreVolumes: %v", err)
+	}
+
+	wantMount := hostCodex + ":" + hostCodex
+	if !hasRunArg(args, "-v", wantMount) {
+		t.Errorf("expected shared companion mount %q in %v", wantMount, args)
+	}
+}
+
+func TestCoreVolumesCompanionProjectMount(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Companions: &[]string{"codex"}},
+			"codex":  {Config: "project"},
+		},
+	}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{},
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+
+	args, err := coreVolumes(home, cname, opts)
+	if err != nil {
+		t.Fatalf("coreVolumes: %v", err)
+	}
+
+	wantHost := filepath.Join(home, ".asylum", "projects", cname, "codex-config")
+	wantContainer := filepath.Join(home, ".codex")
+	wantMount := wantHost + ":" + wantContainer
+	if !hasRunArg(args, "-v", wantMount) {
+		t.Errorf("expected project companion mount %q in %v", wantMount, args)
+	}
+}
+
+func TestCoreVolumesCompanionNotInstalled(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Companions: &[]string{"codex"}},
+		},
+	}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{},
+		AgentInstalls: nil, // codex not installed
+		ProjectDir:    projectDir,
+	}
+
+	_, err := coreVolumes(home, cname, opts)
+	if err == nil {
+		t.Fatal("expected error when companion not installed")
+	}
+	if !strings.Contains(err.Error(), "codex") {
+		t.Errorf("error should name missing companion, got: %v", err)
+	}
+}
+
+func TestCoreVolumesNoCompanions(t *testing.T) {
+	// Regression: behavior identical to pre-change when no companions are set.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	opts := RunOpts{
+		Config:     config.Config{},
+		Agent:      claudeStubAgent{},
+		ProjectDir: projectDir,
+	}
+	args, err := coreVolumes(home, cname, opts)
+	if err != nil {
+		t.Fatalf("coreVolumes: %v", err)
+	}
+	// Look for any companion-style codex mount; there should be none.
+	for _, a := range args {
+		if strings.Contains(a.Value, ".codex") {
+			t.Errorf("did not expect codex-related mount, got %v", a)
+		}
+	}
+}
+
+func TestCoreVolumesCompanionInverseRun(t *testing.T) {
+	// Config has claude declaring codex as a companion; running codex as primary
+	// must not consult claude's companion list.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Companions: &[]string{"codex"}},
+			"codex":  {Config: "isolated"},
+		},
+	}
+	// Primary is the stub posing as "codex" — reuse the default stubAgent.Name()
+	// returns "stub", which differs from "claude", so claude's companion list
+	// must not be applied. Build a stub that returns "codex" as Name.
+	primary := codexStubAgent{}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         primary,
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+	args, err := coreVolumes(home, cname, opts)
+	if err != nil {
+		t.Fatalf("coreVolumes: %v", err)
+	}
+	// No second codex mount expected since codex is primary, not companion of itself.
+	// Count -v args whose container path ends in /.codex
+	count := 0
+	for _, a := range args {
+		if a.Flag == "-v" && strings.HasSuffix(strings.SplitN(a.Value, ":", 2)[1], "/.codex") {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("expected exactly one /.codex mount (primary), got %d in %v", count, args)
+	}
+}
+
+// codexStubAgent is a stub whose Name() returns "codex", used to verify
+// that companion declarations on other agents do not affect this primary.
+type codexStubAgent struct{ stubAgent }
+
+func (codexStubAgent) Name() string               { return "codex" }
+func (codexStubAgent) ContainerConfigDir() string { return "/home/stub/.codex" }
+
+func TestCoreEnvVarsCompanion(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Companions: &[]string{"codex"}},
+		},
+	}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{stubAgent{envVars: map[string]string{"CLAUDE_CONFIG_DIR": "/home/stub/.claude"}}},
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+
+	args, err := coreEnvVars(home, opts)
+	if err != nil {
+		t.Fatalf("coreEnvVars: %v", err)
+	}
+
+	if !hasRunArg(args, "-e", "CLAUDE_CONFIG_DIR=/home/stub/.claude") {
+		t.Errorf("expected primary env var, got %v", args)
+	}
+	wantCodex := "CODEX_HOME=" + filepath.Join(home, ".codex")
+	if !hasRunArg(args, "-e", wantCodex) {
+		t.Errorf("expected companion env var %q, got %v", wantCodex, args)
+	}
+}
+
+func TestCoreEnvVarsCompanionCollisionPrimaryWins(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Companions: &[]string{"codex"}},
+		},
+	}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{stubAgent{envVars: map[string]string{"CODEX_HOME": "/primary-wins"}}},
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+
+	stdout := captureStdout(t, func() {
+		args, err := coreEnvVars(home, opts)
+		if err != nil {
+			t.Fatalf("coreEnvVars: %v", err)
+		}
+		if !hasRunArg(args, "-e", "CODEX_HOME=/primary-wins") {
+			t.Errorf("expected primary's CODEX_HOME, got %v", args)
+		}
+		companionVal := "CODEX_HOME=" + filepath.Join(home, ".codex")
+		if hasRunArg(args, "-e", companionVal) {
+			t.Errorf("companion's CODEX_HOME should not have won, but %q present in %v", companionVal, args)
+		}
+	})
+
+	if !strings.Contains(stdout, "CODEX_HOME") || !strings.Contains(stdout, "codex") {
+		t.Errorf("expected collision warning naming key and companion, got: %q", stdout)
+	}
+}
+
+func TestCoreEnvVarsCompanionNoCollisionNoWarning(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Companions: &[]string{"codex"}},
+		},
+	}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{stubAgent{envVars: map[string]string{"CLAUDE_CONFIG_DIR": "/home/stub/.claude"}}},
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+
+	stdout := captureStdout(t, func() {
+		if _, err := coreEnvVars(home, opts); err != nil {
+			t.Fatalf("coreEnvVars: %v", err)
+		}
+	})
+
+	if strings.Contains(stdout, "ignored") {
+		t.Errorf("did not expect collision warning, got: %q", stdout)
+	}
+}
+
+func TestCoreVolumesCompanionDoesNotSuppressAgentsMount(t *testing.T) {
+	// Companion's isolated mode must not block ~/.agents when primary is shared.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	os.MkdirAll(filepath.Join(home, ".agents"), 0755)
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Config: "shared", Companions: &[]string{"codex"}},
+			"codex":  {Config: "isolated"},
+		},
+	}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{},
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+	args, err := coreVolumes(home, cname, opts)
+	if err != nil {
+		t.Fatalf("coreVolumes: %v", err)
+	}
+	agentsMount := filepath.Join(home, ".agents") + ":" + filepath.Join(home, ".agents")
+	if !hasRunArg(args, "-v", agentsMount) {
+		t.Errorf("~/.agents must still be mounted when primary is shared, got %v", args)
+	}
+}
+
+func TestCoreVolumesCompanionDoesNotAffectAgentsMount(t *testing.T) {
+	// Companion's shared isolation must not pull in ~/.agents when primary is isolated.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectDir := t.TempDir()
+	cname := ContainerName(projectDir)
+
+	// Create ~/.agents so the mount would be eligible if logic were wrong.
+	os.MkdirAll(filepath.Join(home, ".agents"), 0755)
+
+	cfg := config.Config{
+		Agents: map[string]*config.AgentConfig{
+			"claude": {Config: "isolated", Companions: &[]string{"codex"}},
+			"codex":  {Config: "shared"},
+		},
+	}
+	opts := RunOpts{
+		Config:        cfg,
+		Agent:         claudeStubAgent{},
+		AgentInstalls: []*agent.AgentInstall{codexInstall()},
+		ProjectDir:    projectDir,
+	}
+	args, err := coreVolumes(home, cname, opts)
+	if err != nil {
+		t.Fatalf("coreVolumes: %v", err)
+	}
+	agentsMount := filepath.Join(home, ".agents") + ":" + filepath.Join(home, ".agents")
+	if hasRunArg(args, "-v", agentsMount) {
+		t.Errorf("~/.agents must not be mounted when primary is isolated, got %v", args)
 	}
 }

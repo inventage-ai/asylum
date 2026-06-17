@@ -4,6 +4,7 @@
 
 ### Added
 - Pi coding agent support (`pi` agent option, installed via npm through fnm)
+- Agent companions: `agents.<name>.companions` mounts other agents' config dirs and env vars into the container at runtime without launching them, enabling Claude Code plugins that shell out to other agent CLIs (e.g. the codex plugin)
 
 ### Fixed
 - `--agent <name>` now always includes that agent in the image build, even when not listed in the config file

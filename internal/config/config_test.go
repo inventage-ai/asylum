@@ -3,11 +3,13 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
 
-func ptrBool(b bool) *bool { return &b }
+func ptrBool(b bool) *bool                  { return &b }
+func ptrStrSlice(s ...string) *[]string     { v := append([]string(nil), s...); return &v }
 
 func TestMerge(t *testing.T) {
 	tests := []struct {
@@ -239,6 +241,135 @@ func TestAgentIsolation(t *testing.T) {
 		cfg := Config{}
 		if got := cfg.AgentIsolation("claude"); got != "" {
 			t.Errorf("got %q, want empty", got)
+		}
+	})
+}
+
+func TestAgentCompanions(t *testing.T) {
+	t.Run("returns configured list", func(t *testing.T) {
+		cfg := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice("codex", "gemini")},
+		}}
+		got := cfg.AgentCompanions("claude")
+		if !reflect.DeepEqual(got, []string{"codex", "gemini"}) {
+			t.Errorf("got %v, want [codex gemini]", got)
+		}
+	})
+	t.Run("returns nil when unset", func(t *testing.T) {
+		cfg := Config{Agents: map[string]*AgentConfig{"claude": {}}}
+		if got := cfg.AgentCompanions("claude"); got != nil {
+			t.Errorf("got %v, want nil", got)
+		}
+	})
+	t.Run("returns nil when explicitly empty", func(t *testing.T) {
+		cfg := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice()},
+		}}
+		if got := cfg.AgentCompanions("claude"); got != nil {
+			t.Errorf("got %v, want nil", got)
+		}
+	})
+	t.Run("strips self-reference", func(t *testing.T) {
+		cfg := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice("claude", "codex")},
+		}}
+		got := cfg.AgentCompanions("claude")
+		if !reflect.DeepEqual(got, []string{"codex"}) {
+			t.Errorf("got %v, want [codex]", got)
+		}
+	})
+	t.Run("dedupes duplicates", func(t *testing.T) {
+		cfg := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice("codex", "codex", "gemini")},
+		}}
+		got := cfg.AgentCompanions("claude")
+		if !reflect.DeepEqual(got, []string{"codex", "gemini"}) {
+			t.Errorf("got %v, want [codex gemini]", got)
+		}
+	})
+	t.Run("returns nil when only self-references remain", func(t *testing.T) {
+		cfg := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice("claude")},
+		}}
+		if got := cfg.AgentCompanions("claude"); got != nil {
+			t.Errorf("got %v, want nil", got)
+		}
+	})
+	t.Run("returns nil when agents nil", func(t *testing.T) {
+		cfg := Config{}
+		if got := cfg.AgentCompanions("claude"); got != nil {
+			t.Errorf("got %v, want nil", got)
+		}
+	})
+}
+
+func TestMergeAgentCompanions(t *testing.T) {
+	t.Run("overlay replaces base when set", func(t *testing.T) {
+		base := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice("codex")},
+		}}
+		over := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice("gemini")},
+		}}
+		got := Merge(base, over).AgentCompanions("claude")
+		if !reflect.DeepEqual(got, []string{"gemini"}) {
+			t.Errorf("got %v, want [gemini]", got)
+		}
+	})
+	t.Run("overlay nil preserves base", func(t *testing.T) {
+		base := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice("codex")},
+		}}
+		over := Config{Agents: map[string]*AgentConfig{
+			"claude": {Config: "shared"},
+		}}
+		got := Merge(base, over).AgentCompanions("claude")
+		if !reflect.DeepEqual(got, []string{"codex"}) {
+			t.Errorf("got %v, want [codex]", got)
+		}
+	})
+	t.Run("overlay empty list clears base", func(t *testing.T) {
+		base := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice("codex")},
+		}}
+		over := Config{Agents: map[string]*AgentConfig{
+			"claude": {Companions: ptrStrSlice()},
+		}}
+		got := Merge(base, over).AgentCompanions("claude")
+		if got != nil {
+			t.Errorf("got %v, want nil after clear", got)
+		}
+	})
+	t.Run("config field last-wins without affecting companions", func(t *testing.T) {
+		base := Config{Agents: map[string]*AgentConfig{
+			"claude": {Config: "isolated", Companions: ptrStrSlice("codex")},
+		}}
+		over := Config{Agents: map[string]*AgentConfig{
+			"claude": {Config: "shared"},
+		}}
+		merged := Merge(base, over)
+		if got := merged.AgentIsolation("claude"); got != "shared" {
+			t.Errorf("isolation = %q, want shared", got)
+		}
+		if got := merged.AgentCompanions("claude"); !reflect.DeepEqual(got, []string{"codex"}) {
+			t.Errorf("companions = %v, want [codex]", got)
+		}
+	})
+	t.Run("yaml empty list clears inherited via Load", func(t *testing.T) {
+		dir := t.TempDir()
+		os.WriteFile(filepath.Join(dir, ".asylum"), []byte("agents:\n  claude:\n    companions: [codex]\n"), 0644)
+		baseFromYAML, err := LoadFile(filepath.Join(dir, ".asylum"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		os.WriteFile(filepath.Join(dir, ".asylum.local"), []byte("agents:\n  claude:\n    companions: []\n"), 0644)
+		overFromYAML, err := LoadFile(filepath.Join(dir, ".asylum.local"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		merged := Merge(baseFromYAML, overFromYAML)
+		if got := merged.AgentCompanions("claude"); got != nil {
+			t.Errorf("expected empty-list overlay to clear inherited list, got %v", got)
 		}
 	})
 }

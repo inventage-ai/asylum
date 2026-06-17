@@ -65,8 +65,12 @@ type KitConfig struct {
 }
 
 // AgentConfig holds per-agent configuration.
+// Fields tagged merge:"concat" are accumulated (base + overlay) during config
+// merge. All other fields use last-wins semantics (overlay replaces base when
+// non-zero).
 type AgentConfig struct {
-	Config string `yaml:"config,omitempty"` // shared, isolated, project
+	Config     string    `yaml:"config,omitempty"`     // shared, isolated, project
+	Companions *[]string `yaml:"companions,omitempty"` // other agents whose configs are also mounted when this agent is primary; last-wins across config layers — set to [] in an overlay to clear an inherited list
 }
 
 // AgentIsolation returns the config isolation level for the named agent.
@@ -80,6 +84,31 @@ func (c Config) AgentIsolation(agentName string) string {
 		return ""
 	}
 	return ac.Config
+}
+
+// AgentCompanions returns the companion list for the named agent, de-duplicated
+// and with self-references stripped. Returns nil if no companions are configured.
+func (c Config) AgentCompanions(agentName string) []string {
+	if c.Agents == nil {
+		return nil
+	}
+	ac, ok := c.Agents[agentName]
+	if !ok || ac == nil || ac.Companions == nil || len(*ac.Companions) == 0 {
+		return nil
+	}
+	seen := map[string]bool{agentName: true}
+	out := make([]string, 0, len(*ac.Companions))
+	for _, name := range *ac.Companions {
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		out = append(out, name)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
 }
 
 type Config struct {
@@ -404,15 +433,13 @@ func Merge(base, overlay Config) Config {
 			result.Kits[name] = mergeKitConfig(result.Kits[name], overKC)
 		}
 	}
-	// Agents: per-key merge
+	// Agents: per-key deep merge
 	if overlay.Agents != nil {
 		if result.Agents == nil {
 			result.Agents = make(map[string]*AgentConfig, len(overlay.Agents))
 		}
-		for name, ac := range overlay.Agents {
-			if _, ok := result.Agents[name]; !ok {
-				result.Agents[name] = ac
-			}
+		for name, overAC := range overlay.Agents {
+			result.Agents[name] = mergeAgentConfig(result.Agents[name], overAC)
 		}
 	}
 
@@ -427,6 +454,31 @@ func Merge(base, overlay Config) Config {
 	}
 
 	return result
+}
+
+// mergeAgentConfig deep-merges two AgentConfig values using struct tags.
+// Fields tagged merge:"concat" are accumulated (base + overlay).
+// All other fields use last-wins: overlay replaces base when non-zero.
+func mergeAgentConfig(base, overlay *AgentConfig) *AgentConfig {
+	if base == nil {
+		return overlay
+	}
+	if overlay == nil {
+		return base
+	}
+	result := *base
+	rv := reflect.ValueOf(&result).Elem()
+	ov := reflect.ValueOf(overlay).Elem()
+	for i := range rv.NumField() {
+		of := ov.Field(i)
+		tag := rv.Type().Field(i).Tag.Get("merge")
+		if tag == "concat" {
+			rv.Field(i).Set(reflect.AppendSlice(rv.Field(i), of))
+		} else if !of.IsZero() {
+			rv.Field(i).Set(of)
+		}
+	}
+	return &result
 }
 
 // mergeKitConfig deep-merges two KitConfig values using struct tags.
