@@ -1520,6 +1520,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#companions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Companions
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1745,6 +1756,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#companions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Companions
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1835,6 +1857,23 @@ asylum<span class="w"> </span>-a<span class="w"> </span>gemini<span class="w"> <
 <div class="highlight"><pre><span></span><code>asylum<span class="w"> </span>--agents<span class="w"> </span>claude,gemini
 </code></pre></div>
 <p>Agent installation requires their kit dependencies (Gemini, Codex, and Pi need the <code>node</code> kit).</p>
+<h2 id="companions">Companions<a class="headerlink" href="#companions" title="Permanent link">&para;</a></h2>
+<p>A primary agent can declare other installed agents as <strong>companions</strong>. When the primary launches, each companion's config dir is also mounted (writable) and its env vars are merged into the container, but the companion itself is not launched. This enables Claude Code plugins that shell out to other agent CLIs — for example, the codex Claude Code plugin invokes <code>codex</code> from inside a Claude session and needs <code>~/.codex</code> to be present.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">agents</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">claude</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shared</span>
+<span class="w">    </span><span class="nt">companions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">codex</span><span class="p p-Indicator">]</span>
+<span class="w">  </span><span class="nt">codex</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shared</span>
+</code></pre></div>
+<p>Notes:</p>
+<ul>
+<li>Companions are <strong>one-directional</strong>: declaring <code>codex</code> as a companion of <code>claude</code> does <strong>not</strong> make <code>claude</code> a companion of <code>codex</code>. Running <code>asylum codex</code> ignores Claude's companion list.</li>
+<li>Each companion's own <code>config</code> (shared/isolated/project) is used to resolve where its config dir comes from. So a companion in <code>shared</code> mode mounts the host's <code>~/.codex</code>; in <code>isolated</code> mode it mounts <code>~/.asylum/agents/codex</code>.</li>
+<li>Companions must be in the installed agent set. If a listed companion isn't installed, asylum errors before starting the container.</li>
+<li>On env var collisions between primary and companion, the primary wins and a warning is logged.</li>
+<li>The list merges last-wins across config layers. Set <code>companions: []</code> in <code>.asylum</code> or <code>.asylum.local</code> to clear a list inherited from <code>~/.asylum/config.yaml</code>.</li>
+</ul>
 
 
 
