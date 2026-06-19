@@ -60,10 +60,10 @@ func TestResolveInstalls_UnknownAgent(t *testing.T) {
 
 func TestAllInstallNames(t *testing.T) {
 	names := AllInstallNames()
-	if len(names) != 5 {
-		t.Fatalf("expected 5 agent installs, got %d: %v", len(names), names)
+	if len(names) != 6 {
+		t.Fatalf("expected 6 agent installs, got %d: %v", len(names), names)
 	}
-	expected := []string{"claude", "codex", "gemini", "opencode", "pi"}
+	expected := []string{"claude", "codex", "copilot", "gemini", "opencode", "pi"}
 	for i, name := range expected {
 		if names[i] != name {
 			t.Errorf("names[%d] = %q, want %q", i, names[i], name)
