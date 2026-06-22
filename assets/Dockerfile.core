@@ -31,7 +31,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         # Process management
         procps psmisc \
         # Search tools
-        ripgrep fd-find && \
+        ripgrep fd-find \
+        # File type detection
+        file && \
+    # Expose fd-find under its canonical name (Debian ships it as fdfind)
+    ln -s "$(command -v fdfind)" /usr/local/bin/fd && \
     # Setup locale
     echo "en_US.UTF-8 UTF-8" > /etc/locale.gen && \
     locale-gen && \

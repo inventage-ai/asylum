@@ -15,6 +15,7 @@
 - **BREAKING**: `asylum` (agent mode) now starts a new agent session by default. Pre-this-release behaviour auto-resumed when a prior session existed; resume is now opt-in via `--continue`/`--resume` or `default-resume: true`. `-n/--new` is kept as a recognised no-op so existing scripts continue to parse.
 
 ### Fixed
+- `fd` is now available under its canonical name in the container (Debian ships the binary as `fdfind`); `file` is now installed in the base image
 - `--agent <name>` now always includes that agent in the image build, even when not listed in the config file
 - Cache directory volumes (`~/.gradle`, `~/.m2`, `~/.npm`, `~/.cache/pip`) are now correctly owned by the container user, fixing agent write failures introduced when caches switched to named Docker volumes
 
