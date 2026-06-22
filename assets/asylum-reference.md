@@ -262,6 +262,19 @@ kits:
     # isolation: project  # per-project keys in ~/.asylum/projects/<container>/ssh/
 ```
 
+### Using the generated key
+
+To view the public key from the host (so you can add it to a Git hosting provider):
+
+```sh
+cat ~/.asylum/ssh/id_ed25519.pub                              # isolated mode (default)
+cat ~/.asylum/projects/<container>/ssh/id_ed25519.pub         # project mode
+```
+
+Then paste it into your Git host's SSH keys settings (GitHub: *Settings → SSH and GPG keys*; GitLab: *Preferences → SSH Keys*). The container's user is `claude`, so when adding a host to `~/.ssh/known_hosts` from inside the container, the entry persists if the host's `known_hosts` file existed at container start (it is mounted read-write).
+
+You may also replace the generated key with your own — drop your private/public pair into `~/.asylum/ssh/` (isolated) or the project-specific directory (project mode), and asylum will mount them as-is without regenerating.
+
 ## Troubleshooting
 
 ### Container won't start

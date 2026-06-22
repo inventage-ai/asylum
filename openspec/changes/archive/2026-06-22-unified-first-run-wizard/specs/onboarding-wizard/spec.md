@@ -1,63 +1,4 @@
-### Requirement: Unified onboarding flow
-Before starting a container, the system SHALL collect all pending onboarding steps and present them as a single wizard flow. On first-run invocations, the flow SHALL include the agent selection step, the optional default-agent step, the kit selection step, the isolation step (if applicable), and the credentials step (if applicable). On non-first-run invocations, the flow SHALL include only the isolation and credentials steps when their values are unconfigured. The wizard SHALL run before `ensureImages` so image-shaping selections affect the build. If no steps are pending, the wizard SHALL be skipped entirely.
-
-#### Scenario: First run with all steps
-- **WHEN** the user runs `asylum` on a fresh install
-- **THEN** the wizard SHALL present agents, kits, isolation, and credentials in sequence (with the default-agent step appearing when applicable), all before any image build
-
-#### Scenario: Multiple pending steps for existing user
-- **WHEN** both config isolation and kit credentials are unconfigured and the invocation is not first-run
-- **THEN** the wizard SHALL present isolation and credentials in sequence (no agents/kits steps)
-
-#### Scenario: Single pending step for existing user
-- **WHEN** only config isolation is unconfigured and the invocation is not first-run
-- **THEN** the wizard SHALL present one step
-
-#### Scenario: No pending steps
-- **WHEN** all onboarding options are already configured and the invocation is not first-run
-- **THEN** the wizard SHALL be skipped and the system SHALL proceed to `ensureImages`
-
-#### Scenario: Non-interactive mode
-- **WHEN** stdin is not a TTY
-- **THEN** the system SHALL skip the wizard and use defaults for unconfigured options
-
-### Requirement: Onboarding step detection
-The system SHALL detect pending onboarding steps using two signals: first-run state (for agents and kits) and "not configured" state (for isolation and credentials). Each step fires when its trigger applies.
-
-#### Scenario: First-run state triggers agents and kits
-- **WHEN** the invocation is first-run (no `~/.asylum/config.yaml` at startup)
-- **THEN** the agents and kits steps SHALL be included
-
-#### Scenario: Non-first-run skips agents and kits
-- **WHEN** the invocation is not first-run
-- **THEN** the agents and kits steps SHALL NOT be included regardless of current config values
-
-#### Scenario: Isolation not configured
-- **WHEN** `agents.<agent>.config` is not set in the loaded config
-- **THEN** the isolation step SHALL be included in the wizard
-
-#### Scenario: Credentials not configured for active kit
-- **WHEN** an active kit has a non-nil CredentialFunc and its parent kit has no `credentials` config
-- **THEN** the credentials step SHALL be included in the wizard
-
-#### Scenario: V1 migration user
-- **WHEN** the user migrated from v1 (has `~/.asylum/agents/` but no credential config) and `~/.asylum/config.yaml` exists
-- **THEN** the credential step SHALL appear in the wizard, but the agents and kits steps SHALL NOT
-
-### Requirement: Onboarding result application
-After the wizard completes, the system SHALL apply all completed step results to `~/.asylum/config.yaml` and update the in-memory config. Steps that were not reached (due to cancel) SHALL not be applied.
-
-#### Scenario: All steps completed
-- **WHEN** the user completes all wizard steps
-- **THEN** all results SHALL be written to config and applied in-memory
-
-#### Scenario: Cancelled mid-wizard
-- **WHEN** the user cancels at step 2 of 3
-- **THEN** step 1's result SHALL be written to config, steps 2 and 3 SHALL not be applied
-
-#### Scenario: Cancelled at first step
-- **WHEN** the user cancels at step 1
-- **THEN** no config SHALL be written
+## ADDED Requirements
 
 ### Requirement: Agent selection step
 On first-run invocations, the wizard SHALL include a multi-select step listing all registered agents except `echo` (a test stub), with `claude` pre-checked. Selection SHALL write `agent:` and `agents:` entries to `~/.asylum/config.yaml`. The step SHALL be skipped when not first-run, regardless of how many agents are configured.
@@ -134,3 +75,51 @@ On first-run invocations where the wizard will present at least one step, the wi
 #### Scenario: Non-first run
 - **WHEN** the wizard is presented for an existing user (only isolation or credentials)
 - **THEN** the welcome banner SHALL NOT be shown
+
+## MODIFIED Requirements
+
+### Requirement: Unified onboarding flow
+Before starting a container, the system SHALL collect all pending onboarding steps and present them as a single wizard flow. On first-run invocations, the flow SHALL include the agent selection step, the optional default-agent step, the kit selection step, the isolation step (if applicable), and the credentials step (if applicable). On non-first-run invocations, the flow SHALL include only the isolation and credentials steps when their values are unconfigured. The wizard SHALL run before `ensureImages` so image-shaping selections affect the build. If no steps are pending, the wizard SHALL be skipped entirely.
+
+#### Scenario: First run with all steps
+- **WHEN** the user runs `asylum` on a fresh install
+- **THEN** the wizard SHALL present agents, kits, isolation, and credentials in sequence (with the default-agent step appearing when applicable), all before any image build
+
+#### Scenario: Multiple pending steps for existing user
+- **WHEN** both config isolation and kit credentials are unconfigured and the invocation is not first-run
+- **THEN** the wizard SHALL present isolation and credentials in sequence (no agents/kits steps)
+
+#### Scenario: Single pending step for existing user
+- **WHEN** only config isolation is unconfigured and the invocation is not first-run
+- **THEN** the wizard SHALL present one step
+
+#### Scenario: No pending steps
+- **WHEN** all onboarding options are already configured and the invocation is not first-run
+- **THEN** the wizard SHALL be skipped and the system SHALL proceed to `ensureImages`
+
+#### Scenario: Non-interactive mode
+- **WHEN** stdin is not a TTY
+- **THEN** the system SHALL skip the wizard and use defaults for unconfigured options
+
+### Requirement: Onboarding step detection
+The system SHALL detect pending onboarding steps using two signals: first-run state (for agents and kits) and "not configured" state (for isolation and credentials). Each step fires when its trigger applies.
+
+#### Scenario: First-run state triggers agents and kits
+- **WHEN** the invocation is first-run (no `~/.asylum/config.yaml` at startup)
+- **THEN** the agents and kits steps SHALL be included
+
+#### Scenario: Non-first-run skips agents and kits
+- **WHEN** the invocation is not first-run
+- **THEN** the agents and kits steps SHALL NOT be included regardless of current config values
+
+#### Scenario: Isolation not configured
+- **WHEN** `agents.<agent>.config` is not set in the loaded config
+- **THEN** the isolation step SHALL be included in the wizard
+
+#### Scenario: Credentials not configured for active kit
+- **WHEN** an active kit has a non-nil CredentialFunc and its parent kit has no `credentials` config
+- **THEN** the credentials step SHALL be included in the wizard
+
+#### Scenario: V1 migration user
+- **WHEN** the user migrated from v1 (has `~/.asylum/agents/` but no credential config) and `~/.asylum/config.yaml` exists
+- **THEN** the credential step SHALL appear in the wizard, but the agents and kits steps SHALL NOT

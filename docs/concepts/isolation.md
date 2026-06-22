@@ -4,7 +4,7 @@ Asylum controls how each agent's config directory (e.g. `~/.claude`) is managed 
 
 ## Modes
 
-### `shared`
+### `shared` (default)
 
 The host config directory is mounted directly into the container. Changes sync both ways — anything the agent writes inside the container is immediately visible on the host, and vice versa.
 
@@ -17,7 +17,7 @@ The host config directory is mounted directly into the container. Changes sync b
 
 **Trade-off:** no isolation. A misbehaving agent can modify your host config.
 
-### `isolated` (default)
+### `isolated`
 
 Agent config is stored in Asylum's own directory, separate from the host. On first run, Asylum seeds this by copying from the host config. After that, the two are independent.
 
@@ -51,14 +51,14 @@ Set the isolation mode in your config:
 # ~/.asylum/config.yaml (or .asylum / .asylum.local)
 agents:
   claude:
-    config: isolated   # shared | isolated | project
+    config: shared   # shared (default) | isolated | project
 ```
 
 ### First-Run Wizard
 
-On first run with Claude, Asylum prompts you to choose an isolation mode if one isn't configured. The choice is saved to `~/.asylum/config.yaml`. In non-interactive environments, `isolated` is used as the default.
+The [first-run wizard](first-run.md) prompts for Claude's isolation mode if one isn't configured. `shared` is pre-selected as recommended; the choice is saved to `~/.asylum/config.yaml`. In non-interactive environments, `shared` is used as the default.
 
-Other agents (Gemini, Codex) currently default to `isolated` without prompting.
+Other agents (Gemini, Codex, Copilot, Pi) follow the same `shared`-by-default behavior unless explicitly configured.
 
 ## Config Seeding
 

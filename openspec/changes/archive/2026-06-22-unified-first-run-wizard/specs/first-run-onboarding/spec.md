@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: First-run detection
 The system SHALL detect a first-run condition by checking whether `~/.asylum/config.yaml` exists at startup, captured before `WriteDefaults` runs. If the file does not exist, the system SHALL treat the invocation as first-run and SHALL run the full first-run wizard (agents + kits, in addition to isolation and credentials) before loading the resolved config used by `ensureImages`. The `~/.asylum/agents/` directory is no longer used as the first-run signal — it remains in use by the resume-migration prompt under different semantics.
@@ -15,46 +15,7 @@ The system SHALL detect a first-run condition by checking whether `~/.asylum/con
 - **WHEN** asylum starts non-interactively (stdin is not a TTY) on what would be a first-run invocation
 - **THEN** the system SHALL skip the wizard entirely and SHALL apply today's silent defaults (claude only, TierDefault kits, isolated config, no credentials)
 
-### Requirement: Credential file detection
-The system SHALL include a credentials step in the onboarding wizard when any active kit has credential support (non-nil CredentialFunc) but no `credentials` config is set. The step SHALL be a multiselect listing all credential-capable kits. Detection is based on "not configured" status, not first-run detection.
-
-#### Scenario: Kits with credential support available
-- **WHEN** an active kit has CredentialFunc and no credentials config
-- **THEN** the system SHALL include a credential multiselect step in the onboarding wizard
-
-#### Scenario: No kits with credential support
-- **WHEN** no active kits have a CredentialFunc
-- **THEN** the system SHALL not include a credential step in the wizard
-
-#### Scenario: Credentials already configured
-- **WHEN** all credential-capable kits already have `credentials` set (auto, explicit list, or false)
-- **THEN** the system SHALL not include a credential step in the wizard
-
-#### Scenario: Non-interactive mode
-- **WHEN** asylum starts non-interactively (stdin is not a TTY)
-- **THEN** the system SHALL skip the credential step and leave credentials off (default)
-
-### Requirement: Interactive credential mount prompt
-When the user selects kits in the credential wizard step, the system SHALL write `credentials: auto` for each selected kit into `~/.asylum/config.yaml`.
-
-#### Scenario: User selects kits
-- **WHEN** the user selects Java/Maven in the credential step and completes the wizard
-- **THEN** `~/.asylum/config.yaml` SHALL be updated with `kits: { java: { credentials: auto } }`
-
-#### Scenario: User selects no kits
-- **WHEN** the user confirms the credential step with no kits selected
-- **THEN** the system SHALL not write any credential config
-
-#### Scenario: User cancels before reaching credential step
-- **WHEN** the user cancels the wizard before the credential step
-- **THEN** the system SHALL not write any credential config
-
-### Requirement: Config file generation
-When the user accepts credential support for kits, the system SHALL write `credentials: auto` under each selected kit in `~/.asylum/config.yaml`, using yaml.Node manipulation to preserve existing config formatting and comments.
-
-#### Scenario: Config updated for selected kits
-- **WHEN** the user selects Java/Maven for credential support
-- **THEN** `~/.asylum/config.yaml` SHALL contain `credentials: auto` under the java kit entry
+## ADDED Requirements
 
 ### Requirement: First-run wizard ownership
 The `internal/firstrun/` package SHALL own the first-run wizard build, presentation, and result persistence. `cmd/asylum/main.go` SHALL call `firstrun.Run(...)` once, after `config.Load` and before `ensureImages`, and SHALL re-invoke `config.Load` when the wizard wrote any image-shaping settings (agents, kits) so the rebuilt config drives image generation.

@@ -20,7 +20,7 @@ func TestResolveConfigDir(t *testing.T) {
 		{"shared", "asylum-abc123-proj", filepath.Join(dir, ".claude")},
 		{"project", "asylum-abc123-proj", filepath.Join(dir, ".asylum", "projects", "asylum-abc123-proj", "claude-config")},
 		{"isolated", "asylum-abc123-proj", filepath.Join(dir, ".asylum", "agents", "claude")},
-		{"", "asylum-abc123-proj", filepath.Join(dir, ".asylum", "agents", "claude")},
+		{"", "asylum-abc123-proj", filepath.Join(dir, ".claude")},
 	}
 	for _, tt := range tests {
 		t.Run("isolation="+tt.isolation, func(t *testing.T) {

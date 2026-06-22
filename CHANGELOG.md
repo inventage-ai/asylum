@@ -13,6 +13,10 @@
 
 ### Changed
 - **BREAKING**: `asylum` (agent mode) now starts a new agent session by default. Pre-this-release behaviour auto-resumed when a prior session existed; resume is now opt-in via `--continue`/`--resume` or `default-resume: true`. `-n/--new` is kept as a recognised no-op so existing scripts continue to parse.
+- First-run experience: a single wizard now runs before the image build instead of after, and asks which coding agents and top-level kits to bake into the image (in addition to the existing isolation / credentials questions). Pressing enter through every step yields today's defaults. Subsequent runs skip the agents/kits questions.
+- Default agent config isolation flipped from `isolated` to `shared` — the wizard pre-selects "Shared with host" and the implicit default (non-interactive / unset config) now points at the host's native config dir. Set `agents.<name>.config: isolated` to restore the previous behaviour.
+- `ssh-keygen` no longer spams the terminal on first container start. The randomart and "Add this key to your Git host" preamble are gone; asylum prints a single line pointing at the in-container `asylum-reference.md`, which now includes the key-usage guidance.
+- A single "Building sandbox image — this takes a few minutes the first time" line prints before any actual `docker build`, so first-run users aren't staring at silence. Suppressed when both images are cache hits.
 
 ### Fixed
 - `fd` is now available under its canonical name in the container (Debian ships the binary as `fdfind`); `file` is now installed in the base image

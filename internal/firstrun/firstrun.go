@@ -5,16 +5,11 @@ import (
 	"path/filepath"
 )
 
-// Run detects a first-run condition. Credential prompting has moved to
-// the unified onboarding wizard in main.go. This function remains as a
-// shell for any future first-run-only tasks.
-// Uses ~/.asylum/agents/ as the signal that asylum has been used before.
-func Run(homeDir string) error {
-	agentsDir := filepath.Join(homeDir, ".asylum", "agents")
-	if _, err := os.Stat(agentsDir); err == nil {
-		return nil // existing user
-	}
-
-	// Future first-run-only tasks go here.
-	return nil
+// IsFirstRun reports whether `~/.asylum/config.yaml` is absent — the signal
+// that no prior asylum invocation has written its defaults. Capture this
+// value before any code path that might create the file (notably
+// `config.WriteDefaults`), otherwise the answer will always be false.
+func IsFirstRun(home string) bool {
+	_, err := os.Stat(filepath.Join(home, ".asylum", "config.yaml"))
+	return os.IsNotExist(err)
 }

@@ -1364,7 +1364,14 @@ func TestRunArgsSandboxRulesMount(t *testing.T) {
 		asylumConfigDir: agentConfigDir,
 	}
 	opts := RunOpts{
-		Config:     config.Config{},
+		// Explicit isolated mode so the mountpoint pre-create lands in
+		// agentConfigDir (`~/.asylum/agents/claude`); the empty-config
+		// default is `shared` and would target the host's native dir.
+		Config: config.Config{
+			Agents: map[string]*config.AgentConfig{
+				"claude": {Config: "isolated"},
+			},
+		},
 		Agent:      claudeStubAgent{stubAgent: a},
 		ImageTag:   "asylum:test",
 		ProjectDir: projectDir,

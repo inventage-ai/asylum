@@ -1,11 +1,13 @@
 package kit
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	"github.com/inventage-ai/asylum/internal/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -82,21 +84,15 @@ func ensureSSHKey(dir string) error {
 	hostname, _ := os.Hostname()
 	comment := fmt.Sprintf("asylum@%s", hostname)
 
+	var captured bytes.Buffer
 	cmd := exec.Command("ssh-keygen", "-t", "ed25519", "-f", keyPath, "-C", comment, "-N", "")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = &captured
+	cmd.Stderr = &captured
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("ssh-keygen: %w", err)
+		return fmt.Errorf("ssh-keygen: %w\n%s", err, captured.String())
 	}
 
-	pubKey, err := os.ReadFile(keyPath + ".pub")
-	if err != nil {
-		return fmt.Errorf("read public key: %w", err)
-	}
-
-	fmt.Printf("\nSSH public key:\n%s\n", pubKey)
-	fmt.Println("Add this key to your Git hosting provider, or replace with your own keys at", dir)
-
+	log.Info("Generated SSH key at %s.pub — see asylum-reference.md for usage.", keyPath)
 	return nil
 }
 

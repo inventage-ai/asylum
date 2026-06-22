@@ -327,8 +327,9 @@ func coreVolumes(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 		vol(companionHost, config.ExpandTilde(companion.ContainerConfigDir(), home), "")
 	}
 
-	// ~/.agents — shared agent registry (only in shared mode)
-	if opts.Config.AgentIsolation(opts.Agent.Name()) == "shared" {
+	// ~/.agents — shared agent registry (only in shared mode; empty defaults to shared)
+	switch opts.Config.AgentIsolation(opts.Agent.Name()) {
+	case "shared", "":
 		agentsDir := filepath.Join(home, ".agents")
 		if dirExists(agentsDir) {
 			vol(agentsDir, agentsDir, "")

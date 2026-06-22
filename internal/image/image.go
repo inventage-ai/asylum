@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 
 	"github.com/inventage-ai/asylum/assets"
 	"github.com/inventage-ai/asylum/internal/agent"
@@ -17,6 +18,17 @@ import (
 )
 
 const baseTag = "asylum:latest"
+
+// buildContextOnce ensures the "this takes a few minutes" preamble prints
+// at most once per asylum invocation, regardless of which Ensure* call
+// trips the first real build.
+var buildContextOnce sync.Once
+
+func announceBuild() {
+	buildContextOnce.Do(func() {
+		log.Info("Building sandbox image — this takes a few minutes the first time, subsequent runs reuse the cache.")
+	})
+}
 
 // writeCore writes a core asset to the builder, ensuring it ends with a blank line separator.
 func writeCore(b *strings.Builder, core []byte) {
@@ -157,6 +169,7 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitCon
 		return false, orderedIDs, nil
 	}
 
+	announceBuild()
 	log.Build("building base image...")
 
 	labels := map[string]string{
@@ -217,6 +230,7 @@ func EnsureProject(projectProfiles []*kit.Kit, allKits []*kit.Kit, packages map[
 		return tag, nil
 	}
 
+	announceBuild()
 	log.Build("building project image...")
 
 	labels := map[string]string{

@@ -47,20 +47,20 @@ func wrapZsh(cmd string) []string {
 }
 
 // ResolveConfigDir returns the host-side directory that backs the agent's
-// config inside the container. Which directory is used depends on the
-// isolation mode: "shared" → native config dir, "project" → per-project
-// dir, default ("isolated") → asylum agents dir.
+// config inside the container. Isolation mode: "isolated" → asylum agents
+// dir, "project" → per-project dir, "shared" (or empty, the default) →
+// native host config dir.
 func ResolveConfigDir(a Agent, isolation, containerName string) (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
 	switch isolation {
-	case "shared":
-		return config.ExpandTilde(a.NativeConfigDir(), home), nil
+	case "isolated":
+		return config.ExpandTilde(a.AsylumConfigDir(), home), nil
 	case "project":
 		return filepath.Join(home, ".asylum", "projects", containerName, a.Name()+"-config"), nil
 	default:
-		return config.ExpandTilde(a.AsylumConfigDir(), home), nil
+		return config.ExpandTilde(a.NativeConfigDir(), home), nil
 	}
 }

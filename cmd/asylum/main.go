@@ -121,16 +121,6 @@ func main() {
 		return
 	}
 
-	// Write default config on first run
-	if home, err := os.UserHomeDir(); err == nil {
-		cfgPath := filepath.Join(home, ".asylum", "config.yaml")
-		if err := os.MkdirAll(filepath.Dir(cfgPath), 0755); err != nil {
-			log.Error("create config directory: %v", err)
-		} else if err := config.WriteDefaults(cfgPath, kitSnippets); err != nil {
-			log.Error("write default config: %v", err)
-		}
-	}
-
 	containerMode := resolveMode(subcommand, flags.Admin)
 
 	home, err := os.UserHomeDir()
@@ -144,11 +134,14 @@ func main() {
 	// it, so this probe is unaffected by initialisation order.
 	existingInstall := firstrun.IsExistingInstall(home)
 
-	if err := firstrun.Run(home); err != nil {
-		die("first-run setup: %v", err)
+	// First-run detection must happen before any config.yaml write.
+	isFirstRun := firstrun.IsFirstRun(home)
+	cfgPath := filepath.Join(home, ".asylum", "config.yaml")
+	if err := os.MkdirAll(filepath.Dir(cfgPath), 0755); err != nil {
+		log.Error("create config directory: %v", err)
 	}
 
-	cfg, err := config.Load(projectDir, config.CLIFlags{
+	cliFlags := config.CLIFlags{
 		Agent:   flags.Agent,
 		Kits:    flags.Kits,
 		Agents:  flags.Agents,
@@ -156,9 +149,60 @@ func main() {
 		Volumes: flags.Volumes,
 		Env:     flags.Env,
 		Java:    flags.Java,
-	}, kitSnippets)
+	}
+
+	// On first-run we defer config writing until the wizard supplies the
+	// user's selections; on subsequent runs the default file is already in
+	// place.
+	if !isFirstRun {
+		if err := config.WriteDefaults(cfgPath, kitSnippets); err != nil {
+			log.Error("write default config: %v", err)
+		}
+	}
+
+	cfg, err := config.Load(projectDir, cliFlags, kitSnippets)
 	if err != nil {
 		die("load config: %v", err)
+	}
+
+	// Pre-resolve kits for credentials gating; wizard inspects this.
+	preWizardKits, err := kit.Resolve(cfg.KitNames(), cfg.DisabledKits())
+	if err != nil {
+		die("%v", err)
+	}
+
+	wizardOut, err := firstrun.Run(firstrun.WizardInput{
+		Home:       home,
+		IsFirstRun: isFirstRun,
+		Cfg:        &cfg,
+		AllKits:    preWizardKits,
+		Reload: func() (*config.Config, []*kit.Kit, error) {
+			c, err := config.Load(projectDir, cliFlags, kitSnippets)
+			if err != nil {
+				return nil, nil, err
+			}
+			k, err := kit.Resolve(c.KitNames(), c.DisabledKits())
+			if err != nil {
+				return nil, nil, err
+			}
+			return &c, k, nil
+		},
+	})
+	if err != nil {
+		die("first-run wizard: %v", err)
+	}
+
+	// When the wizard writes a new config (first-run agents/kits selections
+	// change image inputs), re-resolve so EnsureBase/EnsureProject see the
+	// updated layer. The wizard reloaded internally between phases, but the
+	// caller-side `cfg`/`preWizardKits` references still need the update —
+	// the wizard mutates `*in.Cfg` in place, but downstream re-resolutions
+	// (allKits, agentInstalls, etc.) run from `cfg` here.
+	if wizardOut.WroteConfig {
+		cfg, err = config.Load(projectDir, cliFlags, kitSnippets)
+		if err != nil {
+			die("load config: %v", err)
+		}
 	}
 
 	// Resolve all active kits from config
@@ -257,15 +301,18 @@ func main() {
 
 	// If no container running, build images and start one detached
 	if !docker.IsRunning(cname) {
-		// Onboarding wizard: prompt for any unconfigured options (isolation, credentials)
-		runOnboarding(&cfg, a, allKits, home)
-
-		// Ensure agent config exists — behavior depends on isolation level
+		// Ensure agent config exists — behavior depends on isolation level.
+		// Unset/empty defaults to "shared".
 		switch cfg.AgentIsolation(a.Name()) {
-		case "shared":
-			// Host dir used directly — no seeding needed
+		case "isolated":
+			seeded, err := container.EnsureAgentConfig(home, a)
+			if err != nil {
+				die("%v", err)
+			}
+			if seeded {
+				suppressResumeFromSeed = true
+			}
 		case "project":
-			// Seed per-project dir from host config
 			projConfigDir := filepath.Join(home, ".asylum", "projects", cname, a.Name()+"-config")
 			seeded, err := container.EnsureAgentConfigAt(home, a, projConfigDir)
 			if err != nil {
@@ -274,14 +321,7 @@ func main() {
 			if seeded {
 				suppressResumeFromSeed = true
 			}
-		default: // "isolated" or empty
-			seeded, err := container.EnsureAgentConfig(home, a)
-			if err != nil {
-				die("%v", err)
-			}
-			if seeded {
-				suppressResumeFromSeed = true
-			}
+		default: // "shared" or empty — host dir used directly
 		}
 
 		runArgs, resolved, overrides, err := container.RunArgs(container.RunOpts{
@@ -1013,136 +1053,6 @@ func checkStaleContainer(cname, imageTag, cfgHash string) {
 	}
 	if existing != cfgHash {
 		log.Warn("config changed (volumes/env/ports) — restart with --rebuild to apply")
-	}
-}
-
-// runOnboarding collects all pending onboarding steps and presents them
-// as a single wizard flow. Each step fires when its config is not yet set.
-func runOnboarding(cfg *config.Config, a agent.Agent, allKits []*kit.Kit, home string) {
-	type applyFunc func(result tui.StepResult)
-	var steps []tui.WizardStep
-	var appliers []applyFunc
-
-	// Step: config isolation (if not set for Claude)
-	if a.Name() == "claude" && cfg.AgentIsolation(a.Name()) == "" {
-		steps = append(steps, tui.WizardStep{
-			Title:       "Config Isolation",
-			Description: "How should Claude's config (~/.claude) be managed inside the sandbox?",
-			Kind:        tui.StepSelect,
-			Options: []tui.Option{
-				{Label: "Shared with host", Description: "Use your host ~/.claude directly. Changes sync both ways."},
-				{Label: "Isolated (recommended)", Description: "Separate from host, shared across projects. This is the current default."},
-				{Label: "Project-isolated", Description: "Separate config per project. No state shared between projects."},
-			},
-			DefaultIdx: 1,
-		})
-		appliers = append(appliers, func(result tui.StepResult) {
-			levels := []string{"shared", "isolated", "project"}
-			level := levels[result.SelectIdx]
-			cfgPath := filepath.Join(home, ".asylum", "config.yaml")
-			if err := config.SetAgentIsolation(cfgPath, a.Name(), level); err != nil {
-				log.Error("save isolation config: %v", err)
-			}
-			if cfg.Agents == nil {
-				cfg.Agents = map[string]*config.AgentConfig{}
-			}
-			if cfg.Agents[a.Name()] == nil {
-				cfg.Agents[a.Name()] = &config.AgentConfig{}
-			}
-			cfg.Agents[a.Name()].Config = level
-		})
-	}
-
-	// Step: kit credentials — show all credential-capable kits, pre-select configured ones.
-	// Only show the step if at least one kit is unconfigured.
-	var credKits []*kit.Kit
-	hasUnconfigured := false
-	for _, k := range allKits {
-		if k.CredentialFunc == nil {
-			continue
-		}
-		credKits = append(credKits, k)
-		parent, _, _ := strings.Cut(k.Name, "/")
-		if cfg.KitCredentialMode(parent) == "" {
-			hasUnconfigured = true
-		}
-	}
-	if hasUnconfigured {
-		options := make([]tui.Option, len(credKits))
-		var preSelected []int
-		for i, k := range credKits {
-			label := k.CredentialLabel
-			if label == "" {
-				label = k.Name
-			}
-			desc := ""
-			if k.Name == "java/maven" {
-				desc = "Exposes matching server entries from ~/.m2/settings.xml"
-			}
-			if k.Name == "github" {
-				desc = "Extracts gh auth token for CLI authentication"
-			}
-			options[i] = tui.Option{Label: label, Description: desc}
-			parent, _, _ := strings.Cut(k.Name, "/")
-			if cfg.KitCredentialMode(parent) != "" {
-				preSelected = append(preSelected, i)
-			}
-		}
-		steps = append(steps, tui.WizardStep{
-			Title:       "Credentials",
-			Description: "Allow the sandbox to access host credentials for private registries and repositories (scoped to what the project needs, where possible).",
-			Kind:        tui.StepMultiSelect,
-			Options:     options,
-			DefaultSel:  preSelected,
-		})
-		appliers = append(appliers, func(result tui.StepResult) {
-			cfgPath := filepath.Join(home, ".asylum", "config.yaml")
-			selected := map[int]bool{}
-			for _, idx := range result.MultiIdx {
-				selected[idx] = true
-			}
-			for i, k := range credKits {
-				parent, _, _ := strings.Cut(k.Name, "/")
-				if selected[i] {
-					if err := config.SetKitCredentials(cfgPath, parent, "auto"); err != nil {
-						log.Error("save credential config: %v", err)
-					}
-					if cfg.Kits == nil {
-						cfg.Kits = map[string]*config.KitConfig{}
-					}
-					if cfg.Kits[parent] == nil {
-						cfg.Kits[parent] = &config.KitConfig{}
-					}
-					cfg.Kits[parent].Credentials = &config.Credentials{Auto: true}
-				} else if cfg.KitCredentialMode(parent) == "" {
-					if err := config.SetKitCredentials(cfgPath, parent, "false"); err != nil {
-						log.Error("save credential config: %v", err)
-					}
-					if cfg.Kits == nil {
-						cfg.Kits = map[string]*config.KitConfig{}
-					}
-					if cfg.Kits[parent] == nil {
-						cfg.Kits[parent] = &config.KitConfig{}
-					}
-					cfg.Kits[parent].Credentials = &config.Credentials{}
-				}
-			}
-		})
-	}
-
-	if len(steps) == 0 {
-		return
-	}
-
-	results, err := tui.Wizard(steps)
-	if err != nil {
-		die("aborted")
-	}
-
-	for i, r := range results {
-		if r.Completed {
-			appliers[i](r)
-		}
 	}
 }
 

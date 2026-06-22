@@ -1,22 +1,4 @@
-## ADDED Requirements
-
-### Requirement: SSH kit registration
-The system SHALL register an `ssh` kit with `TierAlwaysOn` tier, providing SSH key management and credential mounting.
-
-#### Scenario: Kit is always active
-- **WHEN** kits are resolved for any configuration
-- **THEN** the `ssh` kit SHALL be included regardless of config entries
-
-### Requirement: SSH isolation configuration
-The SSH kit SHALL support an `isolation` config key with values `isolated` (default), `shared`, and `project`.
-
-#### Scenario: No isolation configured
-- **WHEN** the SSH kit's isolation is not set in config
-- **THEN** the system SHALL default to `isolated` mode
-
-#### Scenario: Explicit isolation value
-- **WHEN** the SSH kit's isolation is set to `shared`, `isolated`, or `project`
-- **THEN** the system SHALL use that mode for key storage and mounting
+## MODIFIED Requirements
 
 ### Requirement: Isolated mode
 In `isolated` mode, the kit SHALL generate an ed25519 key pair at `~/.asylum/ssh/` if one does not exist, and mount the key pair into `~/.ssh/`. Key generation SHALL be silent on success: `ssh-keygen` stdout and stderr SHALL be captured and discarded when the process exits zero. On a non-zero exit, the captured output SHALL be included in the returned error. After a successful generation, the kit SHALL emit a single user-facing line via the project `log` package indicating the public key path and pointing at `asylum-reference.md` for usage details. The kit SHALL NOT print the public key contents, randomart, ssh-keygen banner, or instructions about adding the key to a Git host — those details live in `asylum-reference.md`.
@@ -37,13 +19,6 @@ In `isolated` mode, the kit SHALL generate an ed25519 key pair at `~/.asylum/ssh
 - **WHEN** the credential function runs in `isolated` mode and `~/.asylum/ssh/id_ed25519` exists
 - **THEN** no key generation SHALL occur, no success-line SHALL be emitted, and the existing key pair SHALL be mounted
 
-### Requirement: Shared mode
-In `shared` mode, the kit SHALL mount the host's entire `~/.ssh/` directory into the container in read-write mode without generating any keys.
-
-#### Scenario: Shared mode mounting
-- **WHEN** the credential function runs in `shared` mode
-- **THEN** `~/.ssh/` SHALL be mounted as a single read-write directory bind mount
-
 ### Requirement: Project mode
 In `project` mode, the kit SHALL generate a per-project ed25519 key pair at `~/.asylum/projects/<container>/ssh/` if one does not exist, and mount the key pair into `~/.ssh/`. The same silent-on-success / single-line-notice behavior as `isolated` mode SHALL apply, with the success line referencing the project-specific path.
 
@@ -55,28 +30,3 @@ In `project` mode, the kit SHALL generate a per-project ed25519 key pair at `~/.
 #### Scenario: Different projects get different keys
 - **WHEN** two projects use `project` mode
 - **THEN** each SHALL have its own key pair in its respective project directory
-
-### Requirement: Known hosts mounting
-In `isolated` and `project` modes, the host's `~/.ssh/known_hosts` SHALL be mounted at `~/.ssh/known_hosts` in read-write mode if the file exists.
-
-#### Scenario: Host known_hosts exists
-- **WHEN** the credential function runs in `isolated` or `project` mode and `~/.ssh/known_hosts` exists on the host
-- **THEN** it SHALL be mounted to `~/.ssh/known_hosts` in read-write mode
-
-#### Scenario: Host known_hosts does not exist
-- **WHEN** `~/.ssh/known_hosts` does not exist on the host
-- **THEN** no known_hosts mount SHALL be returned
-
-### Requirement: Credential mode bypass for always-on kits
-The container assembly credential loop SHALL treat unconfigured credential mode as `auto` for kits with `TierAlwaysOn` tier, instead of skipping them.
-
-#### Scenario: Always-on kit with no credential config
-- **WHEN** a `TierAlwaysOn` kit has a credential function and no credential mode is configured
-- **THEN** the credential function SHALL be called with `CredentialAuto` mode
-
-### Requirement: Container name in credential opts
-The `CredentialOpts` struct SHALL include a `ContainerName` field so credential functions can resolve per-project paths.
-
-#### Scenario: Container name available to credential function
-- **WHEN** a kit's credential function is called
-- **THEN** the `ContainerName` field SHALL be populated with the current container name
