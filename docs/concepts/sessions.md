@@ -14,17 +14,31 @@ When a session exits, asylum checks for other active exec sessions inside the co
 
 ## Agent Resume
 
-Agents automatically resume their previous session by default. This means if you run `asylum`, close the terminal, and run `asylum` again, the agent picks up where it left off.
-
-Use `-n` / `--new` to start a fresh session:
+Each `asylum` invocation starts a new agent session by default. To resume the previous session, pass `--continue` or `--resume` — both are forwarded verbatim to the underlying agent (which has its own resume picker / behaviour):
 
 ```sh
-asylum -n
+asylum --continue
+asylum --resume
 ```
+
+To restore the pre-0.7 behaviour of automatically resuming whenever a prior session exists, set:
+
+```yaml
+# ~/.asylum/config.yaml
+default-resume: true
+```
+
+The flag is layered like every other config value — set it globally, override per project in `.asylum`, or override per checkout in `.asylum.local`.
+
+`-n` / `--new` is a deprecated no-op kept so existing scripts continue to parse. Starting a new session is now the default.
+
+### Upgrade Dialog
+
+On the first `asylum` invocation after upgrading from an earlier release, asylum shows a one-time dialog explaining this change and offering to set `default-resume: true` for you. The dialog is shown once per installation and is skipped entirely for fresh installs.
 
 ### How Resume Detection Works
 
-Each agent has its own method for detecting previous sessions:
+When `default-resume: true` is on, each agent has its own method for detecting previous sessions:
 
 - **Claude Code**: Looks for `.jsonl` session files in `~/.asylum/agents/claude/projects/<encoded-path>/`
 - **Gemini CLI**: Checks for a `.project_root` file and chat history in `~/.asylum/agents/gemini/tmp/`
@@ -32,7 +46,7 @@ Each agent has its own method for detecting previous sessions:
 
 ### First Run Exception
 
-On the very first run (when agent config is seeded from the host), resume is skipped. The seeded data doesn't represent a container session, so the agent starts fresh.
+On the very first run (when agent config is seeded from the host), resume is skipped even with `default-resume: true`. The seeded data doesn't represent a container session, so the agent starts fresh.
 
 ## Container Naming
 

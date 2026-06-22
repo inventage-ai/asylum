@@ -700,7 +700,12 @@ type ExecOpts struct {
 	Agent         agent.Agent
 	ProjectDir    string
 	ExtraArgs     []string
-	NewSession    bool
+	// DefaultResume reflects the resolved `default-resume` config value for
+	// this invocation. When true (and the agent reports a prior session),
+	// asylum injects the agent-native resume flag. When false, asylum starts
+	// a new session — the user can still pass `--continue`/`--resume`
+	// directly via ExtraArgs.
+	DefaultResume bool
 	Config        config.Config
 	Kits          []*kit.Kit
 }
@@ -734,7 +739,7 @@ func agentCommand(opts ExecOpts) []string {
 		opts.Config.AgentIsolation(opts.Agent.Name()),
 		opts.ContainerName,
 	)
-	resume := err == nil && !opts.NewSession && opts.Agent.HasSession(configDir, opts.ProjectDir)
+	resume := opts.DefaultResume && err == nil && opts.Agent.HasSession(configDir, opts.ProjectDir)
 	cmdOpts := agent.CmdOpts{}
 	if kit.AnyProvidesSkills(opts.Kits) {
 		cmdOpts.KitSkillsDir = "/opt/asylum-skills"

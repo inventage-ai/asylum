@@ -13,7 +13,9 @@ Flags can be used with any subcommand and override all config file settings.
 | `--java <version>` | Java version in container |
 | `--kits <list>` | Comma-separated kits to enable (e.g., `--kits java,python,docker`) |
 | `--agents <list>` | Comma-separated agents to install (e.g., `--agents claude,gemini`) |
-| `-n`, `--new` | Start a new session (skip auto-resume) |
+| `--continue` | Forwarded to the agent — resume the previous session |
+| `--resume` | Forwarded to the agent — resume the previous session |
+| `-n`, `--new` | Deprecated no-op (starting a new session is the default) |
 | `--rebuild` | Force rebuild the Docker image |
 | `--skip-onboarding` | Skip project onboarding tasks for this run |
 | `--cleanup` | Alias for [`cleanup`](../commands/cleanup.md) command |
@@ -37,8 +39,11 @@ Everything after `--` is forwarded to the agent command unchanged.
 # Start Gemini with port forwarding and an env var
 asylum -a gemini -p 3000 -e API_KEY=abc123
 
-# Fresh Claude session with image rebuild
-asylum -n --rebuild
+# Resume Claude's previous session
+asylum --continue
+
+# Force a fresh image build (new session is already the default)
+asylum --rebuild
 
 # Use only Java and Docker kits
 asylum --kits java,docker

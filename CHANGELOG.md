@@ -3,9 +3,15 @@
 ## Unreleased
 
 ### Added
+- `--continue` and `--resume` flags are now forwarded verbatim to the underlying agent (Claude, Gemini, Copilot, Pi). Use them to opt explicitly into the previous session.
+- `default-resume: true` config key restores the old auto-resume behaviour. Honoured at the global, project, and local config layers.
+- One-time upgrade dialog on the next interactive `asylum` invocation after this release, explaining the breaking default-flip below and offering to set `default-resume: true` automatically. Shown once; new installations skip it entirely.
 - Pi coding agent support (`pi` agent option, installed via npm through fnm)
 - Agent companions: `agents.<name>.companions` mounts other agents' config dirs and env vars into the container at runtime without launching them, enabling Claude Code plugins that shell out to other agent CLIs (e.g. the codex plugin)
 - GitHub Copilot CLI coding agent support (`copilot` agent option). Sessions are detected via `~/.copilot/session-state/`, resumed via `--resume`. When the `github` kit is active, copilot picks up the host's `gh` token automatically via the launch wrapper (`GH_TOKEN` exported from `gh auth token`).
+
+### Changed
+- **BREAKING**: `asylum` (agent mode) now starts a new agent session by default. Pre-this-release behaviour auto-resumed when a prior session existed; resume is now opt-in via `--continue`/`--resume` or `default-resume: true`. `-n/--new` is kept as a recognised no-op so existing scripts continue to parse.
 
 ### Fixed
 - `--agent <name>` now always includes that agent in the image build, even when not listed in the config file

@@ -10,7 +10,7 @@ Repository: https://github.com/inventage-ai/asylum
 1. **First run**: Asylum builds a base Docker image with all tools, then a project-specific image on top (for custom packages, Java versions, etc.)
 2. **Container start**: A detached container is started with the project directory bind-mounted at its real host path. The entrypoint configures git, SSH, direnv, and language managers, then sleeps.
 3. **Agent exec**: Asylum runs `docker exec` to start the agent (or shell) inside the running container.
-4. **Multiple sessions**: Additional `asylum` invocations attach to the same container. The container stays running until all sessions exit.
+4. **Sessions**: Each `asylum` invocation starts a new agent session by default. Pass `--continue` or `--resume` to forward those flags to the underlying agent and resume the previous session, or set `default-resume: true` in `~/.asylum/config.yaml` to make resume the default. `-n/--new` is a deprecated no-op kept for compatibility. Additional `asylum` invocations attach to the same container. The container stays running until all sessions exit.
 5. **Cleanup**: When the last session exits, the container is removed. Named volumes (caches, node_modules shadows) persist.
 
 Container names are deterministic: `asylum-<sha256(project_dir)[:12]>`. This means the same project directory always maps to the same container name.
@@ -42,6 +42,11 @@ agent: claude  # claude, gemini, codex, opencode
 
 # Release channel for self-update
 release-channel: stable  # stable, dev
+
+# Auto-resume the previous agent session on each `asylum` invocation. Off by
+# default — each invocation starts a new session. Use `--continue` or
+# `--resume` (forwarded to the agent) to opt into resume per-invocation.
+# default-resume: true
 
 # Agent CLIs to install in the container image
 agents:

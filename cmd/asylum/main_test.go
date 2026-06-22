@@ -83,9 +83,24 @@ func TestParseArgs(t *testing.T) {
 			wantFlags: cliFlags{Java: "21"},
 		},
 		{
-			name:      "new flag",
+			name:      "new flag is a recognised no-op",
 			args:      []string{"-n"},
-			wantFlags: cliFlags{New: true},
+			wantFlags: cliFlags{},
+		},
+		{
+			name:      "--new is a recognised no-op",
+			args:      []string{"--new"},
+			wantFlags: cliFlags{},
+		},
+		{
+			name:      "--continue is forwarded to agent",
+			args:      []string{"--continue"},
+			wantExtra: []string{"--continue"},
+		},
+		{
+			name:      "--resume is forwarded to agent",
+			args:      []string{"--resume"},
+			wantExtra: []string{"--resume"},
 		},
 		{
 			name:      "rebuild flag",
@@ -351,7 +366,7 @@ func TestParseArgs(t *testing.T) {
 		{
 			name:      "worktree does not consume next flag as name",
 			args:      []string{"--worktree", "-n"},
-			wantFlags: cliFlags{New: true},
+			wantFlags: cliFlags{},
 			wantExtra: []string{"--worktree"},
 		},
 

@@ -9,8 +9,9 @@ import (
 
 // State holds machine-managed state persisted at ~/.asylum/state.json.
 type State struct {
-	KnownKits        []string `json:"known_kits"`
-	DockerSourceOrder []string `json:"docker_source_order,omitempty"`
+	KnownKits                  []string `json:"known_kits"`
+	DockerSourceOrder          []string `json:"docker_source_order,omitempty"`
+	ResumeMigrationPromptShown bool     `json:"resume_migration_prompt_shown,omitempty"`
 }
 
 // LoadState reads state.json from the asylum directory. Returns an empty

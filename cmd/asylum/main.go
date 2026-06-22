@@ -138,6 +138,12 @@ func main() {
 		die("home dir: %v", err)
 	}
 
+	// Existing-user signal for the resume-migration dialog. Probes
+	// ~/.asylum/agents/, which is materialised lazily by EnsureAgentConfig —
+	// the early default-config write at ~/.asylum/config.yaml does not touch
+	// it, so this probe is unaffected by initialisation order.
+	existingInstall := firstrun.IsExistingInstall(home)
+
 	if err := firstrun.Run(home); err != nil {
 		die("first-run setup: %v", err)
 	}
@@ -201,7 +207,11 @@ func main() {
 	}
 
 	cname := container.ContainerName(projectDir)
-	newSession := flags.New
+	// If we freshly seed the agent config from the host this run, suppress
+	// asylum-injected resume even when the user has opted into
+	// `default-resume: true` — the host's session markers don't represent a
+	// container session.
+	suppressResumeFromSeed := false
 	freshContainer := false
 
 	// Always ensure images are up to date (cheap when nothing changed)
@@ -211,9 +221,17 @@ func main() {
 		log.Warn("load state: %v", err)
 	}
 
+	// One-time resume-migration dialog for users who installed asylum before
+	// the default-new-session behaviour change. New users are pre-marked here
+	// so they never see the dialog on a future asylum version. Mutates cfg
+	// when the user opts into legacy behaviour.
+	_, promptStateDirty := firstrun.MaybeShowResumeMigrationPrompt(
+		asylumDir, &state, &cfg, containerMode == container.ModeAgent, existingInstall,
+	)
+
 	containerRunning := docker.IsRunning(cname)
 	imageTag, stateChanged := ensureImages(globalKits, projectKits, allKits, agentInstalls, cfg, version, flags.Rebuild, &state, containerRunning)
-	if stateChanged {
+	if stateChanged || promptStateDirty {
 		if err := config.SaveState(asylumDir, state); err != nil {
 			log.Warn("save state: %v", err)
 		}
@@ -254,7 +272,7 @@ func main() {
 				die("%v", err)
 			}
 			if seeded {
-				newSession = true
+				suppressResumeFromSeed = true
 			}
 		default: // "isolated" or empty
 			seeded, err := container.EnsureAgentConfig(home, a)
@@ -262,7 +280,7 @@ func main() {
 				die("%v", err)
 			}
 			if seeded {
-				newSession = true
+				suppressResumeFromSeed = true
 			}
 		}
 
@@ -355,7 +373,7 @@ func main() {
 		Agent:         a,
 		ProjectDir:    projectDir,
 		ExtraArgs:     extraArgs,
-		NewSession:    newSession,
+		DefaultResume: cfg.ResumeByDefault() && !suppressResumeFromSeed,
 		Config:        cfg,
 		Kits:          allKits,
 	})
@@ -379,7 +397,6 @@ type cliFlags struct {
 	Volumes        []string
 	Env            map[string]string
 	Java           string
-	New            bool
 	Rebuild        bool
 	Cleanup        bool
 	Help           bool
@@ -472,7 +489,12 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 				i++
 			}
 		case arg == "-n" || arg == "--new":
-			flags.New = true
+			// Deprecated no-op: starting a new session is now the default.
+			// Kept so existing scripts/aliases continue to parse.
+			i++
+		case arg == "--continue" || arg == "--resume":
+			// Passthrough: the underlying agent owns resume semantics.
+			extraArgs = append(extraArgs, arg)
 			i++
 		case arg == "--rebuild":
 			flags.Rebuild = true
@@ -1149,7 +1171,9 @@ Flags:
   --java <version>     Java version in container
   --kits <list>    Comma-separated kits (default: all)
   --agents <list>      Comma-separated agents (default: claude)
-  -n, --new            Start new session (skip resume)
+  --continue           Forwarded to agent (resume previous session)
+  --resume             Forwarded to agent (resume previous session)
+  -n, --new            (deprecated, no-op — new session is now the default)
   --rebuild            Force rebuild Docker image
   --skip-onboarding    Skip project onboarding tasks
   --cleanup            Alias for cleanup command

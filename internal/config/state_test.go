@@ -79,6 +79,29 @@ func TestNewKits_DeletedState(t *testing.T) {
 	}
 }
 
+func TestState_ResumeMigrationPromptShown_RoundTrip(t *testing.T) {
+	dir := t.TempDir()
+	if err := SaveState(dir, State{ResumeMigrationPromptShown: true}); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := LoadState(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.ResumeMigrationPromptShown {
+		t.Error("ResumeMigrationPromptShown lost in round-trip")
+	}
+
+	// Default (missing field) is false.
+	loaded2, err := LoadState(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded2.ResumeMigrationPromptShown {
+		t.Error("missing field should default to false")
+	}
+}
+
 func TestLoadState_CorruptFile(t *testing.T) {
 	dir := t.TempDir()
 	os.WriteFile(filepath.Join(dir, "state.json"), []byte("not json"), 0644)

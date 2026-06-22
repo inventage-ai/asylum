@@ -115,11 +115,19 @@ type Config struct {
 	Version        string                  `yaml:"version,omitempty"`
 	Agent          string                  `yaml:"agent,omitempty"`
 	ReleaseChannel string                  `yaml:"release-channel,omitempty"`
+	DefaultResume  *bool                   `yaml:"default-resume,omitempty"`
 	Kits           map[string]*KitConfig   `yaml:"kits,omitempty"`
 	Agents         map[string]*AgentConfig `yaml:"agents,omitempty"`
 	Ports          []string                `yaml:"ports,omitempty"`
 	Volumes        []string                `yaml:"volumes,omitempty"`
 	Env            map[string]string       `yaml:"env,omitempty"`
+}
+
+// ResumeByDefault reports whether asylum should auto-resume the previous
+// agent session when no explicit --continue/--resume is passed. False unless
+// the user has opted into the legacy behaviour via `default-resume: true`.
+func (c Config) ResumeByDefault() bool {
+	return c.DefaultResume != nil && *c.DefaultResume
 }
 
 // KitActive returns true if the named kit is present and not disabled.
@@ -422,6 +430,9 @@ func Merge(base, overlay Config) Config {
 	}
 	if overlay.ReleaseChannel != "" {
 		result.ReleaseChannel = overlay.ReleaseChannel
+	}
+	if overlay.DefaultResume != nil {
+		result.DefaultResume = overlay.DefaultResume
 	}
 
 	// Kits: per-key deep merge

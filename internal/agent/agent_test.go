@@ -80,6 +80,30 @@ func TestClaudeCommand(t *testing.T) {
 	}
 }
 
+func TestClaudeCommand_ContinueResumePassthrough(t *testing.T) {
+	a := Claude{}
+	t.Run("--continue forwarded via extraArgs without resume", func(t *testing.T) {
+		cmd := a.Command(false, []string{"--continue"}, CmdOpts{})
+		assertZshWrapped(t, cmd, []string{"claude", "--dangerously-skip-permissions", "'--continue'"})
+	})
+	t.Run("--resume forwarded via extraArgs without resume", func(t *testing.T) {
+		cmd := a.Command(false, []string{"--resume"}, CmdOpts{})
+		assertZshWrapped(t, cmd, []string{"claude", "--dangerously-skip-permissions", "'--resume'"})
+	})
+}
+
+func TestGeminiCommand_ContinueResumePassthrough(t *testing.T) {
+	a := Gemini{}
+	t.Run("--resume forwarded via extraArgs without resume", func(t *testing.T) {
+		cmd := a.Command(false, []string{"--resume"}, CmdOpts{})
+		assertZshWrapped(t, cmd, []string{"gemini", "--yolo", "'--resume'"})
+	})
+	t.Run("--continue forwarded via extraArgs even though Gemini has its own resume flag", func(t *testing.T) {
+		cmd := a.Command(false, []string{"--continue"}, CmdOpts{})
+		assertZshWrapped(t, cmd, []string{"gemini", "--yolo", "'--continue'"})
+	})
+}
+
 func TestGeminiCommand(t *testing.T) {
 	a := Gemini{}
 	tests := []struct {

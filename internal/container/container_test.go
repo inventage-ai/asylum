@@ -459,37 +459,49 @@ func TestExecArgsAllModes(t *testing.T) {
 			want: []string{"exec", "-it", "test", "ls", "-la"},
 		},
 		{
-			name: "agent mode with new session (no resume)",
+			name: "agent mode default does not resume even when session exists",
 			opts: ExecOpts{
 				ContainerName: "test",
 				Mode:          ModeAgent,
-				NewSession:    true,
+				DefaultResume: false,
 				Agent:         stubAgent{hasSession: true},
 				ProjectDir:    projectDir,
 			},
 			want: []string{"exec", "-it", "test", "stub"},
 		},
 		{
-			name: "agent mode resumes when session exists",
+			name: "agent mode resumes when default-resume on and session exists",
 			opts: ExecOpts{
 				ContainerName: "test",
 				Mode:          ModeAgent,
-				NewSession:    false,
+				DefaultResume: true,
 				Agent:         stubAgent{hasSession: true},
 				ProjectDir:    projectDir,
 			},
 			want: []string{"exec", "-it", "test", "stub-resume"},
 		},
 		{
-			name: "agent mode no resume when session absent",
+			name: "agent mode no resume when default-resume on but session absent",
 			opts: ExecOpts{
 				ContainerName: "test",
 				Mode:          ModeAgent,
-				NewSession:    false,
+				DefaultResume: true,
 				Agent:         stubAgent{hasSession: false},
 				ProjectDir:    projectDir,
 			},
 			want: []string{"exec", "-it", "test", "stub"},
+		},
+		{
+			name: "agent mode passes --continue verbatim regardless of default",
+			opts: ExecOpts{
+				ContainerName: "test",
+				Mode:          ModeAgent,
+				DefaultResume: false,
+				Agent:         stubAgent{hasSession: false},
+				ProjectDir:    projectDir,
+				ExtraArgs:     []string{"--continue"},
+			},
+			want: []string{"exec", "-it", "test", "stub", "--continue"},
 		},
 	}
 
@@ -508,7 +520,7 @@ func TestExecArgsAgentExtraArgs(t *testing.T) {
 	opts := ExecOpts{
 		ContainerName: "test",
 		Mode:          ModeAgent,
-		NewSession:    false,
+		DefaultResume: false,
 		Agent:         stubAgent{hasSession: false},
 		ProjectDir:    dir,
 		ExtraArgs:     []string{"fix", "the", "bug"},
