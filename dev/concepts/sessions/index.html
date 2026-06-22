@@ -1450,6 +1450,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#upgrade-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade Dialog
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#how-resume-detection-works" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1709,6 +1720,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#upgrade-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Upgrade Dialog
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#how-resume-detection-works" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1788,19 +1810,27 @@
 </ol>
 <p>When a session exits, asylum checks for other active exec sessions inside the container. If none remain, the container is automatically removed.</p>
 <h2 id="agent-resume">Agent Resume<a class="headerlink" href="#agent-resume" title="Permanent link">&para;</a></h2>
-<p>Agents automatically resume their previous session by default. This means if you run <code>asylum</code>, close the terminal, and run <code>asylum</code> again, the agent picks up where it left off.</p>
-<p>Use <code>-n</code> / <code>--new</code> to start a fresh session:</p>
-<div class="highlight"><pre><span></span><code>asylum<span class="w"> </span>-n
+<p>Each <code>asylum</code> invocation starts a new agent session by default. To resume the previous session, pass <code>--continue</code> or <code>--resume</code> — both are forwarded verbatim to the underlying agent (which has its own resume picker / behaviour):</p>
+<div class="highlight"><pre><span></span><code>asylum<span class="w"> </span>--continue
+asylum<span class="w"> </span>--resume
 </code></pre></div>
+<p>To restore the pre-0.7 behaviour of automatically resuming whenever a prior session exists, set:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ~/.asylum/config.yaml</span>
+<span class="nt">default-resume</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+</code></pre></div>
+<p>The flag is layered like every other config value — set it globally, override per project in <code>.asylum</code>, or override per checkout in <code>.asylum.local</code>.</p>
+<p><code>-n</code> / <code>--new</code> is a deprecated no-op kept so existing scripts continue to parse. Starting a new session is now the default.</p>
+<h3 id="upgrade-dialog">Upgrade Dialog<a class="headerlink" href="#upgrade-dialog" title="Permanent link">&para;</a></h3>
+<p>On the first <code>asylum</code> invocation after upgrading from an earlier release, asylum shows a one-time dialog explaining this change and offering to set <code>default-resume: true</code> for you. The dialog is shown once per installation and is skipped entirely for fresh installs.</p>
 <h3 id="how-resume-detection-works">How Resume Detection Works<a class="headerlink" href="#how-resume-detection-works" title="Permanent link">&para;</a></h3>
-<p>Each agent has its own method for detecting previous sessions:</p>
+<p>When <code>default-resume: true</code> is on, each agent has its own method for detecting previous sessions:</p>
 <ul>
 <li><strong>Claude Code</strong>: Looks for <code>.jsonl</code> session files in <code>~/.asylum/agents/claude/projects/&lt;encoded-path&gt;/</code></li>
 <li><strong>Gemini CLI</strong>: Checks for a <code>.project_root</code> file and chat history in <code>~/.asylum/agents/gemini/tmp/</code></li>
 <li><strong>Codex</strong>: Uses a marker file at <code>~/.asylum/agents/codex/projects/&lt;encoded-path&gt;/.has_session</code></li>
 </ul>
 <h3 id="first-run-exception">First Run Exception<a class="headerlink" href="#first-run-exception" title="Permanent link">&para;</a></h3>
-<p>On the very first run (when agent config is seeded from the host), resume is skipped. The seeded data doesn't represent a container session, so the agent starts fresh.</p>
+<p>On the very first run (when agent config is seeded from the host), resume is skipped even with <code>default-resume: true</code>. The seeded data doesn't represent a container session, so the agent starts fresh.</p>
 <h2 id="container-naming">Container Naming<a class="headerlink" href="#container-naming" title="Permanent link">&para;</a></h2>
 <p>Container names are deterministic based on the project directory:</p>
 <div class="highlight"><pre><span></span><code>asylum-&lt;sha256(project_dir)[:6]&gt;

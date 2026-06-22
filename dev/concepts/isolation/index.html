@@ -1355,10 +1355,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#shared" class="md-nav__link">
+  <a href="#shared-default" class="md-nav__link">
     <span class="md-ellipsis">
       
-        shared
+        shared (default)
       
     </span>
   </a>
@@ -1366,10 +1366,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#isolated-default" class="md-nav__link">
+  <a href="#isolated" class="md-nav__link">
     <span class="md-ellipsis">
       
-        isolated (default)
+        isolated
       
     </span>
   </a>
@@ -1732,10 +1732,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#shared" class="md-nav__link">
+  <a href="#shared-default" class="md-nav__link">
     <span class="md-ellipsis">
       
-        shared
+        shared (default)
       
     </span>
   </a>
@@ -1743,10 +1743,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#isolated-default" class="md-nav__link">
+  <a href="#isolated" class="md-nav__link">
     <span class="md-ellipsis">
       
-        isolated (default)
+        isolated
       
     </span>
   </a>
@@ -1848,7 +1848,7 @@
 <h1 id="config-isolation">Config Isolation<a class="headerlink" href="#config-isolation" title="Permanent link">&para;</a></h1>
 <p>Asylum controls how each agent's config directory (e.g. <code>~/.claude</code>) is managed inside the container. Three isolation modes determine where config lives on the host and how it's mounted.</p>
 <h2 id="modes">Modes<a class="headerlink" href="#modes" title="Permanent link">&para;</a></h2>
-<h3 id="shared"><code>shared</code><a class="headerlink" href="#shared" title="Permanent link">&para;</a></h3>
+<h3 id="shared-default"><code>shared</code> (default)<a class="headerlink" href="#shared-default" title="Permanent link">&para;</a></h3>
 <p>The host config directory is mounted directly into the container. Changes sync both ways — anything the agent writes inside the container is immediately visible on the host, and vice versa.</p>
 <table>
 <thead>
@@ -1870,7 +1870,7 @@
 </table>
 <p><strong>Use when:</strong> you want identical config inside and outside the sandbox, or use the same API keys, MCP servers, and settings everywhere.</p>
 <p><strong>Trade-off:</strong> no isolation. A misbehaving agent can modify your host config.</p>
-<h3 id="isolated-default"><code>isolated</code> (default)<a class="headerlink" href="#isolated-default" title="Permanent link">&para;</a></h3>
+<h3 id="isolated"><code>isolated</code><a class="headerlink" href="#isolated" title="Permanent link">&para;</a></h3>
 <p>Agent config is stored in Asylum's own directory, separate from the host. On first run, Asylum seeds this by copying from the host config. After that, the two are independent.</p>
 <table>
 <thead>
@@ -1919,11 +1919,11 @@
 <div class="highlight"><pre><span></span><code><span class="c1"># ~/.asylum/config.yaml (or .asylum / .asylum.local)</span>
 <span class="nt">agents</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">claude</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">isolated</span><span class="w">   </span><span class="c1"># shared | isolated | project</span>
+<span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shared</span><span class="w">   </span><span class="c1"># shared (default) | isolated | project</span>
 </code></pre></div>
 <h3 id="first-run-wizard">First-Run Wizard<a class="headerlink" href="#first-run-wizard" title="Permanent link">&para;</a></h3>
-<p>On first run with Claude, Asylum prompts you to choose an isolation mode if one isn't configured. The choice is saved to <code>~/.asylum/config.yaml</code>. In non-interactive environments, <code>isolated</code> is used as the default.</p>
-<p>Other agents (Gemini, Codex) currently default to <code>isolated</code> without prompting.</p>
+<p>The <a href="../first-run/">first-run wizard</a> prompts for Claude's isolation mode if one isn't configured. <code>shared</code> is pre-selected as recommended; the choice is saved to <code>~/.asylum/config.yaml</code>. In non-interactive environments, <code>shared</code> is used as the default.</p>
+<p>Other agents (Gemini, Codex, Copilot, Pi) follow the same <code>shared</code>-by-default behavior unless explicitly configured.</p>
 <h2 id="config-seeding">Config Seeding<a class="headerlink" href="#config-seeding" title="Permanent link">&para;</a></h2>
 <p>In <code>isolated</code> and <code>project</code> modes, Asylum performs a one-time copy of your host agent config into the target directory on first run. This seeds API keys, settings, and other config so you don't have to set them up again.</p>
 <p>After seeding, the copy is independent — changes to the host config don't propagate. To re-seed, delete the asylum copy and restart.</p>

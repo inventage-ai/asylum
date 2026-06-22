@@ -1739,8 +1739,16 @@
 <td>Comma-separated agents to install (e.g., <code>--agents claude,gemini</code>)</td>
 </tr>
 <tr>
+<td><code>--continue</code></td>
+<td>Forwarded to the agent — resume the previous session</td>
+</tr>
+<tr>
+<td><code>--resume</code></td>
+<td>Forwarded to the agent — resume the previous session</td>
+</tr>
+<tr>
 <td><code>-n</code>, <code>--new</code></td>
-<td>Start a new session (skip auto-resume)</td>
+<td>Deprecated no-op (starting a new session is the default)</td>
 </tr>
 <tr>
 <td><code>--rebuild</code></td>
@@ -1774,8 +1782,11 @@ asylum<span class="w"> </span>-a<span class="w"> </span>gemini<span class="w"> <
 <div class="highlight"><pre><span></span><code><span class="c1"># Start Gemini with port forwarding and an env var</span>
 asylum<span class="w"> </span>-a<span class="w"> </span>gemini<span class="w"> </span>-p<span class="w"> </span><span class="m">3000</span><span class="w"> </span>-e<span class="w"> </span><span class="nv">API_KEY</span><span class="o">=</span>abc123
 
-<span class="c1"># Fresh Claude session with image rebuild</span>
-asylum<span class="w"> </span>-n<span class="w"> </span>--rebuild
+<span class="c1"># Resume Claude&#39;s previous session</span>
+asylum<span class="w"> </span>--continue
+
+<span class="c1"># Force a fresh image build (new session is already the default)</span>
+asylum<span class="w"> </span>--rebuild
 
 <span class="c1"># Use only Java and Docker kits</span>
 asylum<span class="w"> </span>--kits<span class="w"> </span>java,docker
