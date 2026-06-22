@@ -25,6 +25,11 @@ import (
 
 var invalidHostnameChars = regexp.MustCompile(`[^a-z0-9-]`)
 
+// reservedAgentEnv carries the active agent's name into the container. It is
+// set from the agent for the run and cannot be overridden by user config or
+// kit env vars, so in-container tooling can trust it to identify the agent.
+const reservedAgentEnv = "ASYLUM_AGENT"
+
 type Mode int
 
 const (
@@ -134,6 +139,10 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 
 	// User config: env vars
 	for _, k := range slices.Sorted(maps.Keys(opts.Config.Env)) {
+		if k == reservedAgentEnv {
+			log.Warn("env var %q is reserved for the active agent and cannot be set via config", k)
+			continue
+		}
 		if strings.ContainsAny(opts.Config.Env[k], "\n\r") {
 			return nil, nil, nil, fmt.Errorf("env var %q contains newlines, which Docker does not support", k)
 		}
@@ -385,9 +394,14 @@ func coreEnvVars(home string, opts RunOpts) ([]kit.RunArg, error) {
 	}
 	env("HISTFILE", filepath.Join(home, ".shell_history", "zsh_history"))
 	env("HOST_PROJECT_DIR", opts.ProjectDir)
+	env(reservedAgentEnv, opts.Agent.Name())
 
 	// Collect env vars from kits that provide an EnvFunc.
 	for k, v := range kit.AssembleEnvVars(opts.Kits, opts.Config.KitSnippetConfig) {
+		if k == reservedAgentEnv {
+			log.Warn("env var %q from a kit is reserved for the active agent and was ignored", k)
+			continue
+		}
 		args = append(args, kit.RunArg{Flag: "-e", Value: k + "=" + v, Source: "kit", Priority: kit.PriorityKit})
 	}
 

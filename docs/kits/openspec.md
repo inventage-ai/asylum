@@ -20,6 +20,16 @@ kits:
 
 The OpenSpec kit depends on `node` because it's installed via npm. If the Node.js kit is not active, Asylum emits a warning.
 
+## Setup
+
+To set up OpenSpec in a project that doesn't have it yet, run the bundled init script:
+
+```sh
+! asylum-openspec-init
+```
+
+This initializes OpenSpec non-interactively with Asylum's preferred settings: the `custom` workflow profile (`propose`, `explore`, `apply`, `verify`, `archive` — `verify` instead of `sync`), wired up for whichever agent is running. It is safe to re-run — on an already-initialized project it refreshes the instruction files instead. The agent will also run it automatically when you ask to use OpenSpec in an uninitialized project.
+
 ## Usage
 
 OpenSpec is used inside containers for structured change management:

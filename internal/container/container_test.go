@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -365,6 +366,7 @@ func TestCoreEnvVars(t *testing.T) {
 			"COLORTERM=truecolor",
 			"TERM=xterm-256color",
 			"HOST_PROJECT_DIR=/work/myproject",
+			"ASYLUM_AGENT=stub",
 		} {
 			if !hasRunArg(got, "-e", want) {
 				t.Errorf("expected RunArg{Flag:\"-e\", Value:%q} in %v", want, got)
@@ -1318,6 +1320,35 @@ func TestGenerateSandboxRules_NoKits(t *testing.T) {
 	// All kits should appear as disabled when none are active
 	if !strings.Contains(content, "## Disabled Kits") {
 		t.Error("should have Disabled Kits section listing available kits")
+	}
+}
+
+func TestRunArgsReservedAgentEnv(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	opts := RunOpts{
+		// User config tries to spoof the active agent identity.
+		Config:     config.Config{Env: map[string]string{"ASYLUM_AGENT": "codex"}},
+		Agent:      claudeStubAgent{},
+		ImageTag:   "asylum:test",
+		ProjectDir: t.TempDir(),
+		Version:    "1.0.0",
+	}
+
+	args, _, _, err := RunArgs(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, arg := range args {
+		if arg == "ASYLUM_AGENT=codex" {
+			t.Errorf("user config overrode reserved ASYLUM_AGENT: %v", args)
+		}
+	}
+	found := slices.Contains(args, "ASYLUM_AGENT=claude")
+	if !found {
+		t.Errorf("expected ASYLUM_AGENT=claude (active agent), got: %v", args)
 	}
 }
 
