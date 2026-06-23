@@ -16,3 +16,6 @@ var EntrypointTail []byte
 
 //go:embed asylum-reference.md
 var AsylumReference []byte
+
+//go:embed workspace-words.txt
+var WorkspaceWords []byte

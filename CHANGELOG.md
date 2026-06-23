@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Launching `asylum` from your home directory or the filesystem root (which can't be safely sandboxed) now redirects into a fresh workspace under `~/asylum-workspace/<date>-<three-words>/` instead of attempting to mount your entire home tree. The new path is announced on start.
 - `asylum-openspec-init`: a bundled container script that initializes OpenSpec non-interactively with Asylum's preferred profile (`custom` with `verify` instead of `sync`) and the active agent's toolset. Idempotent (refreshes an existing setup). The agent runs it automatically when asked to use OpenSpec in an uninitialized project; the openspec kit also seeds the preferred global config and exposes the active agent via the `ASYLUM_AGENT` env var.
 - `--continue` and `--resume` flags are now forwarded verbatim to the underlying agent (Claude, Gemini, Copilot, Pi). Use them to opt explicitly into the previous session.
 - `default-resume: true` config key restores the old auto-resume behaviour. Honoured at the global, project, and local config layers.

@@ -21,6 +21,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/term"
 	"github.com/inventage-ai/asylum/internal/tui"
+	"github.com/inventage-ai/asylum/internal/workspace"
 )
 
 var version = "dev"
@@ -65,6 +66,16 @@ func main() {
 	projectDir, err := filepath.Abs(".")
 	if err != nil {
 		die("resolve project dir: %v", err)
+	}
+
+	if home, err := os.UserHomeDir(); err != nil {
+		die("home dir: %v", err)
+	} else if dir, redirected, err := workspace.Resolve(projectDir, home); err != nil {
+		die("create workspace: %v", err)
+	} else if redirected {
+		log.Warn("Your home directory can't be sandboxed. Started a fresh workspace:")
+		log.Warn("  %s", dir)
+		projectDir = dir
 	}
 
 	kitSnippets := kit.AssembleConfigSnippets()
