@@ -2,27 +2,31 @@
 
 ## Unreleased
 
+## 0.7.0 — 2026-06-23
+
+Two new coding agents land — GitHub Copilot CLI and Pi — alongside agent companions, which let a Claude Code session reach other agents' CLIs (e.g. the codex plugin) without launching them. The headline behaviour change: `asylum` no longer auto-resumes the previous session by default — it starts fresh, with resume now opt-in via `--continue`/`--resume` or `default-resume: true`. Launching from your home directory or filesystem root is now caught and redirected into a fresh sandboxable workspace instead of failing.
+
 ### Added
-- Launching `asylum` from your home directory or the filesystem root (which can't be safely sandboxed) now redirects into a fresh workspace under `~/asylum-workspace/<date>-<three-words>/` instead of attempting to mount your entire home tree. The new path is announced on start.
+- GitHub Copilot CLI coding agent support (`copilot` agent option). Sessions are detected via `~/.copilot/session-state/`, resumed via `--resume`. When the `github` kit is active, copilot picks up the host's `gh` token automatically via the launch wrapper (`GH_TOKEN` exported from `gh auth token`).
+- Pi coding agent support (`pi` agent option, installed via npm through fnm).
+- Agent companions: `agents.<name>.companions` mounts other agents' config dirs and env vars into the container at runtime without launching them, enabling Claude Code plugins that shell out to other agent CLIs (e.g. the codex plugin).
 - `asylum-openspec-init`: a bundled container script that initializes OpenSpec non-interactively with Asylum's preferred profile (`custom` with `verify` instead of `sync`) and the active agent's toolset. Idempotent (refreshes an existing setup). The agent runs it automatically when asked to use OpenSpec in an uninitialized project; the openspec kit also seeds the preferred global config and exposes the active agent via the `ASYLUM_AGENT` env var.
+- Launching `asylum` from your home directory or the filesystem root (which can't be safely sandboxed) now redirects into a fresh workspace under `~/asylum-workspace/<date>-<three-words>/` instead of attempting to mount your entire home tree. The new path is announced on start.
 - `--continue` and `--resume` flags are now forwarded verbatim to the underlying agent (Claude, Gemini, Copilot, Pi). Use them to opt explicitly into the previous session.
 - `default-resume: true` config key restores the old auto-resume behaviour. Honoured at the global, project, and local config layers.
 - One-time upgrade dialog on the next interactive `asylum` invocation after this release, explaining the breaking default-flip below and offering to set `default-resume: true` automatically. Shown once; new installations skip it entirely.
-- Pi coding agent support (`pi` agent option, installed via npm through fnm)
-- Agent companions: `agents.<name>.companions` mounts other agents' config dirs and env vars into the container at runtime without launching them, enabling Claude Code plugins that shell out to other agent CLIs (e.g. the codex plugin)
-- GitHub Copilot CLI coding agent support (`copilot` agent option). Sessions are detected via `~/.copilot/session-state/`, resumed via `--resume`. When the `github` kit is active, copilot picks up the host's `gh` token automatically via the launch wrapper (`GH_TOKEN` exported from `gh auth token`).
 
 ### Changed
 - **BREAKING**: `asylum` (agent mode) now starts a new agent session by default. Pre-this-release behaviour auto-resumed when a prior session existed; resume is now opt-in via `--continue`/`--resume` or `default-resume: true`. `-n/--new` is kept as a recognised no-op so existing scripts continue to parse.
-- First-run experience: a single wizard now runs before the image build instead of after, and asks which coding agents and top-level kits to bake into the image (in addition to the existing isolation / credentials questions). Pressing enter through every step yields today's defaults. Subsequent runs skip the agents/kits questions.
 - Default agent config isolation flipped from `isolated` to `shared` — the wizard pre-selects "Shared with host" and the implicit default (non-interactive / unset config) now points at the host's native config dir. Set `agents.<name>.config: isolated` to restore the previous behaviour.
+- First-run experience: a single wizard now runs before the image build instead of after, and asks which coding agents and top-level kits to bake into the image (in addition to the existing isolation / credentials questions). Pressing enter through every step yields today's defaults. Subsequent runs skip the agents/kits questions.
 - `ssh-keygen` no longer spams the terminal on first container start. The randomart and "Add this key to your Git host" preamble are gone; asylum prints a single line pointing at the in-container `asylum-reference.md`, which now includes the key-usage guidance.
 - A single "Building sandbox image — this takes a few minutes the first time" line prints before any actual `docker build`, so first-run users aren't staring at silence. Suppressed when both images are cache hits.
 
 ### Fixed
-- `fd` is now available under its canonical name in the container (Debian ships the binary as `fdfind`); `file` is now installed in the base image
-- `--agent <name>` now always includes that agent in the image build, even when not listed in the config file
-- Cache directory volumes (`~/.gradle`, `~/.m2`, `~/.npm`, `~/.cache/pip`) are now correctly owned by the container user, fixing agent write failures introduced when caches switched to named Docker volumes
+- Cache directory volumes (`~/.gradle`, `~/.m2`, `~/.npm`, `~/.cache/pip`) are now correctly owned by the container user, fixing agent write failures introduced when caches switched to named Docker volumes.
+- `fd` is now available under its canonical name in the container (Debian ships the binary as `fdfind`); `file` is now installed in the base image.
+- `--agent <name>` now always includes that agent in the image build, even when not listed in the config file.
 
 ## 0.6.6 — 2026-04-20
 
