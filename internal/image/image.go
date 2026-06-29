@@ -15,6 +15,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/docker"
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/kit"
+	"github.com/inventage-ai/asylum/internal/versions"
 )
 
 const baseTag = "asylum:latest"
@@ -152,8 +153,8 @@ func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag stri
 // for optimal Docker layer caching. previousOrder is the source order from the
 // last successful build (from state.json). Returns (rebuilt, newOrder, err)
 // where newOrder should be saved to state on success.
-func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitConfig func(string) *kit.SnippetConfig, version string, noCache bool, previousOrder []string) (bool, []string, error) {
-	sources := collectSources(profiles, kitConfig, agentInstalls)
+func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitConfig func(string) *kit.SnippetConfig, version string, versions versions.VersionMap, noCache bool, previousOrder []string) (bool, []string, error) {
+	sources := collectSources(profiles, kitConfig, agentInstalls, versions)
 	orderedIDs := computeSourceOrder(sources, previousOrder)
 
 	snippetOf := map[string]string{}

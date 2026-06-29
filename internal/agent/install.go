@@ -90,6 +90,108 @@ func AssembleAgentBannerLines(installs []*AgentInstall) string {
 	return joinFields(installs, func(i *AgentInstall) string { return i.BannerLine })
 }
 
+// VersionedSnippet returns a Dockerfile snippet with a version ARG and
+// modified RUN instruction. Returns the original snippet if no version
+// is available for the agent.
+func (i *AgentInstall) VersionedSnippet(vm map[string]string) string {
+	ver, ok := vm[i.Name]
+	if !ok {
+		return i.DockerSnippet
+	}
+
+	switch i.Name {
+	case "gemini", "codex", "pi":
+		// npm agents: append @${VERSION} to package name within RUN
+		arg := versionArgName(i.Name)
+		snippet := replaceInRun(i.DockerSnippet, fmt.Sprintf(`npm install -g @%s/%s`, agentPrefix(i.Name), pkgName(i.Name)), fmt.Sprintf(`npm install -g @%s/%s@${%s}`, agentPrefix(i.Name), pkgName(i.Name), arg))
+		return fmt.Sprintf("ARG %s=%s\n%s\n", arg, ver, snippet)
+	case "claude":
+		// Claude install.sh accepts a version argument via bash -s --
+		snippet := strings.Replace(i.DockerSnippet, "| bash", "| bash -s -- ${CLAUDE_VERSION}", 1)
+		return fmt.Sprintf("ARG CLAUDE_VERSION=%s\n%s\n", ver, snippet)
+	case "copilot":
+		// Copilot install script accepts VERSION env var
+		snippet := strings.Replace(i.DockerSnippet, "RUN curl", "RUN VERSION=${COPILOT_VERSION} curl", 1)
+		return fmt.Sprintf("ARG COPILOT_VERSION=%s\n%s\n", ver, snippet)
+	case "opencode":
+		// Opencode install script accepts --version flag via bash -s --
+		snippet := strings.Replace(i.DockerSnippet, "| bash", "| bash -s -- --version ${OPENCODE_VERSION}", 1)
+		return fmt.Sprintf("ARG OPENCODE_VERSION=%s\n%s\n", ver, snippet)
+	default:
+		// Echo and unknown agents: no version injection
+		return i.DockerSnippet
+	}
+}
+
+// agentPrefix returns the npm scope prefix for an agent (empty for root scope).
+func agentPrefix(name string) string {
+	switch name {
+	case "gemini":
+		return "google"
+	case "codex":
+		return "openai"
+	case "pi":
+		return "earendil-works"
+	default:
+		return ""
+	}
+}
+
+// pkgName returns the package name part (after the scope) for npm agents.
+func pkgName(name string) string {
+	switch name {
+	case "gemini":
+		return "gemini-cli"
+	case "codex":
+		return "codex"
+	case "pi":
+		return "pi-coding-agent"
+	default:
+		return name
+	}
+}
+
+// replaceInRun finds the install command within the Docker snippet and
+// replaces it with the versioned variant. It preserves surrounding whitespace
+// and multi-line structure (comments, continuation lines).
+func replaceInRun(snippet, old, new string) string {
+	lines := strings.Split(snippet, "\n")
+	for i, line := range lines {
+		if strings.Contains(line, old) {
+			lines[i] = strings.Replace(line, old, new, 1)
+			break
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
+// versionArgName returns the uppercase version ARG name for an npm agent.
+func versionArgName(name string) string {
+	switch name {
+	case "gemini":
+		return "GEMINI_VERSION"
+	case "codex":
+		return "CODEX_VERSION"
+	case "pi":
+		return "PI_VERSION"
+	default:
+		return strings.ToUpper(name) + "_VERSION"
+	}
+}
+
+// AssembleVersionedAgentSnippets concatenates versioned DockerSnippets
+// from the given installs using the provided version map.
+func AssembleVersionedAgentSnippets(installs []*AgentInstall, versions map[string]string) string {
+	var b strings.Builder
+	for _, i := range installs {
+		s := i.VersionedSnippet(versions)
+		if s != "" {
+			b.WriteString(s)
+		}
+	}
+	return b.String()
+}
+
 // joinFields concatenates non-empty field values, ensuring each ends with a newline.
 func joinFields(installs []*AgentInstall, field func(*AgentInstall) string) string {
 	var b strings.Builder

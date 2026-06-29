@@ -7,11 +7,12 @@ import (
 	"github.com/inventage-ai/asylum/assets"
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/kit"
+	"github.com/inventage-ai/asylum/internal/versions"
 )
 
 func allAgentInstalls(t *testing.T) []*agent.AgentInstall {
 	t.Helper()
-	all := map[string]bool{"claude": true, "codex": true, "gemini": true, "opencode": true}
+	all := map[string]bool{"claude": true, "codex": true, "gemini": true, "opencode": true, "copilot": true, "pi": true}
 	installs, err := agent.ResolveInstalls(all, []string{"node"})
 	if err != nil {
 		t.Fatal(err)
@@ -31,7 +32,7 @@ func claudeOnlyInstalls(t *testing.T) []*agent.AgentInstall {
 // testOrderedDockerfile is a test helper that computes source order and
 // assembles the Dockerfile, returning the result and the ordered IDs.
 func testOrderedDockerfile(profiles []*kit.Kit, agents []*agent.AgentInstall) ([]byte, []string) {
-	sources := collectSources(profiles, nil, agents)
+	sources := collectSources(profiles, nil, agents, nil)
 	orderedIDs := computeSourceOrder(sources, nil)
 	snippetOf := map[string]string{}
 	for _, s := range sources {
@@ -213,7 +214,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	agents1 := allAgentInstalls(t)
 
 	_, order1 := testOrderedDockerfile(profiles, agents1)
-	sources1 := collectSources(profiles, nil, agents1)
+	sources1 := collectSources(profiles, nil, agents1, nil)
 	snippetOf1 := map[string]string{}
 	for _, s := range sources1 {
 		snippetOf1[s.ID] = s.Snippet
@@ -228,7 +229,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	// Different agents → different hash
 	agents2 := claudeOnlyInstalls(t)
 	_, order2 := testOrderedDockerfile(profiles, agents2)
-	sources2 := collectSources(profiles, nil, agents2)
+	sources2 := collectSources(profiles, nil, agents2, nil)
 	snippetOf2 := map[string]string{}
 	for _, s := range sources2 {
 		snippetOf2[s.ID] = s.Snippet
@@ -242,7 +243,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	java := []string{"java"}
 	javaOnly, _ := kit.Resolve(java, nil)
 	_, order3 := testOrderedDockerfile(javaOnly, agents1)
-	sources3 := collectSources(javaOnly, nil, agents1)
+	sources3 := collectSources(javaOnly, nil, agents1, nil)
 	snippetOf3 := map[string]string{}
 	for _, s := range sources3 {
 		snippetOf3[s.ID] = s.Snippet
@@ -371,5 +372,87 @@ func TestGenerateProjectDockerfile_WithoutProjectEntrypoint(t *testing.T) {
 	}
 	if strings.Contains(df, "project-entrypoint.sh") {
 		t.Error("should not reference project-entrypoint.sh when not present")
+	}
+}
+
+func TestVersionedAgentSnippets(t *testing.T) {
+	profiles, err := kit.Resolve(nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vm := versions.VersionMap{
+		"claude":   "0.2.32",
+		"gemini":   "0.8.0",
+		"codex":    "0.1.0",
+		"copilot":  "0.9.0",
+		"opencode": "1.0.0",
+		"pi":       "0.5.0",
+	}
+
+	sources := collectSources(profiles, nil, allAgentInstalls(t), vm)
+	orderedIDs := computeSourceOrder(sources, nil)
+	snippetOf := map[string]string{}
+	for _, s := range sources {
+		snippetOf[s.ID] = s.Snippet
+	}
+	df := assembleDockerfile(orderedIDs, snippetOf)
+	s := string(df)
+
+	// Check that version ARGs are present in the Dockerfile
+	for _, s := range sources {
+		if s.ID == "agent:copilot" {
+			}
+	}
+	if !strings.Contains(s, "ARG CLAUDE_VERSION=0.2.32") {
+		t.Error("missing Claude version ARG")
+	}
+	if !strings.Contains(s, "CLAUDE_VERSION") {
+		t.Error("missing CLAUDE_VERSION reference in snippet")
+	}
+	if !strings.Contains(s, "ARG GEMINI_VERSION=0.8.0") {
+		t.Error("missing Gemini version ARG")
+	}
+	if !strings.Contains(s, "@${GEMINI_VERSION}") {
+		t.Error("missing Gemini version reference")
+	}
+	if !strings.Contains(s, "ARG COPILOT_VERSION=0.9.0") {
+		t.Error("missing Copilot version ARG")
+	}
+	if !strings.Contains(s, "VERSION=${COPILOT_VERSION}") {
+		t.Error("missing Copilot version reference")
+	}
+	if !strings.Contains(s, "ARG OPENCODE_VERSION=1.0.0") {
+		t.Error("missing Opencode version ARG")
+	}
+
+	// Verify version-specific RUN commands don't contain "latest"
+	lines := strings.Split(s, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "gemini-cli") && strings.Contains(line, "latest") {
+			t.Errorf("Gemini install should not use 'latest': %s", line)
+		}
+	}
+}
+
+func TestVersionedSnippetCache(t *testing.T) {
+	// Test that passing nil version map falls back to unversioned snippets
+	sources := collectSources(nil, nil, allAgentInstalls(t), nil)
+	
+	// Find the Claude agent source
+	var claudeSnippet string
+	for _, s := range sources {
+		if s.ID == "agent:claude" {
+			claudeSnippet = s.Snippet
+			break
+		}
+	}
+	
+	// Without version map, should use original DockerSnippet
+	if !strings.Contains(claudeSnippet, "claude.ai/install.sh") {
+		t.Errorf("expected Claude install snippet, got: %s", claudeSnippet)
+	}
+	if strings.Contains(claudeSnippet, "ARG") {
+		t.Errorf("without version map, snippet should not contain ARG: %s", claudeSnippet)
 	}
 }

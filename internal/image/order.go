@@ -6,6 +6,7 @@ import (
 
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/kit"
+	"github.com/inventage-ai/asylum/internal/versions"
 )
 
 const defaultPriority = 50
@@ -31,7 +32,8 @@ func kitSnippet(k *kit.Kit, kitConfig func(string) *kit.SnippetConfig) string {
 }
 
 // collectSources builds a list of dockerfile sources from resolved kits and agents.
-func collectSources(kits []*kit.Kit, kitConfig func(string) *kit.SnippetConfig, agents []*agent.AgentInstall) []dockerSource {
+// When versions is non-nil, agent snippets are versioned with the provided versions.
+func collectSources(kits []*kit.Kit, kitConfig func(string) *kit.SnippetConfig, agents []*agent.AgentInstall, versions versions.VersionMap) []dockerSource {
 	var sources []dockerSource
 	for _, k := range kits {
 		snippet := kitSnippet(k, kitConfig)
@@ -56,10 +58,14 @@ func collectSources(kits []*kit.Kit, kitConfig func(string) *kit.SnippetConfig, 
 		if p == 0 {
 			p = defaultPriority
 		}
+		snippet := a.DockerSnippet
+		if versions != nil {
+			snippet = a.VersionedSnippet(versions)
+		}
 		sources = append(sources, dockerSource{
 			ID:       "agent:" + a.Name,
 			Priority: p,
-			Snippet:  a.DockerSnippet,
+			Snippet:  snippet,
 		})
 	}
 	return sources

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/config"
@@ -19,6 +20,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/onboarding"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
+	"github.com/inventage-ai/asylum/internal/versions"
 	"github.com/inventage-ai/asylum/internal/term"
 	"github.com/inventage-ai/asylum/internal/tui"
 	"github.com/inventage-ai/asylum/internal/workspace"
@@ -284,8 +286,37 @@ func main() {
 		asylumDir, &state, &cfg, containerMode == container.ModeAgent, existingInstall,
 	)
 
+	// Load version pinning — blocking if file doesn't exist, background update otherwise.
+	versionsPath := filepath.Join(asylumDir, "versions.json")
+	versionsVM, err := versions.Read(versionsPath)
+	if err != nil {
+		log.Warn("load versions: %v (proceeding without version pinning)", err)
+		versionsVM = nil
+	}
+	if versionsVM == nil {
+		log.Info("fetching latest agent versions (this may take a moment)...")
+		versionsVM = versions.FetchAll()
+		if len(versionsVM) > 0 {
+			if err := versions.Write(versionsPath, versionsVM); err != nil {
+				log.Warn("write versions: %v", err)
+			}
+		}
+	} else if stale, err := versions.IsStale(versionsPath, 24*time.Hour); err != nil {
+		log.Warn("check versions staleness: %v", err)
+	} else if stale {
+		go func() {
+			vm := versions.FetchAll()
+			if len(vm) == 0 {
+				return
+			}
+			if err := versions.Write(versionsPath, vm); err != nil {
+				log.Warn("update versions: %v", err)
+			}
+		}()
+	}
+
 	containerRunning := docker.IsRunning(cname)
-	imageTag, stateChanged := ensureImages(globalKits, projectKits, allKits, agentInstalls, cfg, version, flags.Rebuild, &state, containerRunning)
+	imageTag, stateChanged := ensureImages(globalKits, projectKits, allKits, agentInstalls, cfg, version, versionsVM, flags.Rebuild, &state, containerRunning)
 	if stateChanged || promptStateDirty {
 		if err := config.SaveState(asylumDir, state); err != nil {
 			log.Warn("save state: %v", err)
@@ -999,8 +1030,8 @@ func collectOnboarding(cfg config.Config) map[string]bool {
 // ensureImages runs EnsureBase and EnsureProject unconditionally to determine
 // the expected image tag. When a container is already running and image checks
 // fail (e.g. docker inspect errors), it falls through gracefully.
-func ensureImages(globalKits, projectKits, allKits []*kit.Kit, agentInstalls []*agent.AgentInstall, cfg config.Config, version string, noCache bool, state *config.State, containerRunning bool) (imageTag string, stateChanged bool) {
-	baseRebuilt, newOrder, err := image.EnsureBase(globalKits, agentInstalls, cfg.KitSnippetConfig, version, noCache, state.DockerSourceOrder)
+func ensureImages(globalKits, projectKits, allKits []*kit.Kit, agentInstalls []*agent.AgentInstall, cfg config.Config, version string, versions versions.VersionMap, noCache bool, state *config.State, containerRunning bool) (imageTag string, stateChanged bool) {
+	baseRebuilt, newOrder, err := image.EnsureBase(globalKits, agentInstalls, cfg.KitSnippetConfig, version, versions, noCache, state.DockerSourceOrder)
 	if err != nil {
 		if containerRunning {
 			log.Warn("image check: %v (using running container)", err)
