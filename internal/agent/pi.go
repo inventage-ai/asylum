@@ -14,7 +14,7 @@ func init() {
 		Name:           "pi",
 		DockerPriority: 6,
 		DockerSnippet: `# Install Pi
-RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @mariozechner/pi-coding-agent'
+RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @earendil-works/pi-coding-agent'
 `,
 		KitDeps: []string{"node"},
 		BannerLine: `    echo "Pi:        $(pi --version 2>/dev/null || echo 'not found')"
