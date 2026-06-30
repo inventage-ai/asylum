@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"testing"
 )
 
@@ -156,21 +157,7 @@ func TestFetchGitHubTags(t *testing.T) {
 func TestAgentNames(t *testing.T) {
 	names := AgentNames()
 	expected := []string{"claude", "codex", "copilot", "gemini", "opencode", "pi"}
-	if len(names) != len(expected) {
-		t.Fatalf("AgentNames() = %d, want %d", len(names), len(expected))
-	}
-	// Sort both for comparison since map iteration is not guaranteed
-	sorted := make([]string, len(names))
-	copy(sorted, names)
-	// Simple insertion sort for small arrays
-	for i := 1; i < len(sorted); i++ {
-		for j := i; j > 0 && sorted[j] < sorted[j-1]; j-- {
-			sorted[j], sorted[j-1] = sorted[j-1], sorted[j]
-		}
-	}
-	for i, name := range expected {
-		if sorted[i] != name {
-			t.Errorf("AgentNames()[%d] = %q, want %q", i, sorted[i], name)
-		}
+	if !slices.Equal(names, expected) {
+		t.Errorf("AgentNames() = %v, want %v", names, expected)
 	}
 }

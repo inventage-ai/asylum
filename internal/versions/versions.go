@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -128,6 +129,7 @@ func AgentNames() []string {
 	for name := range fetchers {
 		names = append(names, name)
 	}
+	slices.Sort(names)
 	return names
 }
 
