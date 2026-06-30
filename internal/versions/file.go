@@ -8,7 +8,8 @@ import (
 )
 
 // Read reads and parses versions.json from the given path.
-// Returns an empty VersionMap if the file does not exist or contains invalid JSON.
+// Returns nil if the file does not exist or contains invalid JSON, which the
+// caller uses to trigger a blocking fetch.
 func Read(path string) (VersionMap, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -25,8 +26,10 @@ func Read(path string) (VersionMap, error) {
 	return vm, nil
 }
 
-// Write marshals the version map to JSON and writes it atomically
-// (write to temp file, then rename) in the same directory as the target path.
+// Write marshals the version map to JSON and writes it atomically: it writes to
+// a per-write unique temp file in the target directory, then renames it onto the
+// target path. The unique name keeps concurrent asylum invocations (which share
+// one ~/.asylum/versions.json) from clobbering each other's temp file.
 func Write(path string, vm VersionMap) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -38,12 +41,31 @@ func Write(path string, vm VersionMap) error {
 		return err
 	}
 
-	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0644); err != nil {
+	tmp, err := os.CreateTemp(dir, "versions-*.json")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	if err := tmp.Chmod(0644); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmpPath)
 		return err
 	}
 
-	return os.Rename(tmpPath, path)
+	if err := os.Rename(tmpPath, path); err != nil {
+		os.Remove(tmpPath)
+		return err
+	}
+	return nil
 }
 
 // StaleSince returns the time when the file was last updated, or nil if the
@@ -72,4 +94,24 @@ func IsStale(path string, stalenessDur time.Duration) (bool, error) {
 		return false, nil
 	}
 	return time.Since(*t) > stalenessDur, nil
+}
+
+// NeedsRefresh reports whether the version file should be refetched: either it
+// is older than stalenessDur, or the loaded map is missing an entry for a
+// tracked agent (e.g. one whose fetch failed during an earlier partial fetch),
+// so missing agents are retried before the staleness interval elapses.
+func NeedsRefresh(path string, vm VersionMap, stalenessDur time.Duration) (bool, error) {
+	stale, err := IsStale(path, stalenessDur)
+	if err != nil {
+		return false, err
+	}
+	if stale {
+		return true, nil
+	}
+	for _, name := range AgentNames() {
+		if _, ok := vm[name]; !ok {
+			return true, nil
+		}
+	}
+	return false, nil
 }

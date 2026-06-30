@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -130,59 +131,27 @@ func AgentNames() []string {
 	return names
 }
 
-// AgentSource describes where an agent's version is fetched from.
-type AgentSource int
-
-const (
-	SourceNpmAgent AgentSource = iota
-	SourceGitHubRelease
-	SourceGitHubTag
-)
-
-// AgentSourceMap maps agent names to their fetch source type.
-var AgentSourceMap = map[string]AgentSource{
-	"claude":   SourceGitHubTag,
-	"gemini":   SourceNpmAgent,
-	"codex":    SourceNpmAgent,
-	"copilot":  SourceGitHubRelease,
-	"opencode": SourceGitHubRelease,
-	"pi":       SourceNpmAgent,
-}
-
-// FetchAll fetches the latest version for all registered agents.
-// Agents that fail to fetch are simply omitted from the result.
+// FetchAll fetches the latest version for all registered agents concurrently.
+// Agents that fail to fetch are simply omitted from the result, so total time
+// is bounded by the slowest single source rather than the sum of all sources.
 func FetchAll() VersionMap {
 	vm := make(VersionMap)
+	var mu sync.Mutex
+	var wg sync.WaitGroup
 	for name, fetcher := range fetchers {
-		version, err := fetcher()
-		if err != nil {
-			// Silently skip agents whose fetch fails.
-			continue
-		}
-		vm[name] = version
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			version, err := fetcher()
+			if err != nil {
+				// Silently skip agents whose fetch fails.
+				return
+			}
+			mu.Lock()
+			vm[name] = version
+			mu.Unlock()
+		}()
 	}
-	return vm
-}
-
-// FetchForAgent fetches versions only for agents that are in the active install list.
-// The installs slice comes from agent.ResolveInstalls and includes the agent name.
-func FetchForAgent(installNames []string) VersionMap {
-	agentSet := make(map[string]bool, len(installNames))
-	for _, name := range installNames {
-		agentSet[name] = true
-	}
-
-	vm := make(VersionMap)
-	for _, name := range installNames {
-		fetcher, ok := fetchers[name]
-		if !ok {
-			continue
-		}
-		version, err := fetcher()
-		if err != nil {
-			continue
-		}
-		vm[name] = version
-	}
+	wg.Wait()
 	return vm
 }

@@ -179,19 +179,6 @@ func versionArgName(name string) string {
 	}
 }
 
-// AssembleVersionedAgentSnippets concatenates versioned DockerSnippets
-// from the given installs using the provided version map.
-func AssembleVersionedAgentSnippets(installs []*AgentInstall, versions map[string]string) string {
-	var b strings.Builder
-	for _, i := range installs {
-		s := i.VersionedSnippet(versions)
-		if s != "" {
-			b.WriteString(s)
-		}
-	}
-	return b.String()
-}
-
 // joinFields concatenates non-empty field values, ensuring each ends with a newline.
 func joinFields(installs []*AgentInstall, field func(*AgentInstall) string) string {
 	var b strings.Builder

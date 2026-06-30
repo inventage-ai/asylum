@@ -90,36 +90,6 @@ func TestVersionedSnippet(t *testing.T) {
 	}
 }
 
-func TestAssembleVersionedAgentSnippets(t *testing.T) {
-	installs := []*AgentInstall{
-		{
-			Name:        "gemini",
-			DockerSnippet: "RUN npm install -g @google/gemini-cli\n",
-		},
-		{
-			Name:        "claude",
-			DockerSnippet: "RUN curl -fsSL https://claude.ai/install.sh | bash\n",
-		},
-	}
-
-	versions := map[string]string{
-		"gemini": "0.8.0",
-		"claude": "v2.1.195",
-	}
-
-	result := AssembleVersionedAgentSnippets(installs, versions)
-
-	if !strings.Contains(result, "ARG GEMINI_VERSION=0.8.0") {
-		t.Errorf("missing GEMINI_VERSION ARG: %q", result)
-	}
-	if !strings.Contains(result, "@${GEMINI_VERSION}") {
-		t.Errorf("missing GEMINI_VERSION reference: %q", result)
-	}
-	if !strings.Contains(result, "ARG CLAUDE_VERSION=v2.1.195") {
-		t.Errorf("missing CLAUDE_VERSION ARG: %q", result)
-	}
-}
-
 func TestVersionArgName(t *testing.T) {
 	tests := []struct {
 		name string

@@ -301,7 +301,7 @@ func main() {
 				log.Warn("write versions: %v", err)
 			}
 		}
-	} else if stale, err := versions.IsStale(versionsPath, 24*time.Hour); err != nil {
+	} else if stale, err := versions.NeedsRefresh(versionsPath, versionsVM, 24*time.Hour); err != nil {
 		log.Warn("check versions staleness: %v", err)
 	} else if stale {
 		go func() {
