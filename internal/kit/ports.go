@@ -20,6 +20,9 @@ func init() {
 }
 
 func portsContainerFunc(opts ContainerOpts) ([]RunArg, error) {
+	if opts.Secondary {
+		return nil, nil
+	}
 	pr, err := ports.Allocate(opts.ProjectDir, opts.ContainerName, opts.Config.PortCount())
 	if err != nil {
 		return nil, err

@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"time"
@@ -20,9 +21,9 @@ import (
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/onboarding"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
-	"github.com/inventage-ai/asylum/internal/versions"
 	"github.com/inventage-ai/asylum/internal/term"
 	"github.com/inventage-ai/asylum/internal/tui"
+	"github.com/inventage-ai/asylum/internal/versions"
 	"github.com/inventage-ai/asylum/internal/workspace"
 )
 
@@ -263,7 +264,22 @@ func main() {
 		log.Warn("project migration: %v", err)
 	}
 
+	// Resolve the container for this run. The primary container (named for the
+	// project) serves the configured agent set. If it is already running but
+	// does not support the requested agent, spill to a separate container named
+	// for the project plus baked agent set, leaving the primary untouched. Such
+	// secondary containers are for ad-hoc/review use and forward no ports.
 	cname := container.ContainerName(projectDir)
+	secondary := false
+	if docker.IsRunning(cname) && !containerSupportsAgent(cname, agentName) {
+		names := make([]string, len(agentInstalls))
+		for i, ai := range agentInstalls {
+			names[i] = ai.Name
+		}
+		cname = container.SecondaryContainerName(projectDir, names)
+		secondary = true
+		log.Info("agent %q is not in the project container; using a separate container (no port forwarding)", agentName)
+	}
 	// If we freshly seed the agent config from the host this run, suppress
 	// asylum-injected resume even when the user has opted into
 	// `default-resume: true` — the host's session markers don't represent a
@@ -372,6 +388,8 @@ func main() {
 			AgentInstalls: agentInstalls,
 			ImageTag:      imageTag,
 			ProjectDir:    projectDir,
+			ContainerName: cname,
+			Secondary:     secondary,
 			CacheDirs:     cacheDirs,
 			Kits:          allKits,
 			Version:       version,
@@ -1053,6 +1071,22 @@ func ensureImages(globalKits, projectKits, allKits []*kit.Kit, agentInstalls []*
 		die("%v", err)
 	}
 	return imageTag, stateChanged
+}
+
+// containerSupportsAgent reports whether a running container can serve the
+// named agent, based on its asylum.agents label. A container created before
+// agent labels existed (no label) is treated as supporting only the default
+// agent, so existing single-agent setups keep working untouched.
+func containerSupportsAgent(cname, agentName string) bool {
+	labels, err := docker.InspectLabels(cname)
+	if err != nil {
+		return false
+	}
+	label := labels["asylum.agents"]
+	if label == "" {
+		return agentName == "claude"
+	}
+	return slices.Contains(strings.Split(label, ","), agentName)
 }
 
 // checkStaleContainer compares the running container's image and config hash

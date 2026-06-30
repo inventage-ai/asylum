@@ -553,6 +553,29 @@ func TestContainerName(t *testing.T) {
 	}
 }
 
+func TestSecondaryContainerName(t *testing.T) {
+	project := "/home/user/projectA"
+	primary := ContainerName(project)
+	secondary := SecondaryContainerName(project, []string{"pi"})
+
+	if secondary == primary {
+		t.Error("secondary name should differ from the primary name")
+	}
+	if !strings.HasSuffix(secondary, "-projecta") {
+		t.Errorf("secondary name %q should keep the project suffix", secondary)
+	}
+	// Agent order must not affect the name.
+	ab := SecondaryContainerName(project, []string{"claude", "pi"})
+	ba := SecondaryContainerName(project, []string{"pi", "claude"})
+	if ab != ba {
+		t.Errorf("secondary name should be order-independent: %q != %q", ab, ba)
+	}
+	// Different agent sets produce different names.
+	if SecondaryContainerName(project, []string{"pi"}) == SecondaryContainerName(project, []string{"gemini"}) {
+		t.Error("different agent sets should produce different secondary names")
+	}
+}
+
 func TestOldContainerName(t *testing.T) {
 	old := OldContainerName("/home/user/projectA")
 	if !strings.HasPrefix(old, "asylum-") {

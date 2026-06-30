@@ -45,6 +45,8 @@ type RunOpts struct {
 	AgentInstalls []*agent.AgentInstall // installed agents for the image; used to validate companions
 	ImageTag      string
 	ProjectDir    string
+	ContainerName string            // resolved name; defaults to the primary name when empty
+	Secondary     bool              // ad-hoc container for an agent the primary doesn't support; gets no ports
 	CacheDirs     map[string]string // tool name → container path
 	Kits          []*kit.Kit
 	Version       string
@@ -63,7 +65,10 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 		return nil, nil, nil, fmt.Errorf("home dir: %w", err)
 	}
 
-	containerName := ContainerName(opts.ProjectDir)
+	containerName := opts.ContainerName
+	if containerName == "" {
+		containerName = ContainerName(opts.ProjectDir)
+	}
 	hostname := safeHostname(opts.ProjectDir)
 
 	var all []kit.RunArg
@@ -80,6 +85,14 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	if opts.ConfigHash != "" {
 		core("--label", "asylum.config.hash="+opts.ConfigHash)
 	}
+
+	// Add agent list label
+	agentNames := make([]string, len(opts.AgentInstalls))
+	for i, ai := range opts.AgentInstalls {
+		agentNames[i] = ai.Name
+	}
+	slices.Sort(agentNames)
+	core("--label", "asylum.agents="+strings.Join(agentNames, ","))
 
 	if kit.AnyNeedsMount(opts.Kits) {
 		core("--cap-add", "SYS_ADMIN")
@@ -110,6 +123,7 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 		ContainerName: containerName,
 		HomeDir:       home,
 		Config:        opts.Config,
+		Secondary:     opts.Secondary,
 	})
 	all = append(all, kitArgs...)
 
@@ -124,12 +138,14 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	mountArgs := kitMountArgs(home, containerName, opts)
 	all = append(all, mountArgs...)
 
-	// User config: ports
-	cfgPortArgs, err := configPortArgs(opts.Config.Ports)
-	if err != nil {
-		return nil, nil, nil, err
+	// User config: ports (secondary containers forward none)
+	if !opts.Secondary {
+		cfgPortArgs, err := configPortArgs(opts.Config.Ports)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		all = append(all, cfgPortArgs...)
 	}
-	all = append(all, cfgPortArgs...)
 
 	// User config: volumes
 	cfgVolArgs, err := configVolumeArgs(opts.Config.Volumes, home)
@@ -177,6 +193,17 @@ func ContainerName(projectDir string) string {
 
 // OldContainerName returns the pre-migration container name format (hash only,
 // no project suffix). Used during migration to find old project directories.
+// SecondaryContainerName names a container for a project plus a specific agent
+// set. It is used when the primary container does not support the requested
+// agent: folding the sorted agent set into the hash keeps the name distinct
+// from the primary so both can run at once.
+func SecondaryContainerName(projectDir string, agents []string) string {
+	sorted := slices.Clone(agents)
+	slices.Sort(sorted)
+	h := sha256.Sum256([]byte(projectDir + "\x00" + strings.Join(sorted, ",")))
+	return fmt.Sprintf("asylum-%x-%s", h[:6], sanitizeProject(projectDir))
+}
+
 func OldContainerName(projectDir string) string {
 	h := sha256.Sum256([]byte(projectDir))
 	return fmt.Sprintf("asylum-%x", h[:6])

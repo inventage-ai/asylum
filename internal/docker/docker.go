@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
@@ -44,6 +45,21 @@ func InspectLabel(image, label string) (string, error) {
 		return "", fmt.Errorf("inspect %s: %w", image, err)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+// InspectLabels returns all labels from a container as a map.
+func InspectLabels(name string) (map[string]string, error) {
+	tmpl := "{{json .Config.Labels}}"
+	cmd := exec.Command("docker", "inspect", "--format", tmpl, name)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("inspect %s: %w", name, err)
+	}
+	var labels map[string]string
+	if err := json.Unmarshal(out, &labels); err != nil {
+		return nil, fmt.Errorf("parse labels: %w", err)
+	}
+	return labels, nil
 }
 
 // ContainerImageID returns the image ID (sha256 digest) of a running container.

@@ -1,12 +1,14 @@
 package docker
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestCountExecSessions(t *testing.T) {
 	tests := []struct {
-		name   string
-		input  string
-		want   int
+		name  string
+		input string
+		want  int
 	}{
 		{
 			"empty",

@@ -8,6 +8,7 @@
 ### Added
 - `--debug` now traces the container entrypoint (`set -x`). The entrypoint runs under `set -e` and aborts silently on a failing command, so a startup failure left no clue beyond the last successful log line. The trace is captured in `docker logs` and dumped automatically when a container fails to start, pinpointing the command that died.
 - Agent version tracking — asylum fetches the latest version of each coding agent and injects it as a per-agent `ARG` directive in the Dockerfile, so a new upstream release cache-busts only that agent's install layer. Versions are fetched concurrently on first run, cached in `~/.asylum/versions.json`, and refreshed in the background.
+- Ad-hoc agents in a configured project — running `asylum -a <agent>` for an agent the project's container doesn't have no longer fails or rebuilds the existing container. Instead asylum starts a separate container (named for the project plus agent set) alongside it. Secondary containers forward no ports; bake the agent into project/user config to give it a first-class container with ports.
 
 ## 0.7.0 — 2026-06-23
 

@@ -55,6 +55,7 @@ type ContainerOpts struct {
 	ProjectDir    string
 	ContainerName string
 	HomeDir       string
+	Secondary     bool                         // ad-hoc container that must not allocate or forward ports
 	Config        interface{ PortCount() int } // avoid circular import with config package
 }
 
