@@ -3,6 +3,11 @@
 
 set -e
 
+# When launched with --debug, trace every command. A startup failure aborts
+# silently under set -e, so the trace (captured in docker logs) is what reveals
+# which command actually died.
+[ -n "${ASYLUM_DEBUG:-}" ] && set -x
+
 # Ensure proper PATH
 export PATH="$HOME/.local/share/fnm:$HOME/.local/bin:$PATH"
 

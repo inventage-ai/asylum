@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- `--debug` now traces the container entrypoint (`set -x`). The entrypoint runs under `set -e` and aborts silently on a failing command, so a startup failure left no clue beyond the last successful log line. The trace is captured in `docker logs` and dumped automatically when a container fails to start, pinpointing the command that died.
+
 ## 0.7.0 — 2026-06-23
 
 Two new coding agents land — GitHub Copilot CLI and Pi — alongside agent companions, which let a Claude Code session reach other agents' CLIs (e.g. the codex plugin) without launching them. The headline behaviour change: `asylum` no longer auto-resumes the previous session by default — it starts fresh, with resume now opt-in via `--continue`/`--resume` or `default-resume: true`. Launching from your home directory or filesystem root is now caught and redirected into a fresh sandboxable workspace instead of failing.

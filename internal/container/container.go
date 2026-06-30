@@ -49,6 +49,7 @@ type RunOpts struct {
 	Kits          []*kit.Kit
 	Version       string
 	ConfigHash    string // stored as container label for drift detection
+	Debug         bool   // traces the entrypoint (set -x) so silent startup failures are visible
 }
 
 // RunArgs assembles docker run arguments via a unified RunArg pipeline.
@@ -396,6 +397,9 @@ func coreEnvVars(home string, opts RunOpts) ([]kit.RunArg, error) {
 	env("HISTFILE", filepath.Join(home, ".shell_history", "zsh_history"))
 	env("HOST_PROJECT_DIR", opts.ProjectDir)
 	env(reservedAgentEnv, opts.Agent.Name())
+	if opts.Debug {
+		env("ASYLUM_DEBUG", "1")
+	}
 
 	// Collect env vars from kits that provide an EnvFunc.
 	for k, v := range kit.AssembleEnvVars(opts.Kits, opts.Config.KitSnippetConfig) {

@@ -345,6 +345,7 @@ func main() {
 			Kits:          allKits,
 			Version:       version,
 			ConfigHash:    cfgHash,
+			Debug:         flags.Debug,
 		})
 		if err != nil {
 			die("%v", err)
