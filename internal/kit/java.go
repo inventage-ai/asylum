@@ -76,10 +76,11 @@ func init() {
 			return fmt.Sprintf("# Install non-pre-installed Java version\nRUN ~/.local/bin/mise install java@%s && \\\n    ~/.local/bin/mise use --global java@%s\n",
 				defaultVersion, defaultVersion)
 		},
-		EntrypointSnippet: `# Select Java version if configured
+		EntrypointSnippet: `# Select Java version if configured. Non-fatal: a project's local mise config
+# (e.g. a .tool-versions pinning an uninstalled build) must not abort startup.
 if [ -n "${ASYLUM_JAVA_VERSION:-}" ] && command -v mise >/dev/null 2>&1; then
-    mise use --global java@"${ASYLUM_JAVA_VERSION}" >/dev/null 2>&1
-    eval "$(mise env)"
+    mise use --global java@"${ASYLUM_JAVA_VERSION}" || echo "Warning: could not set Java ${ASYLUM_JAVA_VERSION} as the default"
+    eval "$(mise env)" || true
 fi
 `,
 		BannerLines: `    echo "Java:      $(java -version 2>&1 | head -1 | cut -d'"' -f2 || echo 'not found')"

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- A project's local mise config (e.g. a `.tool-versions` pinning an uninstalled Java build) could abort container startup. The java kit's entrypoint ran `mise use --global` under `set -e` with output suppressed, so a non-zero exit killed startup with no visible cause ("container failed to start"). The command is now non-fatal and no longer hides mise's output.
+
 ### Added
 - `--debug` now traces the container entrypoint (`set -x`). The entrypoint runs under `set -e` and aborts silently on a failing command, so a startup failure left no clue beyond the last successful log line. The trace is captured in `docker logs` and dumped automatically when a container fails to start, pinpointing the command that died.
 
