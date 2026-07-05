@@ -27,7 +27,7 @@ Asylum uses layered YAML configuration. Each layer overrides the previous:
 
 ### Merge Rules
 
-- **Kits**: last-wins (project config replaces global kit map entirely)
+- **Kits**: merged per-key (a project kit entry deep-merges with the global one: `packages`/`build` accumulate across layers, other options are last-wins). The `--kits` CLI flag is the exception: it replaces the kit map entirely.
 - **Ports, Volumes**: concatenated (all layers contribute)
 - **Env vars**: merged (later layers override specific keys)
 - **Agent, Java version**: last-wins
