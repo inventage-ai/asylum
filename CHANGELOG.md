@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Scoped npm packages (e.g. `@mermaid-js/mermaid-cli`) in a kit's `packages` list were rejected as invalid — the package name validation did not allow a leading `@`.
 - A project's local mise config (e.g. a `.tool-versions` pinning an uninstalled Java build) could abort container startup. The java kit's entrypoint ran `mise use --global` under `set -e` with output suppressed, so a non-zero exit killed startup with no visible cause ("container failed to start"). The command is now non-fatal and no longer hides mise's output.
 
 ### Added

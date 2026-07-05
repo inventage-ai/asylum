@@ -141,6 +141,23 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 		}
 	})
 
+	t.Run("scoped npm package accepted", func(t *testing.T) {
+		df, err := generateProjectDockerfile("", map[string][]string{"npm": {"@mermaid-js/mermaid-cli"}}, "", "testuser", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(df, "@mermaid-js/mermaid-cli") {
+			t.Error("missing scoped npm package")
+		}
+	})
+
+	t.Run("leading dash package rejected", func(t *testing.T) {
+		_, err := generateProjectDockerfile("", map[string][]string{"npm": {"--registry=https://evil.example"}}, "", "testuser", false)
+		if err == nil {
+			t.Error("expected error for leading-dash package name")
+		}
+	})
+
 	t.Run("kitProjectSnippets inserted", func(t *testing.T) {
 		df, err := generateProjectDockerfile("", map[string][]string{}, "RUN echo from-kit\n", "testuser", false)
 		if err != nil {

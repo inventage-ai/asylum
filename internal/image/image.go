@@ -256,7 +256,9 @@ var knownPackageTypes = map[string]bool{
 	"apt": true, "npm": true, "pip": true, "run": true, "cx-lang": true,
 }
 
-var validPackageName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9+\-.@:/~_]*$`)
+// Leading @ allows scoped npm packages; a leading dash stays forbidden so
+// names cannot be parsed as flags.
+var validPackageName = regexp.MustCompile(`^[a-zA-Z0-9@][a-zA-Z0-9+\-.@:/~_]*$`)
 
 func validatePackageNames(pkgType string, names []string) error {
 	for _, name := range names {
