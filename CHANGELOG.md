@@ -4,6 +4,7 @@
 
 ### Fixed
 - Scoped npm packages (e.g. `@mermaid-js/mermaid-cli`) in a kit's `packages` list were rejected as invalid — the package name validation did not allow a leading `@`.
+- Installing node kit `packages` in the project image failed with `fnm: command not found` — the generated `npm install -g` step did not put fnm on PATH (Docker RUN does not source shell profiles).
 - A project's local mise config (e.g. a `.tool-versions` pinning an uninstalled Java build) could abort container startup. The java kit's entrypoint ran `mise use --global` under `set -e` with output suppressed, so a non-zero exit killed startup with no visible cause ("container failed to start"). The command is now non-fatal and no longer hides mise's output.
 
 ### Added

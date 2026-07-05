@@ -307,7 +307,7 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 
 	if npm := packages["npm"]; len(npm) > 0 {
 		b.WriteString("\nUSER " + username + "\n")
-		b.WriteString("RUN bash -c 'eval \"$(fnm env)\" && npm install -g \\\n    ")
+		b.WriteString("RUN bash -c 'export PATH=\"$HOME/.local/share/fnm:$PATH\" && eval \"$(fnm env)\" && npm install -g \\\n    ")
 		b.WriteString(strings.Join(npm, " \\\n    "))
 		b.WriteString("'\n")
 	}
