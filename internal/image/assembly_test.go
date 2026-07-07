@@ -29,16 +29,18 @@ func claudeOnlyInstalls(t *testing.T) []*agent.AgentInstall {
 	return installs
 }
 
-// testOrderedDockerfile is a test helper that computes source order and
-// assembles the Dockerfile, returning the result and the ordered IDs.
+// testOrderedDockerfile is a test helper that computes kit source order and
+// assembles the Dockerfile (kits ordered + agent block last), returning the
+// result and the ordered kit IDs.
 func testOrderedDockerfile(profiles []*kit.Kit, agents []*agent.AgentInstall) ([]byte, []string) {
-	sources := collectSources(profiles, nil, agents, nil)
+	sources := collectSources(profiles, nil)
 	orderedIDs := computeSourceOrder(sources, nil)
 	snippetOf := map[string]string{}
 	for _, s := range sources {
 		snippetOf[s.ID] = s.Snippet
 	}
-	return assembleDockerfile(orderedIDs, snippetOf), orderedIDs
+	agentBlock := agent.AssembleVersionedAgentSnippets(agents, nil)
+	return assembleDockerfile(orderedIDs, snippetOf, agentBlock), orderedIDs
 }
 
 func TestAssembleDockerfile_AllProfiles(t *testing.T) {
@@ -214,14 +216,15 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	agents1 := allAgentInstalls(t)
 
 	_, order1 := testOrderedDockerfile(profiles, agents1)
-	sources1 := collectSources(profiles, nil, agents1, nil)
+	sources1 := collectSources(profiles, nil)
 	snippetOf1 := map[string]string{}
 	for _, s := range sources1 {
 		snippetOf1[s.ID] = s.Snippet
 	}
+	block1 := agent.AssembleVersionedAgentSnippets(agents1, nil)
 
-	h1 := baseHash(order1, snippetOf1, profiles, agents1)
-	h2 := baseHash(order1, snippetOf1, profiles, agents1)
+	h1 := baseHash(order1, snippetOf1, block1, profiles, agents1)
+	h2 := baseHash(order1, snippetOf1, block1, profiles, agents1)
 	if h1 != h2 {
 		t.Error("baseHash should be deterministic")
 	}
@@ -229,12 +232,13 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	// Different agents → different hash
 	agents2 := claudeOnlyInstalls(t)
 	_, order2 := testOrderedDockerfile(profiles, agents2)
-	sources2 := collectSources(profiles, nil, agents2, nil)
+	sources2 := collectSources(profiles, nil)
 	snippetOf2 := map[string]string{}
 	for _, s := range sources2 {
 		snippetOf2[s.ID] = s.Snippet
 	}
-	h3 := baseHash(order2, snippetOf2, profiles, agents2)
+	block2 := agent.AssembleVersionedAgentSnippets(agents2, nil)
+	h3 := baseHash(order2, snippetOf2, block2, profiles, agents2)
 	if h1 == h3 {
 		t.Error("different agents should produce different hash")
 	}
@@ -243,12 +247,12 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	java := []string{"java"}
 	javaOnly, _ := kit.Resolve(java, nil)
 	_, order3 := testOrderedDockerfile(javaOnly, agents1)
-	sources3 := collectSources(javaOnly, nil, agents1, nil)
+	sources3 := collectSources(javaOnly, nil)
 	snippetOf3 := map[string]string{}
 	for _, s := range sources3 {
 		snippetOf3[s.ID] = s.Snippet
 	}
-	h4 := baseHash(order3, snippetOf3, javaOnly, agents1)
+	h4 := baseHash(order3, snippetOf3, block1, javaOnly, agents1)
 	if h1 == h4 {
 		t.Error("different profiles should produce different hash")
 	}
@@ -390,20 +394,17 @@ func TestVersionedAgentSnippets(t *testing.T) {
 		"pi":       "0.5.0",
 	}
 
-	sources := collectSources(profiles, nil, allAgentInstalls(t), vm)
+	sources := collectSources(profiles, nil)
 	orderedIDs := computeSourceOrder(sources, nil)
 	snippetOf := map[string]string{}
 	for _, s := range sources {
 		snippetOf[s.ID] = s.Snippet
 	}
-	df := assembleDockerfile(orderedIDs, snippetOf)
+	agentBlock := agent.AssembleVersionedAgentSnippets(allAgentInstalls(t), vm)
+	df := assembleDockerfile(orderedIDs, snippetOf, agentBlock)
 	s := string(df)
 
 	// Check that version ARGs are present in the Dockerfile
-	for _, s := range sources {
-		if s.ID == "agent:copilot" {
-			}
-	}
 	if !strings.Contains(s, "ARG CLAUDE_VERSION=0.2.32") {
 		t.Error("missing Claude version ARG")
 	}
@@ -436,23 +437,13 @@ func TestVersionedAgentSnippets(t *testing.T) {
 }
 
 func TestVersionedSnippetCache(t *testing.T) {
-	// Test that passing nil version map falls back to unversioned snippets
-	sources := collectSources(nil, nil, allAgentInstalls(t), nil)
-	
-	// Find the Claude agent source
-	var claudeSnippet string
-	for _, s := range sources {
-		if s.ID == "agent:claude" {
-			claudeSnippet = s.Snippet
-			break
-		}
+	// Passing a nil version map falls back to unversioned agent snippets.
+	block := agent.AssembleVersionedAgentSnippets(allAgentInstalls(t), nil)
+
+	if !strings.Contains(block, "claude.ai/install.sh") {
+		t.Errorf("expected Claude install snippet, got: %s", block)
 	}
-	
-	// Without version map, should use original DockerSnippet
-	if !strings.Contains(claudeSnippet, "claude.ai/install.sh") {
-		t.Errorf("expected Claude install snippet, got: %s", claudeSnippet)
-	}
-	if strings.Contains(claudeSnippet, "ARG") {
-		t.Errorf("without version map, snippet should not contain ARG: %s", claudeSnippet)
+	if strings.Contains(block, "ARG") {
+		t.Errorf("without version map, agent block should not contain ARG: %s", block)
 	}
 }

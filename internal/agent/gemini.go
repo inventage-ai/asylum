@@ -11,8 +11,7 @@ import (
 func init() {
 	agents["gemini"] = Gemini{}
 	RegisterInstall(&AgentInstall{
-		Name:           "gemini",
-		DockerPriority: 6,
+		Name: "gemini",
 		DockerSnippet: `# Install Gemini CLI
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @google/gemini-cli'
 `,

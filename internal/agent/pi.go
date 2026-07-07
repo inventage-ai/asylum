@@ -11,8 +11,7 @@ import (
 func init() {
 	agents["pi"] = Pi{}
 	RegisterInstall(&AgentInstall{
-		Name:           "pi",
-		DockerPriority: 6,
+		Name: "pi",
 		DockerSnippet: `# Install Pi
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @earendil-works/pi-coding-agent'
 `,

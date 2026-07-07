@@ -11,8 +11,7 @@ import (
 func init() {
 	agents["copilot"] = Copilot{}
 	RegisterInstall(&AgentInstall{
-		Name:           "copilot",
-		DockerPriority: 6,
+		Name: "copilot",
 		DockerSnippet: `# Install GitHub Copilot CLI
 RUN curl -fsSL https://gh.io/copilot-install | bash && \
     ~/.local/bin/copilot --version

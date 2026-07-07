@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Static Dockerfile priority
-Each kit and agent install SHALL have a `DockerPriority` integer field that represents its preferred position in the Dockerfile. Lower values indicate earlier placement (more stable, more expensive layers).
+Each kit SHALL have a `DockerPriority` integer field that represents its preferred position in the Dockerfile. Lower values indicate earlier placement (more stable, more expensive layers). Agent installs SHALL NOT have a priority and SHALL NOT participate in priority-based ordering.
 
 #### Scenario: Kit with explicit priority
 - **WHEN** a kit is registered with `DockerPriority: 10`
@@ -11,24 +11,24 @@ Each kit and agent install SHALL have a `DockerPriority` integer field that repr
 - **WHEN** a kit is registered without setting `DockerPriority`
 - **THEN** the ordering system uses `50` as that kit's priority value (Go zero-value is not used; default is applied during ordering)
 
-#### Scenario: Agent install with priority
-- **WHEN** an agent install is registered with `DockerPriority: 20`
-- **THEN** the ordering system uses `20` as that agent's priority value
+#### Scenario: Agents excluded from priority ordering
+- **WHEN** the active sources include agent installs
+- **THEN** those agents are not assigned a priority and are not included in the priority-ordered, state-tracked source set
 
 ### Requirement: Source identifier scheme
-The ordering system SHALL identify each Dockerfile snippet source with a string of the form `"kit:<name>"` for kits and `"agent:<name>"` for agent installs.
+The ordering system SHALL identify each state-tracked Dockerfile snippet source with a string of the form `"kit:<name>"`. Agent installs are not state-tracked sources and have no ordering identifier.
 
 #### Scenario: Kit identifier
 - **WHEN** the active kits include a kit named `java`
 - **THEN** its source identifier is `"kit:java"`
 
-#### Scenario: Agent identifier
-- **WHEN** the active agents include an agent named `claude`
-- **THEN** its source identifier is `"agent:claude"`
-
 #### Scenario: Sub-kit identifier
 - **WHEN** the active kits include a sub-kit named `java/maven`
 - **THEN** its source identifier is `"kit:java/maven"`
+
+#### Scenario: Agents have no ordering identifier
+- **WHEN** the active agents include an agent named `claude`
+- **THEN** no `"agent:claude"` identifier is added to the tracked source set or persisted in `docker_source_order`
 
 ### Requirement: State-tracked source order
 The system SHALL persist the Dockerfile source order in `state.json` as a `docker_source_order` field (string array) after every successful base image build.
@@ -98,7 +98,7 @@ When sources have the same priority and are being sorted (either as new sources 
 - **THEN** they are ordered as [`kit:bar`, `kit:foo`] (alphabetical)
 
 ### Requirement: Dockerfile assembly uses computed order
-The `assembleDockerfile` function SHALL use the computed source order (not the kit resolution order) when concatenating DockerSnippets.
+The `assembleDockerfile` function SHALL use the computed source order (not the kit resolution order) when concatenating kit DockerSnippets, then append the agent snippet block after all kit snippets.
 
 #### Scenario: Order differs from resolution order
 - **WHEN** kit resolution returns [java, docker, node] but the computed order is [java, node, docker]
@@ -106,15 +106,19 @@ The `assembleDockerfile` function SHALL use the computed source order (not the k
 
 #### Scenario: Core and tail position unchanged
 - **WHEN** the Dockerfile is assembled with any source order
-- **THEN** `Dockerfile.core` is always first and `Dockerfile.tail` is always last, with ordered kit/agent snippets between them
+- **THEN** `Dockerfile.core` is always first and `Dockerfile.tail` is always last, with ordered kit snippets and then the agent block between them
 
-### Requirement: Project image agents before kits
-In project image Dockerfile generation, agent install snippets SHALL be placed before project kit snippets. The full state-tracked ordering algorithm does not apply to project images, but the agents-before-kits rule does.
+### Requirement: Agent snippets appended after kits
+Agent install DockerSnippets SHALL be emitted as a contiguous block placed after all ordered kit snippets and before `Dockerfile.tail`, so that agent version changes invalidate only the agent layers and the tail, never any kit layer.
 
-#### Scenario: Project image with agents and kits
-- **WHEN** a project image is generated with agent snippets and project kit snippets
-- **THEN** agent snippets appear before kit snippets in the generated Dockerfile
+#### Scenario: Agents follow kits in the base image
+- **WHEN** the base image is assembled with both kit snippets and agent snippets
+- **THEN** every kit snippet appears before every agent snippet, and every agent snippet appears before the tail
 
-#### Scenario: Project image with only kits
-- **WHEN** a project image is generated with project kit snippets but no agent snippets
-- **THEN** kit snippets are placed as normal (no change from current behavior)
+#### Scenario: Agent version bump preserves kit layers
+- **WHEN** only an agent's pinned version changes between builds
+- **THEN** the ordered kit snippets are byte-identical and unchanged in position, so their Docker layers remain cached
+
+#### Scenario: Deterministic agent block order
+- **WHEN** the agent block is assembled for a fixed set of active agents
+- **THEN** the agents are emitted in a deterministic order (claude first, remaining agents by name)

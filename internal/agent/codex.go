@@ -12,8 +12,7 @@ import (
 func init() {
 	agents["codex"] = Codex{}
 	RegisterInstall(&AgentInstall{
-		Name:           "codex",
-		DockerPriority: 6,
+		Name: "codex",
 		DockerSnippet: `# Install Codex
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && npm install -g @openai/codex'
 `,

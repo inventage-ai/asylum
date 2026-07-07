@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/inventage-ai/asylum/assets"
+	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/kit"
+	"github.com/inventage-ai/asylum/internal/versions"
 )
 
 func TestComputeSourceOrder(t *testing.T) {
@@ -20,41 +22,41 @@ func TestComputeSourceOrder(t *testing.T) {
 			name: "no previous order — sort by priority",
 			sources: []dockerSource{
 				{ID: "kit:docker", Priority: 30},
-				{ID: "agent:claude", Priority: 20},
+				{ID: "kit:node", Priority: 20},
 				{ID: "kit:java", Priority: 10},
 			},
 			previous: nil,
-			want:     []string{"kit:java", "agent:claude", "kit:docker"},
+			want:     []string{"kit:java", "kit:node", "kit:docker"},
 		},
 		{
 			name: "no changes — preserve previous order",
 			sources: []dockerSource{
 				{ID: "kit:java", Priority: 10},
 				{ID: "kit:docker", Priority: 30},
-				{ID: "agent:claude", Priority: 20},
+				{ID: "kit:node", Priority: 20},
 			},
-			previous: []string{"kit:java", "agent:claude", "kit:docker"},
-			want:     []string{"kit:java", "agent:claude", "kit:docker"},
+			previous: []string{"kit:java", "kit:node", "kit:docker"},
+			want:     []string{"kit:java", "kit:node", "kit:docker"},
 		},
 		{
 			name: "single new source appended",
 			sources: []dockerSource{
 				{ID: "kit:java", Priority: 10},
-				{ID: "agent:claude", Priority: 20},
+				{ID: "kit:node", Priority: 20},
 				{ID: "kit:docker", Priority: 30},
 			},
-			previous: []string{"kit:java", "agent:claude"},
-			want:     []string{"kit:java", "agent:claude", "kit:docker"},
+			previous: []string{"kit:java", "kit:node"},
+			want:     []string{"kit:java", "kit:node", "kit:docker"},
 		},
 		{
 			name: "multiple new sources sorted by priority",
 			sources: []dockerSource{
 				{ID: "kit:java", Priority: 10},
 				{ID: "kit:github", Priority: 40},
-				{ID: "agent:claude", Priority: 20},
+				{ID: "kit:node", Priority: 20},
 			},
 			previous: []string{"kit:java"},
-			want:     []string{"kit:java", "agent:claude", "kit:github"},
+			want:     []string{"kit:java", "kit:node", "kit:github"},
 		},
 		{
 			name: "source removed from middle — re-sort suffix",
@@ -118,7 +120,7 @@ func TestComputeSourceOrder(t *testing.T) {
 			want:     []string{"A", "B"},
 		},
 		{
-			name: "empty sources",
+			name:     "empty sources",
 			sources:  nil,
 			previous: []string{"A", "B"},
 			want:     nil,
@@ -135,57 +137,90 @@ func TestComputeSourceOrder(t *testing.T) {
 	}
 }
 
-func TestOrderingAgentsBeforeKits(t *testing.T) {
+func TestOrderingAgentsAfterKits(t *testing.T) {
 	profiles, err := kit.Resolve(nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	agents := allAgentInstalls(t)
-	sources := collectSources(profiles, nil, agents, nil)
-	orderedIDs := computeSourceOrder(sources, nil)
+	df, _ := testOrderedDockerfile(profiles, agents)
+	s := string(df)
 
-	lastAgent := -1
-	firstKit := -1
-	for i, id := range orderedIDs {
-		if strings.HasPrefix(id, "agent:") {
-			lastAgent = i
+	// Every kit snippet must appear before every agent snippet.
+	lastKit := -1
+	for _, src := range collectSources(profiles, nil) {
+		idx := strings.Index(s, strings.TrimRight(src.Snippet, "\n"))
+		if idx < 0 {
+			t.Fatalf("kit snippet %s not found in Dockerfile", src.ID)
 		}
-		if strings.HasPrefix(id, "kit:") && firstKit == -1 {
-			firstKit = i
+		if idx > lastKit {
+			lastKit = idx
 		}
 	}
-	if lastAgent >= 0 && firstKit >= 0 && lastAgent >= firstKit {
-		t.Errorf("agents should come before kits, got last agent at %d, first kit at %d\norder: %v", lastAgent, firstKit, orderedIDs)
+
+	firstAgent := len(s)
+	for _, a := range agents {
+		idx := strings.Index(s, strings.TrimRight(a.DockerSnippet, "\n"))
+		if idx < 0 {
+			t.Fatalf("agent snippet %q not found in Dockerfile", a.Name)
+		}
+		if idx < firstAgent {
+			firstAgent = idx
+		}
+	}
+
+	if lastKit >= firstAgent {
+		t.Errorf("agents should come after all kits: lastKit=%d firstAgent=%d", lastKit, firstAgent)
+	}
+
+	// The agent block must sit before the tail.
+	tailIdx := strings.Index(s, "init.defaultBranch")
+	if tailIdx < 0 {
+		t.Fatal("tail marker not found")
+	}
+	if firstAgent >= tailIdx {
+		t.Errorf("agent block (idx %d) should appear before the tail (idx %d)", firstAgent, tailIdx)
 	}
 }
 
-func TestOrderingClaudeBeforeOtherAgents(t *testing.T) {
-	agents := allAgentInstalls(t)
-	profiles, _ := kit.Resolve(nil, nil)
-	sources := collectSources(profiles, nil, agents, nil)
-	orderedIDs := computeSourceOrder(sources, nil)
+func TestAgentBlockClaudeFirst(t *testing.T) {
+	block := agent.AssembleVersionedAgentSnippets(allAgentInstalls(t), nil)
+	claudeIdx := strings.Index(block, "claude.ai/install.sh")
+	geminiIdx := strings.Index(block, "gemini-cli")
+	if claudeIdx < 0 || geminiIdx < 0 {
+		t.Fatal("expected claude and gemini snippets in agent block")
+	}
+	if claudeIdx > geminiIdx {
+		t.Error("claude should appear first in the deterministic agent block")
+	}
+}
 
-	claudeIdx := -1
-	for i, id := range orderedIDs {
-		if id == "agent:claude" {
-			claudeIdx = i
-			break
-		}
+func TestAgentVersionBumpPreservesKitLayers(t *testing.T) {
+	profiles, _ := kit.Resolve(nil, nil)
+	agents := allAgentInstalls(t)
+	sources := collectSources(profiles, nil)
+	orderedIDs := computeSourceOrder(sources, nil)
+	snippetOf := map[string]string{}
+	for _, s := range sources {
+		snippetOf[s.ID] = s.Snippet
 	}
-	if claudeIdx < 0 {
-		t.Fatal("agent:claude not found in order")
-	}
-	for i, id := range orderedIDs {
-		if strings.HasPrefix(id, "agent:") && id != "agent:claude" && i < claudeIdx {
-			t.Errorf("agent:claude (idx %d) should come before %s (idx %d)", claudeIdx, id, i)
-		}
+
+	// The kit prefix is everything up to (but not including) the tail when no
+	// agents are present. It must be a byte-identical prefix of the assembled
+	// Dockerfile regardless of the pinned agent versions.
+	kitPrefix := strings.TrimSuffix(string(assembleDockerfile(orderedIDs, snippetOf, "")), string(assets.DockerfileTail))
+
+	df1 := string(assembleDockerfile(orderedIDs, snippetOf, agent.AssembleVersionedAgentSnippets(agents, versions.VersionMap{"claude": "1.0.0"})))
+	df2 := string(assembleDockerfile(orderedIDs, snippetOf, agent.AssembleVersionedAgentSnippets(agents, versions.VersionMap{"claude": "2.0.0"})))
+
+	if !strings.HasPrefix(df1, kitPrefix) || !strings.HasPrefix(df2, kitPrefix) {
+		t.Error("kit prefix (core + kit layers) changed when only an agent version bumped")
 	}
 }
 
 func TestOrderingNewKitAppendedLast(t *testing.T) {
 	profiles, _ := kit.Resolve(nil, nil)
-	agents := claudeOnlyInstalls(t)
-	sources := collectSources(profiles, nil, agents, nil)
+	sources := collectSources(profiles, nil)
 
 	order1 := computeSourceOrder(sources, nil)
 
@@ -206,8 +241,7 @@ func TestOrderingNewKitAppendedLast(t *testing.T) {
 
 func TestOrderingStateRoundTrip(t *testing.T) {
 	profiles, _ := kit.Resolve(nil, nil)
-	agents := claudeOnlyInstalls(t)
-	sources := collectSources(profiles, nil, agents, nil)
+	sources := collectSources(profiles, nil)
 
 	order1 := computeSourceOrder(sources, nil)
 	order2 := computeSourceOrder(sources, order1)
@@ -234,7 +268,7 @@ func TestDockerfileSnippetOrder(t *testing.T) {
 	if claudeIdx < 0 || javaIdx < 0 {
 		t.Fatal("expected both claude and java snippets in Dockerfile")
 	}
-	if claudeIdx > javaIdx {
-		t.Error("claude snippet should appear before java snippet in Dockerfile")
+	if javaIdx > claudeIdx {
+		t.Error("java (kit) snippet should appear before claude (agent) snippet in Dockerfile")
 	}
 }

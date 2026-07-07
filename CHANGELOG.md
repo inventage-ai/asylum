@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- Agent CLIs now build as the topmost base-image layers, after all kits, instead of first. Because agent versions change frequently (version pinning) and Docker invalidates every layer below a changed one, placing agents first meant each agent bump rebuilt the expensive kit layers (Java, Node, etc.) above them. Agents are now assembled as a block just before the tail, so a version bump rebuilds only the agent layers. The first run after upgrading triggers a one-time base-image rebuild.
+
 ### Fixed
 - Scoped npm packages (e.g. `@mermaid-js/mermaid-cli`) in a kit's `packages` list were rejected as invalid — the package name validation did not allow a leading `@`.
 - Installing node kit `packages` in the project image failed with `fnm: command not found` — the generated `npm install -g` step did not put fnm on PATH (Docker RUN does not source shell profiles).

@@ -4,9 +4,7 @@ import (
 	"cmp"
 	"slices"
 
-	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/kit"
-	"github.com/inventage-ai/asylum/internal/versions"
 )
 
 const defaultPriority = 50
@@ -31,9 +29,10 @@ func kitSnippet(k *kit.Kit, kitConfig func(string) *kit.SnippetConfig) string {
 	return k.DockerSnippet
 }
 
-// collectSources builds a list of dockerfile sources from resolved kits and agents.
-// When versions is non-nil, agent snippets are versioned with the provided versions.
-func collectSources(kits []*kit.Kit, kitConfig func(string) *kit.SnippetConfig, agents []*agent.AgentInstall, versions versions.VersionMap) []dockerSource {
+// collectSources builds the list of priority-ordered, state-tracked dockerfile
+// sources from resolved kits. Agents are not tracked here — they are assembled
+// as a block after all kit snippets (see assembleDockerfile).
+func collectSources(kits []*kit.Kit, kitConfig func(string) *kit.SnippetConfig) []dockerSource {
 	var sources []dockerSource
 	for _, k := range kits {
 		snippet := kitSnippet(k, kitConfig)
@@ -46,24 +45,6 @@ func collectSources(kits []*kit.Kit, kitConfig func(string) *kit.SnippetConfig, 
 		}
 		sources = append(sources, dockerSource{
 			ID:       "kit:" + k.Name,
-			Priority: p,
-			Snippet:  snippet,
-		})
-	}
-	for _, a := range agents {
-		if a.DockerSnippet == "" {
-			continue
-		}
-		p := a.DockerPriority
-		if p == 0 {
-			p = defaultPriority
-		}
-		snippet := a.DockerSnippet
-		if versions != nil {
-			snippet = a.VersionedSnippet(versions)
-		}
-		sources = append(sources, dockerSource{
-			ID:       "agent:" + a.Name,
 			Priority: p,
 			Snippet:  snippet,
 		})

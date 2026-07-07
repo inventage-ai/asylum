@@ -13,8 +13,8 @@ import (
 	"github.com/inventage-ai/asylum/assets"
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/docker"
-	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/kit"
+	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/versions"
 )
 
@@ -40,10 +40,12 @@ func writeCore(b *strings.Builder, core []byte) {
 	b.WriteByte('\n')
 }
 
-// assembleDockerfile builds a complete Dockerfile from core + ordered snippets + tail.
-// Snippets are written in the order specified by orderedIDs, which is computed
-// by computeSourceOrder to optimize Docker layer caching.
-func assembleDockerfile(orderedIDs []string, snippetOf map[string]string) []byte {
+// assembleDockerfile builds a complete Dockerfile from core + ordered kit
+// snippets + agent block + tail. Kit snippets are written in the order computed
+// by computeSourceOrder to optimize Docker layer caching. The agent block is
+// always emitted last (before the tail) so agent version bumps invalidate only
+// the agent layers, never any kit layer.
+func assembleDockerfile(orderedIDs []string, snippetOf map[string]string, agentBlock string) []byte {
 	var b strings.Builder
 	writeCore(&b, assets.DockerfileCore)
 	for _, id := range orderedIDs {
@@ -53,6 +55,12 @@ func assembleDockerfile(orderedIDs []string, snippetOf map[string]string) []byte
 			if !strings.HasSuffix(s, "\n") {
 				b.WriteByte('\n')
 			}
+		}
+	}
+	if agentBlock != "" {
+		b.WriteString(agentBlock)
+		if !strings.HasSuffix(agentBlock, "\n") {
+			b.WriteByte('\n')
 		}
 	}
 	b.Write(assets.DockerfileTail)
@@ -104,7 +112,7 @@ func assembleProjectEntrypoint(projectKits []*kit.Kit) []byte {
 	return []byte(b.String())
 }
 
-func baseHash(orderedIDs []string, snippetOf map[string]string, profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) string {
+func baseHash(orderedIDs []string, snippetOf map[string]string, agentBlock string, profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) string {
 	h := sha256.New()
 	h.Write(assets.DockerfileCore)
 	h.Write(assets.DockerfileTail)
@@ -115,6 +123,9 @@ func baseHash(orderedIDs []string, snippetOf map[string]string, profiles []*kit.
 		h.Write([]byte(id))
 		h.Write([]byte(snippetOf[id]))
 	}
+	// Agents are not in orderedIDs; hash their assembled block (which carries
+	// pinned versions) so an agent version bump triggers a rebuild.
+	h.Write([]byte(agentBlock))
 	h.Write([]byte(kit.AssembleEntrypointSnippets(profiles)))
 	h.Write([]byte(kit.AssembleBannerLines(profiles)))
 	h.Write([]byte(agent.AssembleAgentBannerLines(agentInstalls)))
@@ -154,15 +165,16 @@ func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag stri
 // last successful build (from state.json). Returns (rebuilt, newOrder, err)
 // where newOrder should be saved to state on success.
 func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitConfig func(string) *kit.SnippetConfig, version string, versions versions.VersionMap, noCache bool, previousOrder []string) (bool, []string, error) {
-	sources := collectSources(profiles, kitConfig, agentInstalls, versions)
+	sources := collectSources(profiles, kitConfig)
 	orderedIDs := computeSourceOrder(sources, previousOrder)
 
 	snippetOf := map[string]string{}
 	for _, s := range sources {
 		snippetOf[s.ID] = s.Snippet
 	}
+	agentBlock := agent.AssembleVersionedAgentSnippets(agentInstalls, versions)
 
-	hash := baseHash(orderedIDs, snippetOf, profiles, agentInstalls)
+	hash := baseHash(orderedIDs, snippetOf, agentBlock, profiles, agentInstalls)
 
 	existing, err := docker.InspectLabel(baseTag, "asylum.hash")
 	if err == nil && existing == hash && !noCache {
@@ -190,7 +202,7 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitCon
 		"USER_HOME": home,
 	}
 
-	dockerfile := assembleDockerfile(orderedIDs, snippetOf)
+	dockerfile := assembleDockerfile(orderedIDs, snippetOf, agentBlock)
 	entrypoint := assembleEntrypoint(profiles, agentInstalls)
 
 	if err := buildImage(dockerfile, map[string][]byte{"entrypoint.sh": entrypoint}, baseTag, labels, buildArgs, noCache); err != nil {
