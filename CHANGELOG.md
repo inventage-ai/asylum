@@ -2,19 +2,20 @@
 
 ## Unreleased
 
-### Changed
-- Agent CLIs now build as the topmost base-image layers, after all kits, instead of first. Because agent versions change frequently (version pinning) and Docker invalidates every layer below a changed one, placing agents first meant each agent bump rebuilt the expensive kit layers (Java, Node, etc.) above them. Agents are now assembled as a block just before the tail, so a version bump rebuilds only the agent layers. The first run after upgrading triggers a one-time base-image rebuild.
+## 0.7.1 — 2026-07-08
+
+This release restores `agent-browser` automation on arm64, which broke when Debian shipped a crashing Chromium build. It adds agent version tracking, so new upstream agent releases are picked up automatically while only busting that agent's image layer, and lets you run ad-hoc agents in a configured project without rebuilding its container. Several container-startup and kit-package installation failures are also fixed.
+
+### Added
+- Agent version tracking — asylum fetches the latest version of each coding agent and injects it as a per-agent `ARG` directive in the Dockerfile, so a new upstream release cache-busts only that agent's install layer. Versions are fetched concurrently on first run, cached in `~/.asylum/versions.json`, and refreshed in the background.
+- Ad-hoc agents in a configured project — running `asylum -a <agent>` for an agent the project's container doesn't have no longer fails or rebuilds the existing container. Instead asylum starts a separate container (named for the project plus agent set) alongside it. Secondary containers forward no ports; bake the agent into project/user config to give it a first-class container with ports.
+- `--debug` now traces the container entrypoint (`set -x`). The entrypoint runs under `set -e` and aborts silently on a failing command, so a startup failure left no clue beyond the last successful log line. The trace is captured in `docker logs` and dumped automatically when a container fails to start, pinpointing the command that died.
 
 ### Fixed
 - `agent-browser` failed to launch a browser on arm64 (`Chrome exited early ... without writing DevToolsActivePort`, SIGTRAP). Debian's trixie-security channel shipped Chromium 150.0.7871.46, a build Debian itself blocked from migration as a regression (bug #1141488); any base-image rebuild swept it in via the kit's unpinned `apt-get install chromium`. The arm64 install is now pinned to the known-good `147.0.7727.137-1~deb13u1`.
+- A project's local mise config (e.g. a `.tool-versions` pinning an uninstalled Java build) could abort container startup. The java kit's entrypoint ran `mise use --global` under `set -e` with output suppressed, so a non-zero exit killed startup with no visible cause ("container failed to start"). The command is now non-fatal and no longer hides mise's output.
 - Scoped npm packages (e.g. `@mermaid-js/mermaid-cli`) in a kit's `packages` list were rejected as invalid — the package name validation did not allow a leading `@`.
 - Installing node kit `packages` in the project image failed with `fnm: command not found` — the generated `npm install -g` step did not put fnm on PATH (Docker RUN does not source shell profiles).
-- A project's local mise config (e.g. a `.tool-versions` pinning an uninstalled Java build) could abort container startup. The java kit's entrypoint ran `mise use --global` under `set -e` with output suppressed, so a non-zero exit killed startup with no visible cause ("container failed to start"). The command is now non-fatal and no longer hides mise's output.
-
-### Added
-- `--debug` now traces the container entrypoint (`set -x`). The entrypoint runs under `set -e` and aborts silently on a failing command, so a startup failure left no clue beyond the last successful log line. The trace is captured in `docker logs` and dumped automatically when a container fails to start, pinpointing the command that died.
-- Agent version tracking — asylum fetches the latest version of each coding agent and injects it as a per-agent `ARG` directive in the Dockerfile, so a new upstream release cache-busts only that agent's install layer. Versions are fetched concurrently on first run, cached in `~/.asylum/versions.json`, and refreshed in the background.
-- Ad-hoc agents in a configured project — running `asylum -a <agent>` for an agent the project's container doesn't have no longer fails or rebuilds the existing container. Instead asylum starts a separate container (named for the project plus agent set) alongside it. Secondary containers forward no ports; bake the agent into project/user config to give it a first-class container with ports.
 
 ## 0.7.0 — 2026-06-23
 
