@@ -23,7 +23,7 @@ kits:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `packages` | list | `[]` | Additional Python packages to install in the project image via `uv tool install` |
+| `packages` | list | `[]` | Additional Python packages to install via `uv tool install` (base image if declared in the global config, else the project image) |
 
 ## Sub-Kits
 
@@ -36,4 +36,4 @@ Included by default. Provides:
 
 ## Package Installation
 
-Packages listed in the config are installed with `uv tool install` during the project image build. For runtime dependencies in your project, use `uv pip install` or `pip install` inside the container.
+Packages listed in the config are installed with `uv tool install` during the image build. For runtime dependencies in your project, use `uv pip install` or `pip install` inside the container.

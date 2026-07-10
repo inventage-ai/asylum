@@ -17,13 +17,15 @@ The base image contains the full dev toolchain shared across all projects:
 - **Docker CLI** (not the engine — see the [Docker kit](../kits/docker.md) for Docker-in-Docker)
 - **Agent CLIs**: Claude Code, Gemini CLI, Codex
 
-The base image is built once (~5 minutes) and cached. It rebuilds automatically when the Dockerfile or kit snippets change (hash-based detection).
+It also installs any [packages](../configuration/packages.md) declared in your global config (`~/.asylum/config.yaml`), so cross-project tools are built once and shared by every project.
+
+The base image is built once (~5 minutes) and cached. It rebuilds automatically when the Dockerfile, kit snippets, or global packages change (hash-based detection).
 
 ## Project Image
 
 **Tag:** `asylum:proj-<hash>`
 
-When your config includes [packages](../configuration/packages.md) (apt, npm, pip, or custom build commands), Asylum builds a project image on top of the base:
+When your **project** config includes [packages](../configuration/packages.md) (apt, npm, pip, or custom build commands), Asylum builds a project image on top of the base (packages declared in the global config are baked into the base image instead):
 
 ```
 ┌──────────────────────────────┐
@@ -36,7 +38,7 @@ When your config includes [packages](../configuration/packages.md) (apt, npm, pi
 └──────────────────────────────┘
 ```
 
-If no packages are configured, the base image is used directly — no project image is built.
+If no project packages are configured, the base image is used directly — no project image is built.
 
 Project images are also cached and only rebuild when the package configuration changes.
 
@@ -44,7 +46,7 @@ Project images are also cached and only rebuild when the package configuration c
 
 Both tiers use hash-based detection:
 
-- **Base image**: SHA-256 of the Dockerfile, kit snippets, agent install snippets, and host user identity (username, UID, GID, home directory). Stored as a Docker label (`asylum.hash`).
+- **Base image**: SHA-256 of the Dockerfile, kit snippets, global package installs, agent install snippets, and host user identity (username, UID, GID, home directory). Stored as a Docker label (`asylum.hash`).
 - **Project image**: SHA-256 of the packages config. Stored as a Docker label (`asylum.packages.hash`).
 
 A base image rebuild invalidates all project images (they're built `FROM asylum:latest`).

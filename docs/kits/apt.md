@@ -1,6 +1,6 @@
 # APT Packages Kit
 
-Install extra system packages via apt in the project image.
+Install extra system packages via apt. Packages declared in the global config go into the base image; project-declared packages go into the project image (see [Packages](../configuration/packages.md)).
 
 **Activation: Opt-in** — only active if explicitly enabled in your config.
 
@@ -25,7 +25,7 @@ kits:
 
 ## How It Works
 
-Packages are installed as root during the project image build using `apt-get install -y --no-install-recommends`. The project image is cached and only rebuilt when the package list changes.
+Packages are installed as root during the image build using `apt-get install -y --no-install-recommends`. The image is cached and only rebuilt when the package list changes.
 
 ## When to Use
 

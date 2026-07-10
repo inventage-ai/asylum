@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/inventage-ai/asylum/internal/container"
+	"github.com/inventage-ai/asylum/internal/kit"
 )
 
 func TestResolveMode(t *testing.T) {
@@ -448,4 +449,72 @@ func TestParseArgs(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGatePackagesByKits(t *testing.T) {
+	pkgs := map[string][]string{
+		"npm":     {"@mermaid-js/mermaid-cli"},
+		"pip":     {"ansible"},
+		"cx-lang": {"go"},
+		"apt":     {"jq"},
+		"run":     {"echo hi"},
+	}
+
+	t.Run("provider kit excluded drops its packages", func(t *testing.T) {
+		// Only the python kit is active (e.g. `asylum --kits python`).
+		got := gatePackagesByKits(clonePackages(pkgs), []*kit.Kit{{Name: "python"}})
+		if _, ok := got["npm"]; ok {
+			t.Error("npm should be dropped when node kit is excluded")
+		}
+		if _, ok := got["cx-lang"]; ok {
+			t.Error("cx-lang should be dropped when cx kit is excluded")
+		}
+		if _, ok := got["pip"]; !ok {
+			t.Error("pip should be kept when python kit is active")
+		}
+	})
+
+	t.Run("all provider kits active keeps everything", func(t *testing.T) {
+		all := []*kit.Kit{{Name: "node"}, {Name: "python"}, {Name: "cx"}, {Name: "apt"}, {Name: "shell"}}
+		got := gatePackagesByKits(clonePackages(pkgs), all)
+		if len(got) != len(pkgs) {
+			t.Errorf("expected all %d package types kept, got %d", len(pkgs), len(got))
+		}
+	})
+}
+
+func TestSubtractPackages(t *testing.T) {
+	t.Run("global entries removed from project map", func(t *testing.T) {
+		all := map[string][]string{"npm": {"turbo", "vite"}}
+		base := map[string][]string{"npm": {"turbo"}}
+		got := subtractPackages(all, base)
+		if !reflect.DeepEqual(got["npm"], []string{"vite"}) {
+			t.Errorf("expected [vite], got %v", got["npm"])
+		}
+	})
+
+	t.Run("only-global leaves empty project map", func(t *testing.T) {
+		all := map[string][]string{"npm": {"turbo"}}
+		base := map[string][]string{"npm": {"turbo"}}
+		got := subtractPackages(all, base)
+		if len(got) != 0 {
+			t.Errorf("expected empty project map, got %v", got)
+		}
+	})
+
+	t.Run("empty base returns all unchanged", func(t *testing.T) {
+		all := map[string][]string{"npm": {"turbo"}}
+		got := subtractPackages(all, nil)
+		if !reflect.DeepEqual(got, all) {
+			t.Errorf("expected unchanged, got %v", got)
+		}
+	})
+}
+
+func clonePackages(m map[string][]string) map[string][]string {
+	out := make(map[string][]string, len(m))
+	for k, v := range m {
+		out[k] = append([]string(nil), v...)
+	}
+	return out
 }

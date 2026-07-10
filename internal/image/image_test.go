@@ -201,3 +201,57 @@ func TestGenerateProjectDockerfile(t *testing.T) {
 		}
 	})
 }
+
+func TestBasePackageBlock(t *testing.T) {
+	t.Run("empty returns nothing", func(t *testing.T) {
+		block, err := basePackageBlock(nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if block != "" {
+			t.Errorf("expected empty block, got %q", block)
+		}
+	})
+
+	t.Run("apt as root, npm as build user, restores user", func(t *testing.T) {
+		block, err := basePackageBlock(map[string][]string{
+			"apt": {"jq"},
+			"npm": {"@mermaid-js/mermaid-cli"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(block, "USER root") {
+			t.Error("apt should run as USER root")
+		}
+		if !strings.Contains(block, "npm install -g") || !strings.Contains(block, "@mermaid-js/mermaid-cli") {
+			t.Error("missing npm install")
+		}
+		// The build-arg user is used in the base image, and the block must
+		// restore it so the agent block that follows runs unprivileged.
+		if !strings.Contains(block, "USER ${USERNAME}") {
+			t.Error("block should reference the ${USERNAME} build arg")
+		}
+		if !strings.HasSuffix(strings.TrimSpace(block), "USER ${USERNAME}") {
+			t.Error("block must end by restoring USER ${USERNAME}")
+		}
+	})
+
+	t.Run("invalid name rejected", func(t *testing.T) {
+		if _, err := basePackageBlock(map[string][]string{"npm": {"--registry=https://evil"}}); err == nil {
+			t.Error("expected error for flag-like package name")
+		}
+	})
+}
+
+// When only global packages are configured, the project-tier map is empty and
+// EnsureProject returns the base tag without building a project image.
+func TestEnsureProject_EmptyProjectPackagesReturnsBase(t *testing.T) {
+	tag, err := EnsureProject(nil, nil, map[string][]string{}, nil, "test", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tag != baseTag {
+		t.Errorf("expected %q, got %q", baseTag, tag)
+	}
+}

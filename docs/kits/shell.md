@@ -24,7 +24,7 @@ kits:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `disabled` | bool | `false` | Disable this kit |
-| `build` | list | `[]` | Custom shell commands to run during project image build |
+| `build` | list | `[]` | Custom shell commands to run during the image build (base image if declared in the global config, else the project image) |
 
 ## tmux Configuration
 
@@ -38,7 +38,7 @@ The pre-installed tmux config includes:
 
 ## Custom Build Commands
 
-The `build` option runs arbitrary commands during the project image build. This is the escape hatch for installing tools that don't fit into other kit categories:
+The `build` option runs arbitrary commands during the image build. This is the escape hatch for installing tools that don't fit into other kit categories:
 
 ```yaml
 kits:

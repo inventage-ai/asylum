@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- Packages and `shell.build` commands declared in the global config (`~/.asylum/config.yaml`) now install into the shared base image instead of each per-project image, so a global tool (e.g. `@mermaid-js/mermaid-cli`) is built once and reused everywhere. Packages declared in project configs (`.asylum`, `.asylum.local`) still install into the project image. Entries whose provider kit is excluded (`--kits`, `disabled: true`) are dropped rather than installed without their toolchain.
+
 ## 0.7.1 — 2026-07-08
 
 This release restores `agent-browser` automation on arm64, which broke when Debian shipped a crashing Chromium build. It adds agent version tracking, so new upstream agent releases are picked up automatically while only busting that agent's image layer, and lets you run ad-hoc agents in a configured project without rebuilding its container. Several container-startup and kit-package installation failures are also fixed.

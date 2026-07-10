@@ -208,10 +208,10 @@ func TestAgentVersionBumpPreservesKitLayers(t *testing.T) {
 	// The kit prefix is everything up to (but not including) the tail when no
 	// agents are present. It must be a byte-identical prefix of the assembled
 	// Dockerfile regardless of the pinned agent versions.
-	kitPrefix := strings.TrimSuffix(string(assembleDockerfile(orderedIDs, snippetOf, "")), string(assets.DockerfileTail))
+	kitPrefix := strings.TrimSuffix(string(assembleDockerfile(orderedIDs, snippetOf, "", "")), string(assets.DockerfileTail))
 
-	df1 := string(assembleDockerfile(orderedIDs, snippetOf, agent.AssembleVersionedAgentSnippets(agents, versions.VersionMap{"claude": "1.0.0"})))
-	df2 := string(assembleDockerfile(orderedIDs, snippetOf, agent.AssembleVersionedAgentSnippets(agents, versions.VersionMap{"claude": "2.0.0"})))
+	df1 := string(assembleDockerfile(orderedIDs, snippetOf, "", agent.AssembleVersionedAgentSnippets(agents, versions.VersionMap{"claude": "1.0.0"})))
+	df2 := string(assembleDockerfile(orderedIDs, snippetOf, "", agent.AssembleVersionedAgentSnippets(agents, versions.VersionMap{"claude": "2.0.0"})))
 
 	if !strings.HasPrefix(df1, kitPrefix) || !strings.HasPrefix(df2, kitPrefix) {
 		t.Error("kit prefix (core + kit layers) changed when only an agent version bumped")

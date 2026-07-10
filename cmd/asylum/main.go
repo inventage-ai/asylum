@@ -1035,6 +1035,72 @@ func collectPackages(cfg config.Config) map[string][]string {
 	return pkgs
 }
 
+// packageProviders maps a package-map key to the kit that installs the tool it
+// needs (apt-get and the shell are always present; node/python/cx are not).
+var packageProviders = map[string]string{"apt": "apt", "npm": "node", "pip": "python", "cx-lang": "cx", "run": "shell"}
+
+// collectGlobalPackages returns packages declared in the global config, gated on
+// the provider kit being present in the base image (globalKits). Entries whose
+// provider kit was excluded by --kits or a disabled toggle are dropped so the
+// base package block never references an installer that was not baked in.
+func collectGlobalPackages(globalKits []*kit.Kit) map[string][]string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil
+	}
+	globalCfg, err := config.LoadFile(filepath.Join(home, ".asylum", "config.yaml"))
+	if err != nil {
+		return nil
+	}
+	pkgs := gatePackagesByKits(collectPackages(globalCfg), globalKits)
+	if len(pkgs) == 0 {
+		return nil
+	}
+	return pkgs
+}
+
+// gatePackagesByKits drops package entries whose provider kit is not in kits, so
+// a package is never staged into an image whose provider kit was excluded (by
+// --kits or a disabled toggle) and therefore has no installer.
+func gatePackagesByKits(pkgs map[string][]string, kits []*kit.Kit) map[string][]string {
+	active := map[string]bool{}
+	for _, k := range kits {
+		active[k.Name] = true
+	}
+	for key, provider := range packageProviders {
+		if !active[provider] {
+			delete(pkgs, key)
+		}
+	}
+	return pkgs
+}
+
+// subtractPackages returns the entries in all that are not present in base, per
+// package type, so packages installed in the base image are not reinstalled in
+// the project image.
+func subtractPackages(all, base map[string][]string) map[string][]string {
+	if len(base) == 0 {
+		return all
+	}
+	out := map[string][]string{}
+	for key, items := range all {
+		removed := map[string]bool{}
+		for _, b := range base[key] {
+			removed[b] = true
+		}
+		var kept []string
+		for _, it := range items {
+			if !removed[it] {
+				kept = append(kept, it)
+			}
+		}
+		if len(kept) > 0 {
+			out[key] = kept
+		}
+	}
+	return out
+}
+
 // collectOnboarding builds the onboarding enabled map from kit configs.
 func collectOnboarding(cfg config.Config) map[string]bool {
 	m := map[string]bool{}
@@ -1049,7 +1115,8 @@ func collectOnboarding(cfg config.Config) map[string]bool {
 // the expected image tag. When a container is already running and image checks
 // fail (e.g. docker inspect errors), it falls through gracefully.
 func ensureImages(globalKits, projectKits, allKits []*kit.Kit, agentInstalls []*agent.AgentInstall, cfg config.Config, version string, versions versions.VersionMap, noCache bool, state *config.State, containerRunning bool) (imageTag string, stateChanged bool) {
-	baseRebuilt, newOrder, err := image.EnsureBase(globalKits, agentInstalls, cfg.KitSnippetConfig, version, versions, noCache, state.DockerSourceOrder)
+	globalPkgs := collectGlobalPackages(globalKits)
+	baseRebuilt, newOrder, err := image.EnsureBase(globalKits, agentInstalls, globalPkgs, cfg.KitSnippetConfig, version, versions, noCache, state.DockerSourceOrder)
 	if err != nil {
 		if containerRunning {
 			log.Warn("image check: %v (using running container)", err)
@@ -1062,7 +1129,8 @@ func ensureImages(globalKits, projectKits, allKits []*kit.Kit, agentInstalls []*
 		stateChanged = true
 	}
 
-	imageTag, err = image.EnsureProject(projectKits, allKits, collectPackages(cfg), cfg.KitSnippetConfig, version, baseRebuilt, noCache)
+	projectPkgs := subtractPackages(collectPackages(cfg), globalPkgs)
+	imageTag, err = image.EnsureProject(projectKits, allKits, projectPkgs, cfg.KitSnippetConfig, version, baseRebuilt, noCache)
 	if err != nil {
 		if containerRunning {
 			log.Warn("image check: %v (using running container)", err)

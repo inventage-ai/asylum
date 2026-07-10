@@ -24,7 +24,7 @@ kits:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `packages` | list | `[]` | Additional npm packages to install globally in the project image |
+| `packages` | list | `[]` | Additional npm packages to install globally (base image if declared in the global config, else the project image) |
 | `shadow-node-modules` | bool | `true` | Shadow `node_modules` with Docker volumes (see below) |
 | `onboarding` | bool | `false` | Auto-detect lockfiles and run `npm install` on first container start |
 

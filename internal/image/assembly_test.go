@@ -40,7 +40,7 @@ func testOrderedDockerfile(profiles []*kit.Kit, agents []*agent.AgentInstall) ([
 		snippetOf[s.ID] = s.Snippet
 	}
 	agentBlock := agent.AssembleVersionedAgentSnippets(agents, nil)
-	return assembleDockerfile(orderedIDs, snippetOf, agentBlock), orderedIDs
+	return assembleDockerfile(orderedIDs, snippetOf, "", agentBlock), orderedIDs
 }
 
 func TestAssembleDockerfile_AllProfiles(t *testing.T) {
@@ -211,6 +211,55 @@ func TestAssembleEntrypoint_BannerLines(t *testing.T) {
 	})
 }
 
+func TestAssembleDockerfile_PackageBlockPlacement(t *testing.T) {
+	profiles, _ := kit.Resolve(nil, nil)
+	sources := collectSources(profiles, nil)
+	orderedIDs := computeSourceOrder(sources, nil)
+	snippetOf := map[string]string{}
+	for _, s := range sources {
+		snippetOf[s.ID] = s.Snippet
+	}
+	packageBlock, err := basePackageBlock(map[string][]string{"npm": {"@mermaid-js/mermaid-cli"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	agentBlock := agent.AssembleVersionedAgentSnippets(claudeOnlyInstalls(t), nil)
+
+	df := string(assembleDockerfile(orderedIDs, snippetOf, packageBlock, agentBlock))
+
+	kitIdx := strings.Index(df, "# Install Node.js global packages") // node kit snippet
+	pkgIdx := strings.Index(df, "@mermaid-js/mermaid-cli")            // global package block
+	agentIdx := strings.Index(df, "claude.ai/install.sh")            // agent block
+	if kitIdx < 0 || pkgIdx < 0 || agentIdx < 0 {
+		t.Fatalf("missing markers: kit=%d pkg=%d agent=%d", kitIdx, pkgIdx, agentIdx)
+	}
+	if !(kitIdx < pkgIdx && pkgIdx < agentIdx) {
+		t.Errorf("package block must sit after kit snippets and before agent block: kit=%d pkg=%d agent=%d", kitIdx, pkgIdx, agentIdx)
+	}
+}
+
+func TestBaseHash_ChangesWithGlobalPackages(t *testing.T) {
+	profiles, _ := kit.Resolve(nil, nil)
+	agents := claudeOnlyInstalls(t)
+	_, order := testOrderedDockerfile(profiles, agents)
+	sources := collectSources(profiles, nil)
+	snippetOf := map[string]string{}
+	for _, s := range sources {
+		snippetOf[s.ID] = s.Snippet
+	}
+	agentBlock := agent.AssembleVersionedAgentSnippets(agents, nil)
+
+	none := baseHash(order, snippetOf, "", agentBlock, profiles, agents)
+	block, err := basePackageBlock(map[string][]string{"npm": {"turbo"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	with := baseHash(order, snippetOf, block, agentBlock, profiles, agents)
+	if none == with {
+		t.Error("adding a global package should change the base hash")
+	}
+}
+
 func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	profiles, _ := kit.Resolve(nil, nil)
 	agents1 := allAgentInstalls(t)
@@ -223,8 +272,8 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	}
 	block1 := agent.AssembleVersionedAgentSnippets(agents1, nil)
 
-	h1 := baseHash(order1, snippetOf1, block1, profiles, agents1)
-	h2 := baseHash(order1, snippetOf1, block1, profiles, agents1)
+	h1 := baseHash(order1, snippetOf1, "", block1, profiles, agents1)
+	h2 := baseHash(order1, snippetOf1, "", block1, profiles, agents1)
 	if h1 != h2 {
 		t.Error("baseHash should be deterministic")
 	}
@@ -238,7 +287,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 		snippetOf2[s.ID] = s.Snippet
 	}
 	block2 := agent.AssembleVersionedAgentSnippets(agents2, nil)
-	h3 := baseHash(order2, snippetOf2, block2, profiles, agents2)
+	h3 := baseHash(order2, snippetOf2, "", block2, profiles, agents2)
 	if h1 == h3 {
 		t.Error("different agents should produce different hash")
 	}
@@ -252,7 +301,7 @@ func TestBaseHash_DeterministicAndChanges(t *testing.T) {
 	for _, s := range sources3 {
 		snippetOf3[s.ID] = s.Snippet
 	}
-	h4 := baseHash(order3, snippetOf3, block1, javaOnly, agents1)
+	h4 := baseHash(order3, snippetOf3, "", block1, javaOnly, agents1)
 	if h1 == h4 {
 		t.Error("different profiles should produce different hash")
 	}
@@ -401,7 +450,7 @@ func TestVersionedAgentSnippets(t *testing.T) {
 		snippetOf[s.ID] = s.Snippet
 	}
 	agentBlock := agent.AssembleVersionedAgentSnippets(allAgentInstalls(t), vm)
-	df := assembleDockerfile(orderedIDs, snippetOf, agentBlock)
+	df := assembleDockerfile(orderedIDs, snippetOf, "", agentBlock)
 	s := string(df)
 
 	// Check that version ARGs are present in the Dockerfile

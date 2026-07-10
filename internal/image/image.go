@@ -41,11 +41,13 @@ func writeCore(b *strings.Builder, core []byte) {
 }
 
 // assembleDockerfile builds a complete Dockerfile from core + ordered kit
-// snippets + agent block + tail. Kit snippets are written in the order computed
-// by computeSourceOrder to optimize Docker layer caching. The agent block is
-// always emitted last (before the tail) so agent version bumps invalidate only
-// the agent layers, never any kit layer.
-func assembleDockerfile(orderedIDs []string, snippetOf map[string]string, agentBlock string) []byte {
+// snippets + global package block + agent block + tail. Kit snippets are written
+// in the order computed by computeSourceOrder to optimize Docker layer caching.
+// The global package block follows all kit snippets so every provider kit
+// (node/fnm, python/uv, cx) is already installed. The agent block is always
+// emitted last (before the tail) so agent version bumps invalidate only the
+// agent layers, never any kit or package layer.
+func assembleDockerfile(orderedIDs []string, snippetOf map[string]string, packageBlock, agentBlock string) []byte {
 	var b strings.Builder
 	writeCore(&b, assets.DockerfileCore)
 	for _, id := range orderedIDs {
@@ -55,6 +57,12 @@ func assembleDockerfile(orderedIDs []string, snippetOf map[string]string, agentB
 			if !strings.HasSuffix(s, "\n") {
 				b.WriteByte('\n')
 			}
+		}
+	}
+	if packageBlock != "" {
+		b.WriteString(packageBlock)
+		if !strings.HasSuffix(packageBlock, "\n") {
+			b.WriteByte('\n')
 		}
 	}
 	if agentBlock != "" {
@@ -112,7 +120,7 @@ func assembleProjectEntrypoint(projectKits []*kit.Kit) []byte {
 	return []byte(b.String())
 }
 
-func baseHash(orderedIDs []string, snippetOf map[string]string, agentBlock string, profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) string {
+func baseHash(orderedIDs []string, snippetOf map[string]string, packageBlock, agentBlock string, profiles []*kit.Kit, agentInstalls []*agent.AgentInstall) string {
 	h := sha256.New()
 	h.Write(assets.DockerfileCore)
 	h.Write(assets.DockerfileTail)
@@ -126,6 +134,9 @@ func baseHash(orderedIDs []string, snippetOf map[string]string, agentBlock strin
 	// Agents are not in orderedIDs; hash their assembled block (which carries
 	// pinned versions) so an agent version bump triggers a rebuild.
 	h.Write([]byte(agentBlock))
+	// Global package block is a fixed-position block (not an ordered source);
+	// hash it so adding/removing/changing a global package rebuilds the base.
+	h.Write([]byte(packageBlock))
 	h.Write([]byte(kit.AssembleEntrypointSnippets(profiles)))
 	h.Write([]byte(kit.AssembleBannerLines(profiles)))
 	h.Write([]byte(agent.AssembleAgentBannerLines(agentInstalls)))
@@ -164,7 +175,7 @@ func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag stri
 // for optimal Docker layer caching. previousOrder is the source order from the
 // last successful build (from state.json). Returns (rebuilt, newOrder, err)
 // where newOrder should be saved to state on success.
-func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitConfig func(string) *kit.SnippetConfig, version string, versions versions.VersionMap, noCache bool, previousOrder []string) (bool, []string, error) {
+func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, globalPackages map[string][]string, kitConfig func(string) *kit.SnippetConfig, version string, versions versions.VersionMap, noCache bool, previousOrder []string) (bool, []string, error) {
 	sources := collectSources(profiles, kitConfig)
 	orderedIDs := computeSourceOrder(sources, previousOrder)
 
@@ -174,7 +185,12 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitCon
 	}
 	agentBlock := agent.AssembleVersionedAgentSnippets(agentInstalls, versions)
 
-	hash := baseHash(orderedIDs, snippetOf, agentBlock, profiles, agentInstalls)
+	packageBlock, err := basePackageBlock(globalPackages)
+	if err != nil {
+		return false, nil, err
+	}
+
+	hash := baseHash(orderedIDs, snippetOf, packageBlock, agentBlock, profiles, agentInstalls)
 
 	existing, err := docker.InspectLabel(baseTag, "asylum.hash")
 	if err == nil && existing == hash && !noCache {
@@ -202,7 +218,7 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, kitCon
 		"USER_HOME": home,
 	}
 
-	dockerfile := assembleDockerfile(orderedIDs, snippetOf, agentBlock)
+	dockerfile := assembleDockerfile(orderedIDs, snippetOf, packageBlock, agentBlock)
 	entrypoint := assembleEntrypoint(profiles, agentInstalls)
 
 	if err := buildImage(dockerfile, map[string][]byte{"entrypoint.sh": entrypoint}, baseTag, labels, buildArgs, noCache); err != nil {
@@ -281,35 +297,33 @@ func validatePackageNames(pkgType string, names []string) error {
 	return nil
 }
 
-func generateProjectDockerfile(profileSnippets string, packages map[string][]string, kitProjectSnippets string, username string, hasProjectEntrypoint bool) (string, error) {
+// validatePackages checks package types, package names, and run commands.
+func validatePackages(packages map[string][]string) error {
 	for k := range packages {
 		if !knownPackageTypes[k] {
-			return "", fmt.Errorf("unknown package type %q (valid: apt, npm, pip, cx-lang, run)", k)
+			return fmt.Errorf("unknown package type %q (valid: apt, npm, pip, cx-lang, run)", k)
 		}
 	}
 	for _, pkgType := range []string{"apt", "npm", "pip", "cx-lang"} {
 		if err := validatePackageNames(pkgType, packages[pkgType]); err != nil {
-			return "", err
+			return err
 		}
 	}
 	for _, cmd := range packages["run"] {
 		if strings.ContainsAny(cmd, "\n\r") {
-			return "", fmt.Errorf("invalid run command: must not contain newlines")
+			return fmt.Errorf("invalid run command: must not contain newlines")
 		}
 		if strings.TrimSpace(cmd) == "" {
-			return "", fmt.Errorf("invalid run command: must not be empty")
+			return fmt.Errorf("invalid run command: must not be empty")
 		}
 	}
+	return nil
+}
 
-	var b strings.Builder
-	b.WriteString("FROM asylum:latest\n")
-
-	// Project-level profile snippets
-	if profileSnippets != "" {
-		b.WriteString("\nUSER " + username + "\n")
-		b.WriteString(profileSnippets)
-	}
-
+// writePackageInstalls emits install RUN blocks for the given packages,
+// switching USER as needed: apt as root, npm/pip/cx-lang/run as username.
+// Shared by the base and project image generators.
+func writePackageInstalls(b *strings.Builder, packages map[string][]string, username string) {
 	if apt := packages["apt"]; len(apt) > 0 {
 		b.WriteString("\nUSER root\n")
 		b.WriteString("RUN apt-get update && apt-get install -y --no-install-recommends \\\n    ")
@@ -340,6 +354,39 @@ func generateProjectDockerfile(profileSnippets string, packages map[string][]str
 	writeUserRuns("$HOME/.local/bin/uv tool install ", packages["pip"])
 	writeUserRuns("cx lang add ", packages["cx-lang"])
 	writeUserRuns("", packages["run"])
+}
+
+// basePackageBlock renders the global package install block for the base image.
+// It restores USER to the build user afterwards so the agent block that follows
+// runs unprivileged. Returns "" when there are no packages.
+func basePackageBlock(packages map[string][]string) (string, error) {
+	if len(packages) == 0 {
+		return "", nil
+	}
+	if err := validatePackages(packages); err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	writePackageInstalls(&b, packages, "${USERNAME}")
+	b.WriteString("\nUSER ${USERNAME}\n")
+	return b.String(), nil
+}
+
+func generateProjectDockerfile(profileSnippets string, packages map[string][]string, kitProjectSnippets string, username string, hasProjectEntrypoint bool) (string, error) {
+	if err := validatePackages(packages); err != nil {
+		return "", err
+	}
+
+	var b strings.Builder
+	b.WriteString("FROM asylum:latest\n")
+
+	// Project-level profile snippets
+	if profileSnippets != "" {
+		b.WriteString("\nUSER " + username + "\n")
+		b.WriteString(profileSnippets)
+	}
+
+	writePackageInstalls(&b, packages, username)
 
 	if kitProjectSnippets != "" {
 		b.WriteString("\nUSER " + username + "\n")
