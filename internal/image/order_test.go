@@ -174,7 +174,7 @@ func TestOrderingAgentsAfterKits(t *testing.T) {
 	}
 
 	// The agent block must sit before the tail.
-	tailIdx := strings.Index(s, "init.defaultBranch")
+	tailIdx := strings.Index(s, "WORKDIR /workspace")
 	if tailIdx < 0 {
 		t.Fatal("tail marker not found")
 	}
