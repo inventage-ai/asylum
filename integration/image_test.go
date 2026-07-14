@@ -32,7 +32,7 @@ func TestBaseImageBuild(t *testing.T) {
 func TestBaseImageCaching(t *testing.T) {
 	ensureBaseImage(t)
 
-	rebuilt, _, err := image.EnsureBase(baseKits, nil, nil, testVersion, nil, false, nil)
+	rebuilt, _, err := image.EnsureBase(baseKits, nil, nil, nil, testVersion, nil, false, nil)
 	if err != nil {
 		t.Fatalf("second EnsureBase failed: %v", err)
 	}
