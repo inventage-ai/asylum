@@ -69,7 +69,7 @@ func TestClaudeCommand(t *testing.T) {
 		{"with args no resume", false, []string{"fix", "bug"}, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions", "'fix'", "'bug'"}},
 		{"skills dir no resume", false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--add-dir", "/opt/asylum-skills"}},
 		{"skills dir with resume", true, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "--add-dir", "/opt/asylum-skills"}},
-		{"skills dir with args", true, []string{"fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "--add-dir", "/opt/asylum-skills", "'fix'"}},
+		{"skills dir with args keeps add-dir last", true, []string{"fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "'fix'", "--add-dir", "/opt/asylum-skills"}},
 	}
 
 	for _, tt := range tests {

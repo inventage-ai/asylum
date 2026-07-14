@@ -57,9 +57,11 @@ func (Claude) Command(resume bool, extraArgs []string, opts CmdOpts) []string {
 	if resume {
 		parts = append(parts, "--continue")
 	}
+	parts = append(parts, term.ShellQuoteArgs(extraArgs)...)
+	// --add-dir is variadic; keep it last so a positional passthrough prompt
+	// in extraArgs isn't swallowed as a directory argument.
 	if opts.KitSkillsDir != "" {
 		parts = append(parts, "--add-dir", opts.KitSkillsDir)
 	}
-	parts = append(parts, term.ShellQuoteArgs(extraArgs)...)
 	return wrapZsh(strings.Join(parts, " "))
 }

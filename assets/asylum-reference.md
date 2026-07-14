@@ -139,7 +139,7 @@ kits:
 
 ### Kit-Provided Claude Skills
 
-Kits that bundle Claude Code skills (e.g. `agent-browser`, `ast-grep`) stage them inside the container at `/opt/asylum-skills/.claude/skills/<skill-name>/`. Asylum launches `claude` with `--add-dir /opt/asylum-skills`, and a shell wrapper installed by the entrypoint adds the same flag to any interactive `claude` invocation from a secondary shell — so skills are discoverable both ways without asylum touching `~/.claude/skills/`.
+Kits that bundle Claude Code skills (e.g. `agent-browser`, `ast-grep`) stage them inside the container at `/opt/asylum-skills/.claude/skills/<skill-name>/`. Asylum launches `claude` with `--add-dir /opt/asylum-skills`, and a shell wrapper installed by the entrypoint adds the same flag to interactive `claude` sessions started from a secondary shell — so skills are discoverable both ways without asylum touching `~/.claude/skills/`. The wrapper only adds the flag on a session invocation (bare `claude` or a flag-led one like `claude -c`); subcommands such as `claude mcp` and positional-prompt invocations pass through untouched.
 
 ## Installing Additional Tools
 

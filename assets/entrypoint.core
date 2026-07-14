@@ -96,8 +96,12 @@ for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
         cat >> "$rc" <<'EOF'
 
 # asylum-claude-wrapper
+# --add-dir is variadic and swallows following positional tokens, so only inject it
+# on session invocations (no args, or a flag-led invocation). Subcommands like
+# `claude mcp` and positional prompts pass through untouched.
 claude() {
-    if [ -d /opt/asylum-skills/.claude/skills ] && [ -n "$(ls -A /opt/asylum-skills/.claude/skills 2>/dev/null)" ]; then
+    if [ -d /opt/asylum-skills/.claude/skills ] && [ -n "$(ls -A /opt/asylum-skills/.claude/skills 2>/dev/null)" ] \
+       && { [ "$#" -eq 0 ] || [ "${1#-}" != "$1" ]; }; then
         command claude --add-dir /opt/asylum-skills "$@"
     else
         command claude "$@"

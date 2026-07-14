@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- `claude` subcommands (`claude mcp`, `claude doctor`, `claude update`, …) and bare positional prompts (`claude "fix the bug"`) failed inside the sandbox. The entrypoint's `claude` wrapper prepended the variadic `--add-dir /opt/asylum-skills` flag, which swallowed the following subcommand or prompt as directory arguments. The wrapper now injects `--add-dir` only on session invocations (no arguments, or a flag-led invocation), so any other form passes through untouched. The primary session path was hardened the same way — `--add-dir` is now placed after passthrough args.
 - `agent-browser` failed to build on arm64 (`Version '147.0.7727.137-1~deb13u1' for 'chromium' was not found`). Debian's rolling archive only keeps the current version of each package, so the pinned Chromium aged out and apt could no longer resolve it. The pin is dropped — the arm64 install now tracks Debian's current Chromium (150.x, verified to launch without the earlier SIGTRAP regression).
 
 ### Changed
