@@ -2,12 +2,16 @@
 
 ## Unreleased
 
-### Fixed
-- `claude` subcommands (`claude mcp`, `claude doctor`, `claude update`, …) and bare positional prompts (`claude "fix the bug"`) failed inside the sandbox. The entrypoint's `claude` wrapper prepended the variadic `--add-dir /opt/asylum-skills` flag, which swallowed the following subcommand or prompt as directory arguments. The wrapper now injects `--add-dir` only on session invocations (no arguments, or a flag-led invocation), so any other form passes through untouched. The primary session path was hardened the same way — `--add-dir` is now placed after passthrough args.
-- `agent-browser` failed to build on arm64 (`Version '147.0.7727.137-1~deb13u1' for 'chromium' was not found`). Debian's rolling archive only keeps the current version of each package, so the pinned Chromium aged out and apt could no longer resolve it. The pin is dropped — the arm64 install now tracks Debian's current Chromium (150.x, verified to launch without the earlier SIGTRAP regression).
+## 0.7.2 — 2026-07-14
+
+Global tools now build once into the shared base image instead of once per project, so a tool declared in `~/.asylum/config.yaml` is available everywhere without rebuilding each container. This release also fixes the in-sandbox `claude` wrapper, which broke subcommands like `claude mcp`, and restores `agent-browser` builds on arm64.
 
 ### Changed
 - Packages and `shell.build` commands declared in the global config (`~/.asylum/config.yaml`) now install into the shared base image instead of each per-project image, so a global tool (e.g. `@mermaid-js/mermaid-cli`) is built once and reused everywhere. Packages declared in project configs (`.asylum`, `.asylum.local`) still install into the project image. Entries whose provider kit is excluded (`--kits`, `disabled: true`) are dropped rather than installed without their toolchain.
+
+### Fixed
+- `claude` subcommands (`claude mcp`, `claude doctor`, `claude update`, …) and bare positional prompts (`claude "fix the bug"`) failed inside the sandbox. The entrypoint's `claude` wrapper prepended the variadic `--add-dir /opt/asylum-skills` flag, which swallowed the following subcommand or prompt as directory arguments. The wrapper now injects `--add-dir` only on session invocations (no arguments, or a flag-led invocation), so any other form passes through untouched. The primary session path was hardened the same way — `--add-dir` is now placed after passthrough args.
+- `agent-browser` failed to build on arm64 (`Version '147.0.7727.137-1~deb13u1' for 'chromium' was not found`). Debian's rolling archive only keeps the current version of each package, so the pinned Chromium aged out and apt could no longer resolve it. The pin is dropped — the arm64 install now tracks Debian's current Chromium (150.x, verified to launch without the earlier SIGTRAP regression).
 
 ## 0.7.1 — 2026-07-08
 
