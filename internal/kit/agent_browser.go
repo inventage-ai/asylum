@@ -14,14 +14,13 @@ func init() {
 		ConfigNodes:   configNodes("agent-browser", "Browser automation via agent-browser", nil),
 		ConfigComment: "agent-browser:        # Browser automation via agent-browser",
 		DockerSnippet: `# Install agent-browser and Chrome/Chromium.
-# aarch64 pins Chromium: trixie-security shipped 150.0.7871.46 which crashes on
-# launch (SIGTRAP), a regression Debian itself blocked from migration (bug #1141488).
+# aarch64 installs Debian's Chromium via apt (no arm64 Linux build in the
+# agent-browser vendor download); other arches use agent-browser's own fetch.
 RUN bash -c 'export PATH="$HOME/.local/share/fnm:$PATH" && eval "$(fnm env)" && \
     npm install -g agent-browser && \
     if [ "$(uname -m)" = "aarch64" ]; then \
-        CHROMIUM_VERSION=147.0.7727.137-1~deb13u1; \
         sudo apt-get update && sudo apt-get install -y --no-install-recommends \
-            chromium="$CHROMIUM_VERSION" chromium-common="$CHROMIUM_VERSION" chromium-sandbox="$CHROMIUM_VERSION" && \
+            chromium chromium-common chromium-sandbox && \
         sudo rm -rf /var/lib/apt/lists/*; \
     else \
         sudo env "PATH=$PATH" agent-browser install --with-deps; \

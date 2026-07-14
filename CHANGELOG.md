@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Fixed
+- `agent-browser` failed to build on arm64 (`Version '147.0.7727.137-1~deb13u1' for 'chromium' was not found`). Debian's rolling archive only keeps the current version of each package, so the pinned Chromium aged out and apt could no longer resolve it. The pin is dropped — the arm64 install now tracks Debian's current Chromium (150.x, verified to launch without the earlier SIGTRAP regression).
+
 ### Changed
 - Packages and `shell.build` commands declared in the global config (`~/.asylum/config.yaml`) now install into the shared base image instead of each per-project image, so a global tool (e.g. `@mermaid-js/mermaid-cli`) is built once and reused everywhere. Packages declared in project configs (`.asylum`, `.asylum.local`) still install into the project image. Entries whose provider kit is excluded (`--kits`, `disabled: true`) are dropped rather than installed without their toolchain.
 
