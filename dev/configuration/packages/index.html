@@ -756,6 +756,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#where-packages-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where Packages Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1658,6 +1669,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#where-packages-install" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where Packages Install
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#how-it-works" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1700,7 +1722,7 @@
 
 
 <h1 id="packages">Packages<a class="headerlink" href="#packages" title="Permanent link">&para;</a></h1>
-<p>Asylum can install additional packages into a project-specific Docker image layer. When packages are configured, Asylum builds a project image on top of the base image.</p>
+<p>Asylum can install additional packages on top of the base image. Where a package lands depends on which config layer declares it: global packages go into the shared base image, project packages into a per-project image layer.</p>
 <h2 id="package-types">Package Types<a class="headerlink" href="#package-types" title="Permanent link">&para;</a></h2>
 <p>Packages are configured under each kit's config:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
@@ -1756,14 +1778,22 @@
 </tr>
 </tbody>
 </table>
+<h2 id="where-packages-install">Where Packages Install<a class="headerlink" href="#where-packages-install" title="Permanent link">&para;</a></h2>
+<p>Packages follow the config layer that declares them:</p>
+<ul>
+<li><strong>Global config</strong> (<code>~/.asylum/config.yaml</code>) → installed in the shared <strong>base image</strong> (<code>asylum:latest</code>), built once and reused by every project.</li>
+<li><strong>Project config</strong> (<code>.asylum</code>, <code>.asylum.local</code>) → installed in the <strong>project image</strong> (<code>asylum:proj-&lt;hash&gt;</code>), layered <code>FROM asylum:latest</code>.</li>
+</ul>
+<p>A package whose provider kit is excluded (via the <code>--kits</code> flag or <code>disabled: true</code>) is skipped rather than installed without its toolchain.</p>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p>When any packages are configured, Asylum:</p>
+<p>When the global config declares packages, they are added to the base image after the kit layers, so a change to a global package rebuilds the base image (and, in turn, every project image).</p>
+<p>When a project config declares packages, Asylum:</p>
 <ol>
 <li>Generates a project Dockerfile (<code>FROM asylum:latest</code> + install commands)</li>
 <li>Builds a project image tagged <code>asylum:proj-&lt;hash&gt;</code></li>
-<li>Caches the image — rebuilds only when packages change</li>
+<li>Caches the image — rebuilds only when the project packages change</li>
 </ol>
-<p>If no packages are configured, the base image (<code>asylum:latest</code>) is used directly.</p>
+<p>If a project declares no packages of its own, its base image (<code>asylum:latest</code>) is used directly.</p>
 <h2 id="custom-build-commands">Custom Build Commands<a class="headerlink" href="#custom-build-commands" title="Permanent link">&para;</a></h2>
 <p>The <code>shell</code> kit's <code>build</code> key runs arbitrary commands during the project image build. Use this for tools that don't have a standard package manager:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>

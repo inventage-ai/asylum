@@ -1758,7 +1758,7 @@
 <td><code>build</code></td>
 <td>list</td>
 <td><code>[]</code></td>
-<td>Custom shell commands to run during project image build</td>
+<td>Custom shell commands to run during the image build (base image if declared in the global config, else the project image)</td>
 </tr>
 </tbody>
 </table>
@@ -1772,7 +1772,7 @@
 <li>Status bar: hostname (left), date/time (right)</li>
 </ul>
 <h2 id="custom-build-commands">Custom Build Commands<a class="headerlink" href="#custom-build-commands" title="Permanent link">&para;</a></h2>
-<p>The <code>build</code> option runs arbitrary commands during the project image build. This is the escape hatch for installing tools that don't fit into other kit categories:</p>
+<p>The <code>build</code> option runs arbitrary commands during the image build. This is the escape hatch for installing tools that don't fit into other kit categories:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">shell</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">build</span><span class="p">:</span>

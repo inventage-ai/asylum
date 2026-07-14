@@ -1758,10 +1758,11 @@
 <li><strong>Docker CLI</strong> (not the engine — see the <a href="../../kits/docker/">Docker kit</a> for Docker-in-Docker)</li>
 <li><strong>Agent CLIs</strong>: Claude Code, Gemini CLI, Codex</li>
 </ul>
-<p>The base image is built once (~5 minutes) and cached. It rebuilds automatically when the Dockerfile or kit snippets change (hash-based detection).</p>
+<p>It also installs any <a href="../../configuration/packages/">packages</a> declared in your global config (<code>~/.asylum/config.yaml</code>), so cross-project tools are built once and shared by every project.</p>
+<p>The base image is built once (~5 minutes) and cached. It rebuilds automatically when the Dockerfile, kit snippets, or global packages change (hash-based detection).</p>
 <h2 id="project-image">Project Image<a class="headerlink" href="#project-image" title="Permanent link">&para;</a></h2>
 <p><strong>Tag:</strong> <code>asylum:proj-&lt;hash&gt;</code></p>
-<p>When your config includes <a href="../../configuration/packages/">packages</a> (apt, npm, pip, or custom build commands), Asylum builds a project image on top of the base:</p>
+<p>When your <strong>project</strong> config includes <a href="../../configuration/packages/">packages</a> (apt, npm, pip, or custom build commands), Asylum builds a project image on top of the base (packages declared in the global config are baked into the base image instead):</p>
 <div class="highlight"><pre><span></span><code>┌──────────────────────────────┐
 │  Project Image               │
 │  (apt packages, npm globals, │
@@ -1771,12 +1772,12 @@
 │  (languages, agents, tools)  │
 └──────────────────────────────┘
 </code></pre></div>
-<p>If no packages are configured, the base image is used directly — no project image is built.</p>
+<p>If no project packages are configured, the base image is used directly — no project image is built.</p>
 <p>Project images are also cached and only rebuild when the package configuration changes.</p>
 <h2 id="rebuild-detection">Rebuild Detection<a class="headerlink" href="#rebuild-detection" title="Permanent link">&para;</a></h2>
 <p>Both tiers use hash-based detection:</p>
 <ul>
-<li><strong>Base image</strong>: SHA-256 of the Dockerfile, kit snippets, agent install snippets, and host user identity (username, UID, GID, home directory). Stored as a Docker label (<code>asylum.hash</code>).</li>
+<li><strong>Base image</strong>: SHA-256 of the Dockerfile, kit snippets, global package installs, agent install snippets, and host user identity (username, UID, GID, home directory). Stored as a Docker label (<code>asylum.hash</code>).</li>
 <li><strong>Project image</strong>: SHA-256 of the packages config. Stored as a Docker label (<code>asylum.packages.hash</code>).</li>
 </ul>
 <p>A base image rebuild invalidates all project images (they're built <code>FROM asylum:latest</code>).</p>

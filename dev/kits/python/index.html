@@ -1786,7 +1786,7 @@
 <td><code>packages</code></td>
 <td>list</td>
 <td><code>[]</code></td>
-<td>Additional Python packages to install in the project image via <code>uv tool install</code></td>
+<td>Additional Python packages to install via <code>uv tool install</code> (base image if declared in the global config, else the project image)</td>
 </tr>
 </tbody>
 </table>
@@ -1798,7 +1798,7 @@
 <li><strong>Auto-venv</strong>: automatically creates a <code>.venv/</code> virtual environment on container start if the project has <code>requirements.txt</code>, <code>pyproject.toml</code>, or <code>setup.py</code></li>
 </ul>
 <h2 id="package-installation">Package Installation<a class="headerlink" href="#package-installation" title="Permanent link">&para;</a></h2>
-<p>Packages listed in the config are installed with <code>uv tool install</code> during the project image build. For runtime dependencies in your project, use <code>uv pip install</code> or <code>pip install</code> inside the container.</p>
+<p>Packages listed in the config are installed with <code>uv tool install</code> during the image build. For runtime dependencies in your project, use <code>uv pip install</code> or <code>pip install</code> inside the container.</p>
 
 
 

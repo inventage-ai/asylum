@@ -1722,7 +1722,7 @@
 
 
 <h1 id="apt-packages-kit">APT Packages Kit<a class="headerlink" href="#apt-packages-kit" title="Permanent link">&para;</a></h1>
-<p>Install extra system packages via apt in the project image.</p>
+<p>Install extra system packages via apt. Packages declared in the global config go into the base image; project-declared packages go into the project image (see <a href="../../configuration/packages/">Packages</a>).</p>
 <p><strong>Activation: Opt-in</strong> — only active if explicitly enabled in your config.</p>
 <h2 id="whats-included">What's Included<a class="headerlink" href="#whats-included" title="Permanent link">&para;</a></h2>
 <p>Nothing by default — this kit exists solely to install additional Debian packages you specify.</p>
@@ -1753,7 +1753,7 @@
 </tbody>
 </table>
 <h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
-<p>Packages are installed as root during the project image build using <code>apt-get install -y --no-install-recommends</code>. The project image is cached and only rebuilt when the package list changes.</p>
+<p>Packages are installed as root during the image build using <code>apt-get install -y --no-install-recommends</code>. The image is cached and only rebuilt when the package list changes.</p>
 <h2 id="when-to-use">When to Use<a class="headerlink" href="#when-to-use" title="Permanent link">&para;</a></h2>
 <p>Use this kit for system libraries and tools that aren't covered by other kits. Common examples:</p>
 <ul>
