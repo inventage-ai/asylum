@@ -830,7 +830,7 @@ func runBroker(args []string) {
 		os.Exit(0)
 	}()
 
-	broker.Serve(broker.Endpoint{Network: network, Addr: addr}, token, routes)
+	broker.Serve(cname, broker.Endpoint{Network: network, Addr: addr}, token, routes)
 }
 
 // ensureBroker starts (or respawns) the host broker for a running container,

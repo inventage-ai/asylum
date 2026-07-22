@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os/exec"
 	"runtime"
+	"strconv"
 
 	"github.com/inventage-ai/asylum/internal/broker"
 )
@@ -49,12 +50,18 @@ Run ` + "`open <url>`" + ` (or ` + "`xdg-open <url>`" + `) to open an http(s) UR
 
 // openHandler opens an http(s) URL in the host's default browser. It runs on
 // the host. Only http/https is accepted; the URL is passed as a single argument
-// to the opener with no shell, so metacharacters are inert.
-func openHandler(w http.ResponseWriter, r *http.Request) {
+// to the opener with no shell, so metacharacters are inert. When the URL carries
+// a loopback redirect_uri (an OAuth callback), it also asks the broker to bridge
+// that callback port from the host into the container — best-effort, never
+// blocking the open.
+func openHandler(ctx broker.Ctx, w http.ResponseWriter, r *http.Request) {
 	raw := r.FormValue("url")
 	if !validBrowserURL(raw) {
 		http.Error(w, "only http(s) URLs may be opened", http.StatusBadRequest)
 		return
+	}
+	if port, ipv6, ok := detectLoopbackCallback(raw); ok {
+		ctx.ForwardLoopback(port, ipv6)
 	}
 	opener := "xdg-open"
 	if runtime.GOOS == "darwin" {
@@ -75,4 +82,36 @@ func validBrowserURL(raw string) bool {
 		return false
 	}
 	return u.Scheme == "http" || u.Scheme == "https"
+}
+
+// detectLoopbackCallback inspects an OAuth authorize URL for a redirect_uri (or
+// redirect_url) pointing at a loopback host with an explicit port — the pattern
+// of a localhost callback flow. It returns the port and whether it is IPv6.
+func detectLoopbackCallback(rawURL string) (port int, ipv6 bool, ok bool) {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return 0, false, false
+	}
+	q := u.Query()
+	for _, key := range []string{"redirect_uri", "redirect_url"} {
+		v := q.Get(key)
+		if v == "" {
+			continue
+		}
+		ru, err := url.Parse(v)
+		if err != nil {
+			continue
+		}
+		p, err := strconv.Atoi(ru.Port())
+		if err != nil || p <= 0 || p > 65535 {
+			continue
+		}
+		switch ru.Hostname() {
+		case "localhost", "127.0.0.1":
+			return p, false, true
+		case "::1":
+			return p, true, true
+		}
+	}
+	return 0, false, false
 }

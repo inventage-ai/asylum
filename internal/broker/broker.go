@@ -33,11 +33,31 @@ type Endpoint struct {
 	Addr    string // socket path, or "127.0.0.1:<port>"
 }
 
-// Route is a broker endpoint contributed by a kit. Handlers run on the host.
+// Ctx is handed to a route handler, exposing broker services scoped to the
+// container the request came from.
+type Ctx interface {
+	// Container is the name of the container this broker serves.
+	Container() string
+	// ForwardLoopback best-effort forwards the host loopback port to the same
+	// port on the container's loopback for a short window (see forwarder).
+	ForwardLoopback(port int, ipv6 bool)
+}
+
+// Route is a broker endpoint contributed by a kit. Handlers run on the host and
+// receive a Ctx scoped to the serving container.
 type Route struct {
 	Path    string
-	Handler http.HandlerFunc
+	Handler func(Ctx, http.ResponseWriter, *http.Request)
 }
+
+// brokerCtx is the Ctx implementation supplied to handlers.
+type brokerCtx struct {
+	cname string
+	fwd   *forwarder
+}
+
+func (c *brokerCtx) Container() string                   { return c.cname }
+func (c *brokerCtx) ForwardLoopback(port int, ipv6 bool) { c.fwd.ensure(port, ipv6) }
 
 // Token returns a random hex token used to authenticate broker requests.
 func Token() (string, error) {
@@ -63,7 +83,7 @@ func FreePort() (int, error) {
 // stale socket before listening. A bind failure (another broker already owns the
 // endpoint) is returned so the caller can treat it as a clean "already running"
 // exit.
-func Serve(ep Endpoint, token string, routes []Route) error {
+func Serve(cname string, ep Endpoint, token string, routes []Route) error {
 	if ep.Network == "unix" {
 		os.Remove(ep.Addr) // clear a stale socket left by a previous run
 	}
@@ -71,10 +91,14 @@ func Serve(ep Endpoint, token string, routes []Route) error {
 	if err != nil {
 		return err
 	}
+	bc := &brokerCtx{cname: cname, fwd: newForwarder(cname)}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", authWrap(token, func(w http.ResponseWriter, r *http.Request) {}))
 	for _, rt := range routes {
-		mux.HandleFunc(rt.Path, authWrap(token, rt.Handler))
+		h := rt.Handler
+		mux.HandleFunc(rt.Path, authWrap(token, func(w http.ResponseWriter, r *http.Request) {
+			h(bc, w, r)
+		}))
 	}
 	return http.Serve(l, mux)
 }

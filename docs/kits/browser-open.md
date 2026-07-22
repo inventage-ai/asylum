@@ -27,3 +27,13 @@ kits:
 The kit installs a shim at `/usr/local/bin/asylum-open` (exposed as `open`, `xdg-open`, and `sensible-browser`, with `BROWSER` pointing at it). The shim forwards the URL to the **host broker** — a small HTTP server Asylum runs on the host for the container's lifetime. The broker validates the URL and opens it with `open` (macOS) or `xdg-open` (Linux).
 
 The broker never binds a publicly reachable address. On a native Linux engine it listens on a **Unix domain socket** bind-mounted only into that one container; on Docker Desktop and macOS it listens on **`127.0.0.1`**, which the container reaches via `host.docker.internal`. Either way it is unreachable from other hosts and from sibling containers. A per-container token authenticates every request as defense-in-depth. The broker starts automatically when the container starts, is respawned by any session if it dies, and exits when the container stops.
+
+## OAuth login flows
+
+Many CLI logins (`gh auth login`, `gcloud auth login`, `vercel login`, …) start a callback server on `localhost:<port>` **inside the container**, then open a provider URL that redirects back to that port after you sign in. Because the browser runs on your host, that redirect would normally hit the host's `localhost` where nothing is listening.
+
+When the opened URL carries a loopback `redirect_uri` (`localhost`, `127.0.0.1`, or `::1`) with an explicit port, the broker briefly bridges that host port into the container so the callback lands. The bridge:
+
+- binds **host loopback only** (never the LAN) and relays into the container over `docker exec` — it never publishes a host port or starts another container;
+- lives **5 minutes**, with the timer reset if the same port is opened again;
+- is **best-effort** — if the host port is already in use it is skipped, and you can still finish the flow by pasting the code or callback URL as the tool offers.

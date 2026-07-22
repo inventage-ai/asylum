@@ -13,7 +13,7 @@ import (
 // startTestServer starts a broker on the endpoint and waits until it answers.
 func startTestServer(t *testing.T, ep Endpoint, token string, routes []Route) {
 	t.Helper()
-	go Serve(ep, token, routes)
+	go Serve("test-container", ep, token, routes)
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if alive(ep, token) {
@@ -100,7 +100,7 @@ func TestUnixSocketStaleCleanup(t *testing.T) {
 
 func TestRouteRequiresAuth(t *testing.T) {
 	called := false
-	routes := []Route{{Path: "/ping", Handler: func(w http.ResponseWriter, r *http.Request) {
+	routes := []Route{{Path: "/ping", Handler: func(_ Ctx, w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusNoContent)
 	}}}
