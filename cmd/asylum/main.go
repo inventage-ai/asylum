@@ -785,7 +785,7 @@ func setTabTitle(template, projectDir, agent string, mode container.Mode) {
 // exits the process when `docker wait` returns. A bind conflict means another
 // broker already owns the port, which is a clean exit.
 func runBroker(args []string) {
-	var cname, token, kits string
+	var cname, kits string
 	var port int
 	for i := 0; i+1 < len(args); i += 2 {
 		switch args[i] {
@@ -793,14 +793,14 @@ func runBroker(args []string) {
 			cname = args[i+1]
 		case "--port":
 			port, _ = strconv.Atoi(args[i+1])
-		case "--token":
-			token = args[i+1]
 		case "--kits":
 			kits = args[i+1]
 		}
 	}
+	// The token is passed via the environment (not argv) to keep it off ps output.
+	token := os.Getenv("ASYLUM_BROKER_TOKEN")
 	if cname == "" || port == 0 || token == "" {
-		die("__broker: --container, --port and --token are required")
+		die("__broker: --container and --port are required, with ASYLUM_BROKER_TOKEN set")
 	}
 
 	var routes []broker.Route

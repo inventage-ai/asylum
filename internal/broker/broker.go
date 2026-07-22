@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -75,15 +76,21 @@ func authWrap(token string, h http.HandlerFunc) http.HandlerFunc {
 // port; if no live broker answers it spawns a detached `asylum __broker`
 // process. Spawning when one already runs is harmless — the new process's bind
 // fails and it exits.
+//
+// The token is passed to the child via its environment, not argv: process
+// command lines are world-readable (/proc/<pid>/cmdline), while environ is
+// readable only by the owning user, so this keeps the token off multi-user
+// hosts' ps output.
 func EnsureBroker(cname, execPath string, port int, token string, kitNames []string) error {
 	if alive(port, token) {
 		return nil
 	}
-	args := []string{"__broker", "--container", cname, "--port", strconv.Itoa(port), "--token", token}
+	args := []string{"__broker", "--container", cname, "--port", strconv.Itoa(port)}
 	if len(kitNames) > 0 {
 		args = append(args, "--kits", strings.Join(kitNames, ","))
 	}
 	cmd := exec.Command(execPath, args...)
+	cmd.Env = append(os.Environ(), "ASYLUM_BROKER_TOKEN="+token)
 	// Detach from the session so the broker outlives the current asylum process.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	return cmd.Start()
