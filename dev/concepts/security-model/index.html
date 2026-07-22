@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
     
     
       
@@ -31,7 +31,7 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -1054,6 +1054,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../../kits/browser-open/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Browser-Open
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../../kits/ast-grep/" class="md-nav__link">
         
   
@@ -1916,6 +1944,7 @@
 <li><code>host.docker.internal</code> resolves to your host from inside the container. Services listening on the host (databases, dev servers, SSH agents, etc.) are reachable.</li>
 <li><a href="../../kits/ports/">Forwarded ports</a> expose container services on your host's network interface. Anyone who can reach your host can reach those services.</li>
 <li>The <a href="../../kits/docker/">Docker kit</a> runs the container in <strong>privileged mode</strong> with a full Docker daemon. Privileged mode grants effectively full access to the host kernel. This is a deliberate trade-off for Docker-in-Docker; enable it only when you need it.</li>
+<li>The <a href="../../kits/browser-open/">browser-open kit</a> (on by default) runs a small <strong>host broker</strong> for the container's lifetime that opens <code>http(s)</code> URLs from the container in your host browser. The broker is not reachable beyond the host — a Unix socket mounted only into that container on native Linux, or a <code>127.0.0.1</code> loopback bind on Docker Desktop/macOS — with a per-container secret token as defense-in-depth. Opening an <code>http(s)</code> URL is a capability every sandboxed app already has; disable the kit if you don't want it. For OAuth logins, it can also briefly bridge a loopback callback port from the host into the container: the bridge binds host loopback only, forwards into the agent's own container (it cannot reach host services — a taken port just fails), and expires after five minutes.</li>
 </ul>
 <h3 id="malicious-or-compromised-code">Malicious or compromised code<a class="headerlink" href="#malicious-or-compromised-code" title="Permanent link">&para;</a></h3>
 <p>Docker is a convenience boundary, not a security boundary against untrusted code. Container escapes exist, privileged mode removes most remaining isolation, and the attack surface (mounted sockets, the agent's network access, your SSH key) is large. <strong>Do not run code you actively distrust inside Asylum and expect the container to contain it.</strong></p>
@@ -1989,7 +2018,7 @@
       <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
       
     
   </body>
