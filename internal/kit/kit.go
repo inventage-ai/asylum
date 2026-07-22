@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/inventage-ai/asylum/internal/broker"
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/onboarding"
 
@@ -125,6 +126,7 @@ type Kit struct {
 	ConfigSnippet      string                                          // YAML snippet for default config (indented at 2 spaces under kits:)
 	ConfigNodes        []*yaml.Node                                    // structured key+value nodes for kits mapping (len 2: key, value)
 	ConfigComment      string                                          // comment text for opt-in/always-on kits shown in config
+	Routes             []broker.Route                                  // host-broker endpoints this kit contributes
 }
 
 var registry = map[string]*Kit{}

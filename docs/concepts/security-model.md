@@ -39,6 +39,7 @@ Containers have unrestricted outbound network. An agent can call any API, upload
 - `host.docker.internal` resolves to your host from inside the container. Services listening on the host (databases, dev servers, SSH agents, etc.) are reachable.
 - [Forwarded ports](../kits/ports.md) expose container services on your host's network interface. Anyone who can reach your host can reach those services.
 - The [Docker kit](../kits/docker.md) runs the container in **privileged mode** with a full Docker daemon. Privileged mode grants effectively full access to the host kernel. This is a deliberate trade-off for Docker-in-Docker; enable it only when you need it.
+- The [browser-open kit](../kits/browser-open.md) (on by default) runs a small **host broker** for the container's lifetime that opens `http(s)` URLs from the container in your host browser. It binds a host port reachable by sibling containers on the Docker network, gated by a per-container secret token. Opening an `http(s)` URL is a capability every sandboxed app already has; disable the kit if you don't want it.
 
 ### Malicious or compromised code
 

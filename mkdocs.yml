@@ -67,6 +67,7 @@ nav:
     - SSH: kits/ssh.md
     - Shell: kits/shell.md
     - Ports: kits/ports.md
+    - Browser-Open: kits/browser-open.md
     - ast-grep: kits/ast-grep.md
     - Browser: kits/agent-browser.md
     - RTK: kits/rtk.md

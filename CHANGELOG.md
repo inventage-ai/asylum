@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Added
+- Host broker — a small host-side HTTP server, scoped to a container's lifetime, that serves token-authenticated routes contributed by kits. It lets the sandbox ask the host to perform actions it can't do itself, starts automatically, respawns if it dies, and stops with the container.
+- `browser-open` kit (on by default, opt-out) — running `open <url>` / `xdg-open <url>` (or anything honouring `$BROWSER`) inside the container opens an `http(s)` URL in your host browser via the broker. Fixes the friction where full-screen TUI agents disable terminal text selection, making printed URLs impossible to copy. Independent of the `agent-browser` kit.
+
 ## 0.7.2 — 2026-07-14
 
 Global tools now build once into the shared base image instead of once per project, so a tool declared in `~/.asylum/config.yaml` is available everywhere without rebuilding each container. This release also fixes the in-sandbox `claude` wrapper, which broke subcommands like `claude mcp`, and restores `agent-browser` builds on arm64.

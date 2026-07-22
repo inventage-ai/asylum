@@ -62,6 +62,32 @@ func InspectLabels(name string) (map[string]string, error) {
 	return labels, nil
 }
 
+// InspectEnv returns a running container's environment variables as a map,
+// read from the container config (so it reflects the -e values baked at start).
+func InspectEnv(name string) (map[string]string, error) {
+	cmd := exec.Command("docker", "inspect", "--format", "{{json .Config.Env}}", name)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("inspect env %s: %w", name, err)
+	}
+	var entries []string
+	if err := json.Unmarshal(out, &entries); err != nil {
+		return nil, fmt.Errorf("parse env: %w", err)
+	}
+	env := make(map[string]string, len(entries))
+	for _, e := range entries {
+		if k, v, ok := strings.Cut(e, "="); ok {
+			env[k] = v
+		}
+	}
+	return env, nil
+}
+
+// Wait blocks until the named container stops (or is gone), then returns.
+func Wait(name string) {
+	exec.Command("docker", "wait", name).Run()
+}
+
 // ContainerImageID returns the image ID (sha256 digest) of a running container.
 func ContainerImageID(name string) (string, error) {
 	cmd := exec.Command("docker", "inspect", "--format", "{{.Image}}", name)

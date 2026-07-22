@@ -7,11 +7,13 @@ import (
 	"os/signal"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/inventage-ai/asylum/internal/agent"
+	"github.com/inventage-ai/asylum/internal/broker"
 	"github.com/inventage-ai/asylum/internal/config"
 	"github.com/inventage-ai/asylum/internal/container"
 	"github.com/inventage-ai/asylum/internal/docker"
@@ -36,6 +38,13 @@ func die(format string, args ...any) {
 }
 
 func main() {
+	// Hidden subcommand: run the detached host broker for a container. It has
+	// its own flags and must not go through the normal run flow.
+	if len(os.Args) > 1 && os.Args[1] == "__broker" {
+		runBroker(os.Args[2:])
+		return
+	}
+
 	flags, subcommand, extraArgs, err := parseArgs(os.Args[1:])
 	if err != nil {
 		die("%v", err)
@@ -382,6 +391,21 @@ func main() {
 		default: // "shared" or empty — host dir used directly
 		}
 
+		// Bake host-broker connection params into the container env when an
+		// active kit contributes broker routes. The broker itself is started
+		// (from these env values) before the session execs in, below.
+		var brokerPort int
+		var brokerToken string
+		if len(routeKitNames(allKits)) > 0 {
+			if p, err := broker.FreePort(); err != nil {
+				log.Warn("host broker: %v", err)
+			} else if t, err := broker.Token(); err != nil {
+				log.Warn("host broker: %v", err)
+			} else {
+				brokerPort, brokerToken = p, t
+			}
+		}
+
 		runArgs, resolved, overrides, err := container.RunArgs(container.RunOpts{
 			Config:        cfg,
 			Agent:         a,
@@ -395,6 +419,8 @@ func main() {
 			Version:       version,
 			ConfigHash:    cfgHash,
 			Debug:         flags.Debug,
+			BrokerPort:    brokerPort,
+			BrokerToken:   brokerToken,
 		})
 		if err != nil {
 			die("%v", err)
@@ -466,6 +492,12 @@ func main() {
 			Onboarding:    collectOnboarding(cfg),
 		})
 	}
+
+	// Ensure the host broker is running for this container. Params are read
+	// back from the container env (baked at creation), so this covers both the
+	// create path and attaching to an already-running container, and respawns
+	// the broker if it has died.
+	ensureBroker(cname, allKits)
 
 	// Exec session into the running container
 	execArgs := container.ExecArgs(container.ExecOpts{
@@ -746,6 +778,78 @@ func setTabTitle(template, projectDir, agent string, mode container.Mode) {
 		"{mode}", modeName,
 	)
 	fmt.Printf("\033]0;%s\007", r.Replace(template))
+}
+
+// runBroker serves the host broker for a container until the container stops.
+// It gathers routes from the named kits, then blocks in Serve; a goroutine
+// exits the process when `docker wait` returns. A bind conflict means another
+// broker already owns the port, which is a clean exit.
+func runBroker(args []string) {
+	var cname, token, kits string
+	var port int
+	for i := 0; i+1 < len(args); i += 2 {
+		switch args[i] {
+		case "--container":
+			cname = args[i+1]
+		case "--port":
+			port, _ = strconv.Atoi(args[i+1])
+		case "--token":
+			token = args[i+1]
+		case "--kits":
+			kits = args[i+1]
+		}
+	}
+	if cname == "" || port == 0 || token == "" {
+		die("__broker: --container, --port and --token are required")
+	}
+
+	var routes []broker.Route
+	for _, name := range strings.Split(kits, ",") {
+		if k := kit.Get(name); k != nil {
+			routes = append(routes, k.Routes...)
+		}
+	}
+
+	go func() {
+		docker.Wait(cname)
+		os.Exit(0)
+	}()
+
+	broker.Serve(port, token, routes)
+}
+
+// ensureBroker starts (or respawns) the host broker for a running container,
+// using the connection params baked into the container env. It is a no-op when
+// no broker env is present (no route-providing kit, or a pre-broker container).
+func ensureBroker(cname string, kits []*kit.Kit) {
+	env, err := docker.InspectEnv(cname)
+	if err != nil {
+		return
+	}
+	token := env["ASYLUM_BROKER_TOKEN"]
+	port, _ := strconv.Atoi(env["ASYLUM_BROKER_PORT"])
+	if token == "" || port == 0 {
+		return
+	}
+	execPath, err := os.Executable()
+	if err != nil {
+		log.Warn("host broker: %v", err)
+		return
+	}
+	if err := broker.EnsureBroker(cname, execPath, port, token, routeKitNames(kits)); err != nil {
+		log.Warn("host broker: %v", err)
+	}
+}
+
+// routeKitNames returns the names of active kits that contribute broker routes.
+func routeKitNames(kits []*kit.Kit) []string {
+	var names []string
+	for _, k := range kits {
+		if len(k.Routes) > 0 {
+			names = append(names, k.Name)
+		}
+	}
+	return names
 }
 
 func runDocker(args []string) int {

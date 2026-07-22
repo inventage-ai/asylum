@@ -15,6 +15,7 @@ Kits are modular bundles that group everything needed for a language or tool: in
 | [ssh](ssh.md) | SSH key management and mounting | Always on |
 | [shell](shell.md) | oh-my-zsh, tmux, direnv | Always on |
 | [ports](ports.md) | Automatic port forwarding for web services | Always on |
+| [browser-open](browser-open.md) | Open URLs in the host browser | Always on (opt-out) |
 | [ast-grep](ast-grep.md) | AST-based code search, lint, and rewrite (`sg`) | Opt-in |
 | [agent-browser](agent-browser.md) | Browser automation via agent-browser | Opt-in |
 | [cx](cx.md) | Semantic code navigation for AI agents | Opt-in |

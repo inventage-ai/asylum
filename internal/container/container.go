@@ -52,6 +52,8 @@ type RunOpts struct {
 	Version       string
 	ConfigHash    string // stored as container label for drift detection
 	Debug         bool   // traces the entrypoint (set -x) so silent startup failures are visible
+	BrokerPort    int    // host-broker port; baked into the container env when BrokerToken is set
+	BrokerToken   string // host-broker auth token; when non-empty, broker env is injected
 }
 
 // RunArgs assembles docker run arguments via a unified RunArg pipeline.
@@ -111,6 +113,14 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 		return nil, nil, nil, err
 	}
 	all = append(all, coreEnvs...)
+
+	// Host-broker connection parameters, consumed by kit-provided shims that
+	// forward requests (e.g. opening a URL) to the host broker.
+	if opts.BrokerToken != "" {
+		core("-e", "ASYLUM_BROKER_HOST=host.docker.internal")
+		core("-e", "ASYLUM_BROKER_PORT="+strconv.Itoa(opts.BrokerPort))
+		core("-e", "ASYLUM_BROKER_TOKEN="+opts.BrokerToken)
+	}
 
 	// .env file
 	if envFile := filepath.Join(opts.ProjectDir, ".env"); fileExists(envFile) {
