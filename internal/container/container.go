@@ -794,7 +794,8 @@ func ExecArgs(opts ExecOpts) []string {
 	case ModeShell, ModeAdminShell:
 		args = append(args, "/bin/zsh")
 	case ModeCommand:
-		args = append(args, opts.ExtraArgs...)
+		cmd := strings.Join(term.ShellQuoteArgs(opts.ExtraArgs), " ")
+		args = append(args, "zsh", "-c", "source ~/.zshrc && exec "+cmd)
 	case ModeAgent:
 		args = append(args, agentCommand(opts)...)
 	}

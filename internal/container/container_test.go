@@ -456,9 +456,14 @@ func TestExecArgsAllModes(t *testing.T) {
 			want: []string{"exec", "-it", "-u", "root", "test", "/bin/zsh"},
 		},
 		{
-			name: "command mode passes extra args through",
+			name: "command mode runs through a login shell",
 			opts: ExecOpts{ContainerName: "test", Mode: ModeCommand, ExtraArgs: []string{"ls", "-la"}},
-			want: []string{"exec", "-it", "test", "ls", "-la"},
+			want: []string{"exec", "-it", "test", "zsh", "-c", "source ~/.zshrc && exec 'ls' '-la'"},
+		},
+		{
+			name: "command mode shell-quotes arguments with spaces",
+			opts: ExecOpts{ContainerName: "test", Mode: ModeCommand, ExtraArgs: []string{"node", "-e", "console.log('a b')"}},
+			want: []string{"exec", "-it", "test", "zsh", "-c", "source ~/.zshrc && exec 'node' '-e' 'console.log('\\''a b'\\'')'"},
 		},
 		{
 			name: "agent mode default does not resume even when session exists",

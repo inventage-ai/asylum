@@ -32,5 +32,6 @@ asylum -p 8080 run python -m http.server
 ## Notes
 
 - The command runs as your host user (same username, UID, and home directory).
+- The command runs through a login shell, so tools installed via version managers (mise, fnm) and `~/.local/bin` (e.g. `claude`, `node`, `python`) are on `PATH`, just as in `asylum shell`.
 - The exit code from the command is forwarded to the host.
 - The container persists after the command finishes if other sessions are still attached. If this was the only session, the container is removed.
