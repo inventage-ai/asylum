@@ -21,10 +21,16 @@ func init() {
 		// under the names tools use to open a browser. /usr/local/bin precedes
 		// /usr/bin so these shadow any distribution xdg-open.
 		DockerSnippet: `# Open URLs in the host browser via the asylum host broker.
+# Uses the Unix socket when present (native Linux), else loopback TCP via
+# host.docker.internal (Docker Desktop / macOS).
 RUN printf '%s\n' \
     '#!/bin/sh' \
     '[ -n "$1" ] || { echo "usage: asylum-open <url>" >&2; exit 1; }' \
-    'exec curl -fsS -X POST -H "Authorization: Bearer ${ASYLUM_BROKER_TOKEN}" --data-urlencode "url=$1" "http://${ASYLUM_BROKER_HOST}:${ASYLUM_BROKER_PORT}/open"' \
+    'if [ -n "$ASYLUM_BROKER_SOCK" ]; then' \
+    '  exec curl -fsS -X POST -H "Authorization: Bearer ${ASYLUM_BROKER_TOKEN}" --data-urlencode "url=$1" --unix-socket "$ASYLUM_BROKER_SOCK" http://localhost/open' \
+    'else' \
+    '  exec curl -fsS -X POST -H "Authorization: Bearer ${ASYLUM_BROKER_TOKEN}" --data-urlencode "url=$1" "http://${ASYLUM_BROKER_HOST}:${ASYLUM_BROKER_PORT}/open"' \
+    'fi' \
     | sudo tee /usr/local/bin/asylum-open >/dev/null && \
     sudo chmod +x /usr/local/bin/asylum-open && \
     sudo ln -sf /usr/local/bin/asylum-open /usr/local/bin/open && \

@@ -16,6 +16,7 @@ import (
 
 	"github.com/inventage-ai/asylum/assets"
 	"github.com/inventage-ai/asylum/internal/agent"
+	"github.com/inventage-ai/asylum/internal/broker"
 	"github.com/inventage-ai/asylum/internal/config"
 	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/log"
@@ -52,9 +53,14 @@ type RunOpts struct {
 	Version       string
 	ConfigHash    string // stored as container label for drift detection
 	Debug         bool   // traces the entrypoint (set -x) so silent startup failures are visible
-	BrokerPort    int    // host-broker port; baked into the container env when BrokerToken is set
 	BrokerToken   string // host-broker auth token; when non-empty, broker env is injected
+	BrokerPort    int    // TCP transport: host-broker port baked into the container env
+	BrokerSockDir string // Unix transport: host dir bind-mounted for the broker socket
 }
+
+// brokerContainerSockDir is where the host socket directory is bind-mounted in
+// the container on the Unix-socket transport.
+const brokerContainerSockDir = "/run/asylum"
 
 // RunArgs assembles docker run arguments via a unified RunArg pipeline.
 // All sources (core, kits, user config) produce typed RunArgs that are
@@ -115,11 +121,17 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	all = append(all, coreEnvs...)
 
 	// Host-broker connection parameters, consumed by kit-provided shims that
-	// forward requests (e.g. opening a URL) to the host broker.
+	// forward requests (e.g. opening a URL) to the host broker. The transport is
+	// a Unix socket (native Linux) or loopback TCP via host.docker.internal.
 	if opts.BrokerToken != "" {
-		core("-e", "ASYLUM_BROKER_HOST=host.docker.internal")
-		core("-e", "ASYLUM_BROKER_PORT="+strconv.Itoa(opts.BrokerPort))
 		core("-e", "ASYLUM_BROKER_TOKEN="+opts.BrokerToken)
+		if opts.BrokerSockDir != "" {
+			core("-v", opts.BrokerSockDir+":"+brokerContainerSockDir)
+			core("-e", "ASYLUM_BROKER_SOCK="+brokerContainerSockDir+"/"+broker.SockName)
+		} else {
+			core("-e", "ASYLUM_BROKER_HOST=host.docker.internal")
+			core("-e", "ASYLUM_BROKER_PORT="+strconv.Itoa(opts.BrokerPort))
+		}
 	}
 
 	// .env file

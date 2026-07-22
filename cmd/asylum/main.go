@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"slices"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -392,17 +392,27 @@ func main() {
 		}
 
 		// Bake host-broker connection params into the container env when an
-		// active kit contributes broker routes. The broker itself is started
-		// (from these env values) before the session execs in, below.
+		// active kit contributes broker routes. Choose the transport for this
+		// host: a Unix socket on a native Linux engine (shared kernel), else
+		// loopback TCP (Docker Desktop / macOS). The broker is started from these
+		// values before the session execs in, below.
+		var brokerToken, brokerSockDir string
 		var brokerPort int
-		var brokerToken string
 		if len(routeKitNames(allKits)) > 0 {
-			if p, err := broker.FreePort(); err != nil {
+			if t, err := broker.Token(); err != nil {
 				log.Warn("host broker: %v", err)
-			} else if t, err := broker.Token(); err != nil {
+			} else if runtime.GOOS == "linux" && !docker.IsDesktop() {
+				brokerSockDir = filepath.Join(home, ".asylum", "projects", cname)
+				if err := os.MkdirAll(brokerSockDir, 0700); err != nil {
+					log.Warn("host broker: %v", err)
+					brokerSockDir = ""
+				} else {
+					brokerToken = t
+				}
+			} else if p, err := broker.FreePort(); err != nil {
 				log.Warn("host broker: %v", err)
 			} else {
-				brokerPort, brokerToken = p, t
+				brokerToken, brokerPort = t, p
 			}
 		}
 
@@ -419,8 +429,9 @@ func main() {
 			Version:       version,
 			ConfigHash:    cfgHash,
 			Debug:         flags.Debug,
-			BrokerPort:    brokerPort,
 			BrokerToken:   brokerToken,
+			BrokerPort:    brokerPort,
+			BrokerSockDir: brokerSockDir,
 		})
 		if err != nil {
 			die("%v", err)
@@ -785,22 +796,23 @@ func setTabTitle(template, projectDir, agent string, mode container.Mode) {
 // exits the process when `docker wait` returns. A bind conflict means another
 // broker already owns the port, which is a clean exit.
 func runBroker(args []string) {
-	var cname, kits string
-	var port int
+	var cname, network, addr, kits string
 	for i := 0; i+1 < len(args); i += 2 {
 		switch args[i] {
 		case "--container":
 			cname = args[i+1]
-		case "--port":
-			port, _ = strconv.Atoi(args[i+1])
+		case "--net":
+			network = args[i+1]
+		case "--addr":
+			addr = args[i+1]
 		case "--kits":
 			kits = args[i+1]
 		}
 	}
 	// The token is passed via the environment (not argv) to keep it off ps output.
 	token := os.Getenv("ASYLUM_BROKER_TOKEN")
-	if cname == "" || port == 0 || token == "" {
-		die("__broker: --container and --port are required, with ASYLUM_BROKER_TOKEN set")
+	if cname == "" || network == "" || addr == "" || token == "" {
+		die("__broker: --container, --net and --addr are required, with ASYLUM_BROKER_TOKEN set")
 	}
 
 	var routes []broker.Route
@@ -812,10 +824,13 @@ func runBroker(args []string) {
 
 	go func() {
 		docker.Wait(cname)
+		if network == "unix" {
+			os.Remove(addr)
+		}
 		os.Exit(0)
 	}()
 
-	broker.Serve(port, token, routes)
+	broker.Serve(broker.Endpoint{Network: network, Addr: addr}, token, routes)
 }
 
 // ensureBroker starts (or respawns) the host broker for a running container,
@@ -827,8 +842,23 @@ func ensureBroker(cname string, kits []*kit.Kit) {
 		return
 	}
 	token := env["ASYLUM_BROKER_TOKEN"]
-	port, _ := strconv.Atoi(env["ASYLUM_BROKER_PORT"])
-	if token == "" || port == 0 {
+	if token == "" {
+		return
+	}
+	// The container env identifies the transport; the host-side endpoint is
+	// derived from it (the socket's host path is deterministic from cname).
+	var ep broker.Endpoint
+	switch {
+	case env["ASYLUM_BROKER_SOCK"] != "":
+		home, err := os.UserHomeDir()
+		if err != nil {
+			log.Warn("host broker: %v", err)
+			return
+		}
+		ep = broker.Endpoint{Network: "unix", Addr: hostSocketPath(home, cname)}
+	case env["ASYLUM_BROKER_PORT"] != "":
+		ep = broker.Endpoint{Network: "tcp", Addr: "127.0.0.1:" + env["ASYLUM_BROKER_PORT"]}
+	default:
 		return
 	}
 	execPath, err := os.Executable()
@@ -836,9 +866,14 @@ func ensureBroker(cname string, kits []*kit.Kit) {
 		log.Warn("host broker: %v", err)
 		return
 	}
-	if err := broker.EnsureBroker(cname, execPath, port, token, routeKitNames(kits)); err != nil {
+	if err := broker.EnsureBroker(cname, execPath, ep, token, routeKitNames(kits)); err != nil {
 		log.Warn("host broker: %v", err)
 	}
+}
+
+// hostSocketPath is the per-container broker socket path on the host.
+func hostSocketPath(home, cname string) string {
+	return filepath.Join(home, ".asylum", "projects", cname, broker.SockName)
 }
 
 // routeKitNames returns the names of active kits that contribute broker routes.

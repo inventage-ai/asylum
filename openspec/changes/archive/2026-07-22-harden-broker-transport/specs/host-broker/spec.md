@@ -1,9 +1,4 @@
-# host-broker Specification
-
-## Purpose
-Provides a host-side HTTP broker that serves kit-contributed routes to containers over an authenticated, container-scoped channel reachable via `host.docker.internal`.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Host broker HTTP server
 The system SHALL provide a host-side HTTP server (the "broker") that serves routes contributed by enabled kits. The broker SHALL bind a host-only endpoint chosen for the host platform — a Unix domain socket on a native (shared-kernel) Linux engine, or a `127.0.0.1` TCP address on a VM-backed engine (Docker Desktop and macOS) — reachable from the container via `host.docker.internal` or a bind-mounted socket. The broker SHALL NOT bind an address reachable beyond the host (no `0.0.0.0`). It SHALL start only when at least one route is registered.
@@ -20,17 +15,6 @@ The system SHALL provide a host-side HTTP server (the "broker") that serves rout
 - **WHEN** the broker is running
 - **THEN** it is bound to a Unix socket or `127.0.0.1`, and no host network interface exposes the broker port to other hosts
 
-### Requirement: Per-container token authentication
-The broker SHALL authenticate every request with a per-container secret token generated at container creation. Requests SHALL present the token as an `Authorization: Bearer <token>` header, and the broker SHALL compare it in constant time. Requests with a missing or incorrect token SHALL be rejected with `401` and SHALL NOT reach any route handler.
-
-#### Scenario: Valid token accepted
-- **WHEN** a request carries the container's token
-- **THEN** the broker dispatches it to the matching route handler
-
-#### Scenario: Missing or wrong token rejected
-- **WHEN** a request omits the token or carries a different container's token
-- **THEN** the broker responds `401` and no handler runs
-
 ### Requirement: Broker connection parameters in container environment
 At container creation the system SHALL bake the broker connection parameters and token into the container environment. For the Unix-socket transport it SHALL set `ASYLUM_BROKER_SOCK` to the container-side socket path; for the TCP transport it SHALL set `ASYLUM_BROKER_HOST` and `ASYLUM_BROKER_PORT`. `ASYLUM_BROKER_TOKEN` SHALL be set for both. These values SHALL be stable for the container's lifetime and SHALL be recoverable from the running container (e.g. via `docker inspect`).
 
@@ -41,17 +25,6 @@ At container creation the system SHALL bake the broker connection parameters and
 #### Scenario: TCP parameters
 - **WHEN** the broker uses the TCP transport
 - **THEN** the container environment has `ASYLUM_BROKER_HOST`, `ASYLUM_BROKER_PORT`, and `ASYLUM_BROKER_TOKEN`
-
-### Requirement: Container-scoped broker lifetime
-The broker's lifetime SHALL be tied to the container, not to any single session. The broker SHALL run as a detached host process that terminates when the container stops. It SHALL NOT be terminated when the session that started it exits while the container is still running.
-
-#### Scenario: Broker survives the starting session
-- **WHEN** the session that started the broker exits but the container keeps running with other sessions attached
-- **THEN** the broker keeps serving requests
-
-#### Scenario: Broker stops with the container
-- **WHEN** the container stops (normal exit, cleanup, or rebuild)
-- **THEN** the broker process terminates
 
 ### Requirement: Idempotent broker start and self-healing
 Every asylum session SHALL ensure a broker is running for its container, on both the container-create path and the attach path. Ensuring SHALL be idempotent: if a live broker already answers, no second broker is started; if none answers, one SHALL be started. A second concurrent start attempt SHALL NOT produce a second serving broker.
@@ -64,16 +37,7 @@ Every asylum session SHALL ensure a broker is running for its container, on both
 - **WHEN** a session attaches to a running container whose broker is no longer answering
 - **THEN** the session starts a new broker bound to the container's baked endpoint
 
-### Requirement: Kit-contributed routes
-The kit system SHALL let a kit contribute broker routes (path and handler). The broker SHALL mount the routes of all enabled kits under token authentication. Route handlers SHALL execute on the host.
-
-#### Scenario: Enabled kit's routes are served
-- **WHEN** an enabled kit contributes a route
-- **THEN** the broker serves that route under token authentication
-
-#### Scenario: Disabled kit's routes are not served
-- **WHEN** a kit that contributes a route is not enabled for the project
-- **THEN** the broker does not serve that route
+## ADDED Requirements
 
 ### Requirement: Platform-aware transport selection
 The system SHALL choose the broker transport from the host platform. On a native (shared-kernel) Linux engine it SHALL use a Unix domain socket whose containing directory is bind-mounted into that container only. On a VM-backed engine — always on macOS, and on Linux when the engine reports as Docker Desktop — it SHALL use a `127.0.0.1` TCP endpoint reached via `host.docker.internal`. A misdetected transport SHALL degrade to the feature being unavailable and SHALL NOT cause the broker to bind an externally reachable address.

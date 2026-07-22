@@ -17,11 +17,15 @@ The system SHALL provide a `browser-open` kit that is enabled by default and can
 - **THEN** no `/open` broker route is registered and no open shims are installed
 
 ### Requirement: Container open shims
-The kit SHALL install a container-side opener at `/usr/local/bin/asylum-open`, expose it under the conventional names `open`, `xdg-open`, and `sensible-browser`, and set `BROWSER=/usr/local/bin/asylum-open`. These SHALL take precedence over any distribution-provided opener. Invoking any of them with a URL SHALL forward the URL to the broker's `/open` route with the container's token.
+The kit SHALL install a container-side opener at `/usr/local/bin/asylum-open`, expose it under the conventional names `open`, `xdg-open`, and `sensible-browser`, and set `BROWSER=/usr/local/bin/asylum-open`. These SHALL take precedence over any distribution-provided opener. Invoking any of them with a URL SHALL forward the URL to the broker's `/open` route with the container's token, over whichever transport the environment describes: a Unix socket (`--unix-socket "$ASYLUM_BROKER_SOCK"`) when `ASYLUM_BROKER_SOCK` is set, otherwise the TCP endpoint `http://$ASYLUM_BROKER_HOST:$ASYLUM_BROKER_PORT`.
 
-#### Scenario: Tool opens a browser
-- **WHEN** a tool inside the container invokes `xdg-open <url>` (or `open`, `$BROWSER`, or `sensible-browser`)
-- **THEN** the URL is sent to the broker's `/open` route authenticated with the container token
+#### Scenario: Tool opens a browser over a Unix socket
+- **WHEN** `ASYLUM_BROKER_SOCK` is set and a tool invokes `xdg-open <url>` (or `open`, `$BROWSER`, or `sensible-browser`)
+- **THEN** the URL is sent to the broker's `/open` route over the Unix socket, authenticated with the container token
+
+#### Scenario: Tool opens a browser over TCP
+- **WHEN** `ASYLUM_BROKER_SOCK` is unset and `ASYLUM_BROKER_HOST`/`ASYLUM_BROKER_PORT` are set, and a tool invokes an opener with a URL
+- **THEN** the URL is sent to the broker's `/open` route over `host.docker.internal`, authenticated with the container token
 
 ### Requirement: Host open route
 The kit SHALL register a `POST /open` route on the broker. The handler SHALL accept a `url`, SHALL open it in the host's default browser using the host opener (`open` on macOS, `xdg-open` on Linux) with the URL passed as a single argument and without a shell.

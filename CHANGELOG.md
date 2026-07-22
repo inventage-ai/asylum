@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- Host broker — a small host-side HTTP server, scoped to a container's lifetime, that serves token-authenticated routes contributed by kits. It lets the sandbox ask the host to perform actions it can't do itself, starts automatically, respawns if it dies, and stops with the container.
+- Host broker — a small host-side HTTP server, scoped to a container's lifetime, that serves token-authenticated routes contributed by kits. It lets the sandbox ask the host to perform actions it can't do itself, starts automatically, respawns if it dies, and stops with the container. It is never reachable beyond the host: a Unix domain socket mounted only into that container on a native Linux engine, or a `127.0.0.1` loopback bind reached via `host.docker.internal` on Docker Desktop/macOS.
 - `browser-open` kit (on by default, opt-out) — running `open <url>` / `xdg-open <url>` (or anything honouring `$BROWSER`) inside the container opens an `http(s)` URL in your host browser via the broker. Fixes the friction where full-screen TUI agents disable terminal text selection, making printed URLs impossible to copy. Independent of the `agent-browser` kit.
 
 ## 0.7.2 — 2026-07-14

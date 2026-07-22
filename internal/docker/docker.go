@@ -18,6 +18,18 @@ func DockerAvailable() error {
 	return nil
 }
 
+// IsDesktop reports whether the Docker engine is VM-backed (Docker Desktop)
+// rather than a native shared-kernel Linux engine. A VM-backed engine reports
+// its OperatingSystem as "Docker Desktop"; a native engine reports the host
+// distro. This decides whether a bind-mounted Unix socket can reach the host.
+func IsDesktop() bool {
+	out, err := exec.Command("docker", "info", "--format", "{{.OperatingSystem}}").Output()
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(out), "Docker Desktop")
+}
+
 func Build(contextDir, dockerfilePath, tag string, labels, buildArgs map[string]string, noCache bool) error {
 	args := []string{"build", "-f", dockerfilePath, "-t", tag}
 	for _, k := range slices.Sorted(maps.Keys(labels)) {

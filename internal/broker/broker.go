@@ -2,22 +2,36 @@
 // lifetime, that serves token-authenticated routes contributed by kits. It lets
 // a sandboxed container ask the host to perform actions it cannot do itself
 // (e.g. open a URL in the real browser).
+//
+// The broker never binds a publicly reachable address. On a native Linux engine
+// it listens on a Unix domain socket bind-mounted into the one container; on a
+// VM-backed engine (Docker Desktop, macOS) it listens on 127.0.0.1, reached from
+// the container via host.docker.internal. Both are captured by Endpoint.
 package broker
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/subtle"
 	"encoding/hex"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 )
+
+// SockName is the broker's Unix socket filename, within the per-container
+// directory on the host and the bind-mounted directory in the container.
+const SockName = "broker.sock"
+
+// Endpoint describes how to listen for and dial the broker.
+type Endpoint struct {
+	Network string // "unix" or "tcp"
+	Addr    string // socket path, or "127.0.0.1:<port>"
+}
 
 // Route is a broker endpoint contributed by a kit. Handlers run on the host.
 type Route struct {
@@ -34,9 +48,9 @@ func Token() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// FreePort asks the OS for an unused TCP port.
+// FreePort asks the OS for an unused TCP port (used only by the TCP transport).
 func FreePort() (int, error) {
-	l, err := net.Listen("tcp", "0.0.0.0:0")
+	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}
@@ -44,18 +58,25 @@ func FreePort() (int, error) {
 	return l.Addr().(*net.TCPAddr).Port, nil
 }
 
-// Serve mounts the routes under token authentication and serves on
-// 0.0.0.0:port until the process exits or the bind fails. A bind failure
-// (another broker already owns the port) is returned so the caller can treat
-// it as a clean "already running" exit.
-func Serve(port int, token string, routes []Route) error {
+// Serve mounts the routes under token authentication and serves on the endpoint
+// until the process exits or the bind fails. For a Unix socket it unlinks a
+// stale socket before listening. A bind failure (another broker already owns the
+// endpoint) is returned so the caller can treat it as a clean "already running"
+// exit.
+func Serve(ep Endpoint, token string, routes []Route) error {
+	if ep.Network == "unix" {
+		os.Remove(ep.Addr) // clear a stale socket left by a previous run
+	}
+	l, err := net.Listen(ep.Network, ep.Addr)
+	if err != nil {
+		return err
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", authWrap(token, func(w http.ResponseWriter, r *http.Request) {}))
 	for _, rt := range routes {
 		mux.HandleFunc(rt.Path, authWrap(token, rt.Handler))
 	}
-	srv := &http.Server{Addr: fmt.Sprintf("0.0.0.0:%d", port), Handler: mux}
-	return srv.ListenAndServe()
+	return http.Serve(l, mux)
 }
 
 // authWrap rejects any request whose bearer token does not match, in constant
@@ -73,7 +94,7 @@ func authWrap(token string, h http.HandlerFunc) http.HandlerFunc {
 }
 
 // EnsureBroker guarantees a broker for the container is running. It probes the
-// port; if no live broker answers it spawns a detached `asylum __broker`
+// endpoint; if no live broker answers it spawns a detached `asylum __broker`
 // process. Spawning when one already runs is harmless — the new process's bind
 // fails and it exits.
 //
@@ -81,11 +102,11 @@ func authWrap(token string, h http.HandlerFunc) http.HandlerFunc {
 // command lines are world-readable (/proc/<pid>/cmdline), while environ is
 // readable only by the owning user, so this keeps the token off multi-user
 // hosts' ps output.
-func EnsureBroker(cname, execPath string, port int, token string, kitNames []string) error {
-	if alive(port, token) {
+func EnsureBroker(cname, execPath string, ep Endpoint, token string, kitNames []string) error {
+	if alive(ep, token) {
 		return nil
 	}
-	args := []string{"__broker", "--container", cname, "--port", strconv.Itoa(port)}
+	args := []string{"__broker", "--container", cname, "--net", ep.Network, "--addr", ep.Addr}
 	if len(kitNames) > 0 {
 		args = append(args, "--kits", strings.Join(kitNames, ","))
 	}
@@ -97,14 +118,24 @@ func EnsureBroker(cname, execPath string, port int, token string, kitNames []str
 }
 
 // alive reports whether a broker answers an authenticated health check on the
-// host loopback. The port is bound on 0.0.0.0, so 127.0.0.1 reaches it here.
-func alive(port int, token string) bool {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://127.0.0.1:%d/healthz", port), nil)
+// endpoint.
+func alive(ep Endpoint, token string) bool {
+	client := &http.Client{Timeout: 500 * time.Millisecond}
+	url := "http://" + ep.Addr + "/healthz"
+	if ep.Network == "unix" {
+		sock := ep.Addr
+		client.Transport = &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return (&net.Dialer{}).DialContext(ctx, "unix", sock)
+			},
+		}
+		url = "http://localhost/healthz"
+	}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return false
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
-	client := &http.Client{Timeout: 500 * time.Millisecond}
 	resp, err := client.Do(req)
 	if err != nil {
 		return false
