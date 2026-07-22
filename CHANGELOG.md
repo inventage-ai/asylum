@@ -2,9 +2,13 @@
 
 ## Unreleased
 
+## 0.8.0 — 2026-07-22
+
+Agents can now open URLs in your real host browser — the fix for full-screen TUIs that block terminal copy-paste — and browser-based CLI logins (`gh`, `gcloud`, `vercel`, …) complete end to end, with their localhost callbacks bridged back into the container. This rides on a new host broker: a token-authenticated, container-scoped channel that never exposes a port beyond host loopback. `asylum run` also now resolves tools installed via fnm, mise, and `~/.local/bin`.
+
 ### Added
-- Host broker — a small host-side HTTP server, scoped to a container's lifetime, that serves token-authenticated routes contributed by kits. It lets the sandbox ask the host to perform actions it can't do itself, starts automatically, respawns if it dies, and stops with the container. It is never reachable beyond the host: a Unix domain socket mounted only into that container on a native Linux engine, or a `127.0.0.1` loopback bind reached via `host.docker.internal` on Docker Desktop/macOS.
 - `browser-open` kit (on by default, opt-out) — running `open <url>` / `xdg-open <url>` (or anything honouring `$BROWSER`) inside the container opens an `http(s)` URL in your host browser via the broker. Fixes the friction where full-screen TUI agents disable terminal text selection, making printed URLs impossible to copy. Independent of the `agent-browser` kit. For OAuth logins with a loopback `redirect_uri`, it also briefly bridges the callback port from the host into the container (host loopback only, 5-minute best-effort) so `gh`/`gcloud`/`vercel`-style browser logins complete without pasting a code.
+- Host broker — a small host-side HTTP server, scoped to a container's lifetime, that serves token-authenticated routes contributed by kits. It lets the sandbox ask the host to perform actions it can't do itself, starts automatically, respawns if it dies, and stops with the container. It is never reachable beyond the host: a Unix domain socket mounted only into that container on a native Linux engine, or a `127.0.0.1` loopback bind reached via `host.docker.internal` on Docker Desktop/macOS.
 
 ### Fixed
 - `asylum run <cmd>` failed to find tools installed via `~/.local/bin`, fnm, or mise (e.g. `asylum run claude auth login`, `asylum run node …`) with `executable file not found in $PATH`. Command mode exec'd the argv bare, so it never sourced the shell rc that sets up those paths. It now runs through a login shell (`zsh -c "source ~/.zshrc && exec …"`) like agent and shell modes do, with arguments shell-quoted.
