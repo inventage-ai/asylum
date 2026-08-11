@@ -12,6 +12,7 @@ asylum config                 Configure kits, credentials, and isolation
 asylum cleanup                Remove current project's container, volumes, and data
 asylum cleanup --all          Remove all Asylum images, volumes, and cached data
 asylum version [--short]      Show version
+asylum update                 Refresh agent versions and rebuild image if changed
 asylum self-update [version]  Update to latest (or specific) version
 asylum self-update --dev      Update to latest dev build
 asylum self-update --safe     Emergency update (always dev, no checks)
@@ -39,4 +40,5 @@ See [CLI Flags](../configuration/flags.md) for all available flags.
 | [`config`](config.md) | Configure kits, credentials, and isolation |
 | [`cleanup`](cleanup.md) | Clean up current project (or `--all` for everything) |
 | [`version`](version.md) | Show version information |
+| [`update`](update.md) | Refresh agent versions and rebuild the image if they changed |
 | [`self-update`](self-update.md) | Update Asylum to a new version |

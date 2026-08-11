@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/inventage-ai/asylum/internal/kit"
 	"gopkg.in/yaml.v3"
@@ -112,15 +113,27 @@ func (c Config) AgentCompanions(agentName string) []string {
 }
 
 type Config struct {
-	Version        string                  `yaml:"version,omitempty"`
-	Agent          string                  `yaml:"agent,omitempty"`
-	ReleaseChannel string                  `yaml:"release-channel,omitempty"`
-	DefaultResume  *bool                   `yaml:"default-resume,omitempty"`
-	Kits           map[string]*KitConfig   `yaml:"kits,omitempty"`
-	Agents         map[string]*AgentConfig `yaml:"agents,omitempty"`
-	Ports          []string                `yaml:"ports,omitempty"`
-	Volumes        []string                `yaml:"volumes,omitempty"`
-	Env            map[string]string       `yaml:"env,omitempty"`
+	Version              string                  `yaml:"version,omitempty"`
+	Agent                string                  `yaml:"agent,omitempty"`
+	ReleaseChannel       string                  `yaml:"release-channel,omitempty"`
+	VersionCheckInterval string                  `yaml:"version-check-interval,omitempty"`
+	DefaultResume        *bool                   `yaml:"default-resume,omitempty"`
+	Kits                 map[string]*KitConfig   `yaml:"kits,omitempty"`
+	Agents               map[string]*AgentConfig `yaml:"agents,omitempty"`
+	Ports                []string                `yaml:"ports,omitempty"`
+	Volumes              []string                `yaml:"volumes,omitempty"`
+	Env                  map[string]string       `yaml:"env,omitempty"`
+}
+
+// VersionCheckStaleness returns the interval after which cached agent versions
+// are considered stale and refreshed in the background. It parses the
+// version-check-interval field as a Go duration, falling back to 24 hours when
+// unset, empty, or invalid so a typo never breaks a run.
+func (c Config) VersionCheckStaleness() time.Duration {
+	if d, err := time.ParseDuration(c.VersionCheckInterval); err == nil && d > 0 {
+		return d
+	}
+	return 24 * time.Hour
 }
 
 // ResumeByDefault reports whether asylum should auto-resume the previous
@@ -430,6 +443,9 @@ func Merge(base, overlay Config) Config {
 	}
 	if overlay.ReleaseChannel != "" {
 		result.ReleaseChannel = overlay.ReleaseChannel
+	}
+	if overlay.VersionCheckInterval != "" {
+		result.VersionCheckInterval = overlay.VersionCheckInterval
 	}
 	if overlay.DefaultResume != nil {
 		result.DefaultResume = overlay.DefaultResume

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- `asylum update` — on-demand refresh of the cached agent versions followed by an image rebuild if any version changed. Unlike `self-update` (which updates the asylum binary), this updates the agent CLIs baked into the container image, and exits without starting a container.
+
+### Changed
+- The background agent-version refresh now runs at most once every 24 hours (previously hourly), and the interval is configurable via `version-check-interval` (a Go duration, e.g. `24h`) in the config.
+
 ## 0.8.0 — 2026-07-22
 
 Agents can now open URLs in your real host browser — the fix for full-screen TUIs that block terminal copy-paste — and browser-based CLI logins (`gh`, `gcloud`, `vercel`, …) complete end to end, with their localhost callbacks bridged back into the container. This rides on a new host broker: a token-authenticated, container-scoped channel that never exposes a port beyond host loopback. `asylum run` also now resolves tools installed via fnm, mise, and `~/.local/bin`.

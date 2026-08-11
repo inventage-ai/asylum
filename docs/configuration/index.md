@@ -49,6 +49,7 @@ env:
 |-------|------|-------------|
 | `agent` | string | Default agent: `claude`, `gemini`, `codex` (default: `claude`) |
 | `release-channel` | string | Self-update channel: `stable` or `dev` |
+| `version-check-interval` | string | How often to refresh cached agent versions in the background, as a Go duration (default: `24h`). Force a refresh any time with [`asylum update`](../commands/update.md) |
 | `kits` | map | Kit configurations (see [Kits](../kits/index.md)) |
 | `agents` | map | Agent configurations (see [Config Isolation](../concepts/isolation.md)) |
 | `ports` | list | Port forwarding rules |
@@ -111,6 +112,6 @@ When multiple config files define the same field:
 
 | Type | Behavior |
 |------|----------|
-| **Scalars** (agent, release-channel) | Last value wins |
+| **Scalars** (agent, release-channel, version-check-interval) | Last value wins |
 | **Lists** (ports, volumes) | Concatenated across layers |
 | **Maps** (env, kits, agents) | Merged per key, last value wins |

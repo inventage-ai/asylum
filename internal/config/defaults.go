@@ -7,6 +7,9 @@ const configHeader = `version: "0.2"
 # Release channel for self-update (stable, dev)
 release-channel: stable
 
+# How often to refresh cached agent versions in the background (Go duration).
+# version-check-interval: 24h
+
 # Agent to start by default (claude, gemini, codex, opencode)
 agent: claude
 

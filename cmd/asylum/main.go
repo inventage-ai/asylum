@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/broker"
@@ -306,9 +305,10 @@ func main() {
 	// One-time resume-migration dialog for users who installed asylum before
 	// the default-new-session behaviour change. New users are pre-marked here
 	// so they never see the dialog on a future asylum version. Mutates cfg
-	// when the user opts into legacy behaviour.
+	// when the user opts into legacy behaviour. `update` starts no session, so
+	// it must not consume the one-time prompt.
 	_, promptStateDirty := firstrun.MaybeShowResumeMigrationPrompt(
-		asylumDir, &state, &cfg, containerMode == container.ModeAgent, existingInstall,
+		asylumDir, &state, &cfg, containerMode == container.ModeAgent && subcommand != "update", existingInstall,
 	)
 
 	// Load version pinning — blocking if file doesn't exist, background update otherwise.
@@ -318,15 +318,15 @@ func main() {
 		log.Warn("load versions: %v (proceeding without version pinning)", err)
 		versionsVM = nil
 	}
-	if versionsVM == nil {
+	if versionsVM == nil || subcommand == "update" {
 		log.Info("fetching latest agent versions (this may take a moment)...")
-		versionsVM = versions.FetchAll()
-		if len(versionsVM) > 0 {
+		if fetched := versions.FetchAll(); len(fetched) > 0 {
+			versionsVM = fetched
 			if err := versions.Write(versionsPath, versionsVM); err != nil {
 				log.Warn("write versions: %v", err)
 			}
 		}
-	} else if stale, err := versions.NeedsRefresh(versionsPath, versionsVM, time.Hour); err != nil {
+	} else if stale, err := versions.NeedsRefresh(versionsPath, versionsVM, cfg.VersionCheckStaleness()); err != nil {
 		log.Warn("check versions staleness: %v", err)
 	} else if stale {
 		go func() {
@@ -346,6 +346,11 @@ func main() {
 		if err := config.SaveState(asylumDir, state); err != nil {
 			log.Warn("save state: %v", err)
 		}
+	}
+
+	if subcommand == "update" {
+		log.Success("update complete")
+		return
 	}
 
 	cfgHash := config.ConfigHash(cfg)
@@ -704,6 +709,12 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			i++
 			if i < len(args) {
 				return cliFlags{}, "", nil, fmt.Errorf("unexpected argument %q after config", args[i])
+			}
+		case arg == "update":
+			subcommand = "update"
+			i++
+			if i < len(args) {
+				return cliFlags{}, "", nil, fmt.Errorf("unexpected argument %q after update", args[i])
 			}
 		case arg == "self-update" || arg == "selfupdate":
 			subcommand = "self-update"
@@ -1353,6 +1364,7 @@ Usage:
   asylum cleanup                Remove current project's container, volumes, and data
   asylum cleanup --all          Remove all Asylum images, volumes, and cached data
   asylum version [--short]      Show version
+  asylum update                 Refresh agent versions and rebuild image if changed
   asylum self-update [version]  Update to latest (or specific) version
   asylum self-update --dev      Update to latest dev build
   asylum self-update --safe     Emergency update (always dev, no checks)

@@ -6,10 +6,11 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
-func ptrBool(b bool) *bool                  { return &b }
-func ptrStrSlice(s ...string) *[]string     { v := append([]string(nil), s...); return &v }
+func ptrBool(b bool) *bool              { return &b }
+func ptrStrSlice(s ...string) *[]string { v := append([]string(nil), s...); return &v }
 
 func TestMerge(t *testing.T) {
 	tests := []struct {
@@ -35,6 +36,26 @@ func TestMerge(t *testing.T) {
 			check: func(t *testing.T, c Config) {
 				if c.Agent != "claude" {
 					t.Errorf("agent = %q, want %q", c.Agent, "claude")
+				}
+			},
+		},
+		{
+			name: "version-check-interval last wins",
+			base: Config{VersionCheckInterval: "24h"},
+			over: Config{VersionCheckInterval: "1h"},
+			check: func(t *testing.T, c Config) {
+				if c.VersionCheckInterval != "1h" {
+					t.Errorf("interval = %q, want %q", c.VersionCheckInterval, "1h")
+				}
+			},
+		},
+		{
+			name: "version-check-interval empty overlay keeps base",
+			base: Config{VersionCheckInterval: "168h"},
+			over: Config{},
+			check: func(t *testing.T, c Config) {
+				if c.VersionCheckInterval != "168h" {
+					t.Errorf("interval = %q, want %q", c.VersionCheckInterval, "168h")
 				}
 			},
 		},
@@ -1083,4 +1104,27 @@ func TestLoad_YAMLAlias(t *testing.T) {
 			t.Errorf("error should mention conflicting filenames, got: %v", err)
 		}
 	})
+}
+
+func TestVersionCheckStaleness(t *testing.T) {
+	day := 24 * time.Hour
+	tests := []struct {
+		name  string
+		value string
+		want  time.Duration
+	}{
+		{"unset defaults to 24h", "", day},
+		{"valid duration honoured", "1h", time.Hour},
+		{"weekly duration honoured", "168h", 168 * time.Hour},
+		{"invalid falls back to default", "soon", day},
+		{"zero falls back to default", "0s", day},
+		{"negative falls back to default", "-5m", day},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := (Config{VersionCheckInterval: tt.value}).VersionCheckStaleness(); got != tt.want {
+				t.Errorf("VersionCheckStaleness(%q) = %v, want %v", tt.value, got, tt.want)
+			}
+		})
+	}
 }

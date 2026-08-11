@@ -1,5 +1,9 @@
-## ADDED Requirements
+# cli-dispatch
 
+## Purpose
+
+Parse the asylum command line and dispatch to the right destination: a subcommand, the default agent, a shell, or an arbitrary in-container command. Unknown flags are forwarded to the agent rather than rejected, so agent-specific arguments pass through untouched.
+## Requirements
 ### Requirement: Flag parsing
 The CLI SHALL parse `-a/--agent`, `-p`, `-v`, `-e`, `--java`, `-n/--new`, `--continue`, `--resume`, `--skip-onboarding`, `--rebuild`, and `-h/--help` flags. The `--version` and `--cleanup` flags SHALL be accepted as aliases for the `version` and `cleanup` commands respectively. Unknown flags SHALL produce an error.
 
@@ -32,7 +36,7 @@ The CLI SHALL parse `-a/--agent`, `-p`, `-v`, `-e`, `--java`, `-n/--new`, `--con
 - **THEN** the agent receives `--continue` followed by `"fix bug"` in order, alongside any agent-specific default args (e.g. `--dangerously-skip-permissions` for Claude)
 
 ### Requirement: Command dispatch
-The CLI SHALL dispatch to version, cleanup, config, agent mode (default), shell mode, self-update, or arbitrary command based on subcommands and flags. The CLI SHALL accept `selfupdate` as an alias for `self-update`, and `--version`/`--cleanup` as flag aliases for the `version`/`cleanup` commands.
+The CLI SHALL dispatch to version, cleanup, config, update, agent mode (default), shell mode, self-update, or arbitrary command based on subcommands and flags. The CLI SHALL accept `selfupdate` as an alias for `self-update`, and `--version`/`--cleanup` as flag aliases for the `version`/`cleanup` commands.
 
 #### Scenario: Version command
 - **WHEN** `asylum version` is run
@@ -49,6 +53,10 @@ The CLI SHALL dispatch to version, cleanup, config, agent mode (default), shell 
 #### Scenario: Cleanup flag alias
 - **WHEN** `asylum --cleanup` is run
 - **THEN** behavior is identical to `asylum cleanup`
+
+#### Scenario: Update command
+- **WHEN** `asylum update` is run
+- **THEN** agent versions are force-fetched and images are ensured, and the process exits before starting a container
 
 #### Scenario: Default invocation
 - **WHEN** `asylum` is run with no positional args
@@ -88,3 +96,4 @@ The CLI SHALL use `syscall.Exec` to replace itself with the docker process.
 #### Scenario: Exec into docker
 - **WHEN** the docker run args are assembled
 - **THEN** `syscall.Exec` is called with the docker binary path and args
+

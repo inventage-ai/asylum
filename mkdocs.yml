@@ -51,6 +51,7 @@ nav:
     - config: commands/config.md
     - cleanup: commands/cleanup.md
     - version: commands/version.md
+    - update: commands/update.md
     - self-update: commands/self-update.md
   - Configuration:
     - Overview: configuration/index.md
