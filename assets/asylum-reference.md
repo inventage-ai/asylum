@@ -43,6 +43,10 @@ agent: claude  # claude, gemini, codex, opencode
 # Release channel for self-update
 release-channel: stable  # stable, dev
 
+# How often to refresh cached agent versions in the background (Go duration).
+# `asylum update` forces a refresh regardless of this window.
+# version-check-interval: 24h
+
 # Auto-resume the previous agent session on each `asylum` invocation. Off by
 # default — each invocation starts a new session. Use `--continue` or
 # `--resume` (forwarded to the agent) to opt into resume per-invocation.
@@ -238,7 +242,7 @@ Images are hash-tagged. If the assembled content hasn't changed, the existing im
 
 To force a rebuild: `asylum --rebuild`
 
-## Self-Update
+## Updates
 
 Asylum can update itself:
 
@@ -246,6 +250,13 @@ Asylum can update itself:
 asylum self-update              # Update to latest stable release
 asylum self-update --dev        # Update to latest dev build
 asylum self-update 0.4.0        # Install a specific version
+```
+
+The agent CLIs inside the container are updated separately. Their versions are
+cached in `~/.asylum/versions.json` and refreshed in the background every 24h:
+
+```
+asylum update                   # Force a refresh now, rebuild image if changed
 ```
 
 ## SSH

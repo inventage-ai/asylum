@@ -101,6 +101,7 @@ Full reference: [Configuration documentation](https://asylum.inventage.ai/latest
 | `asylum config` | Configure kits, credentials, and isolation |
 | `asylum cleanup` | Clean up current project (`--all` for everything) |
 | `asylum version` | Show version |
+| `asylum update` | Refresh agent versions, rebuild image if they changed |
 | `asylum self-update` | Update to latest version |
 
 Full reference: [Commands documentation](https://asylum.inventage.ai/latest/commands/)
