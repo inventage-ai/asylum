@@ -1,4 +1,10 @@
-## ADDED Requirements
+# colored-logging Specification
+
+## Purpose
+
+Gives asylum one place to write user-facing terminal output, with five levels (info, success, warn, error, build) rendered as colored prefixes. Using it instead of bare `fmt.Println` keeps output consistent and makes a failure visually distinct from progress chatter.
+
+## Requirements
 
 ### Requirement: Five log levels with colored prefixes
 The log package SHALL provide five functions: Info, Success, Warn, Error, Build. Each SHALL print a colored prefix followed by the formatted message and a newline.

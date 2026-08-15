@@ -1,4 +1,10 @@
-## ADDED Requirements
+# config-migration Specification
+
+## Purpose
+
+Upgrades v1 config files to the v2 schema on load, so an existing install keeps working after asylum's config format changes rather than failing to parse. Global and project files are detected by different signals, and a `.backup` copy is written before any file is rewritten.
+
+## Requirements
 
 ### Requirement: Global config migration
 When loading `~/.asylum/config.yaml`, the system SHALL detect v1 format (missing `version` field or version < 0.2) and migrate it to v2 format in place.

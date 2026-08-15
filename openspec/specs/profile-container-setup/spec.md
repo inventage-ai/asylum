@@ -1,4 +1,10 @@
-## MODIFIED Requirements
+# profile-container-setup Specification
+
+## Purpose
+
+Covers where an agent's config directory is mounted from, which follows that agent's configured isolation level: the host directory for `shared`, an asylum-managed one for `isolated`, or a per-project one for `project`.
+
+## Requirements
 
 ### Requirement: Agent config volume mount
 The agent config volume mount SHALL respect the isolation level configured for each agent.

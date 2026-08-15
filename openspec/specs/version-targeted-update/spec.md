@@ -1,4 +1,10 @@
-## ADDED Requirements
+# version-targeted-update Specification
+
+## Purpose
+
+Lets `self-update` take a version argument to install a specific GitHub release rather than the newest one, which is what makes downgrading out of a bad release possible.
+
+## Requirements
 
 ### Requirement: Install a specific version
 The `self-update` subcommand SHALL accept an optional positional version argument that targets a specific GitHub release tag instead of the latest release.

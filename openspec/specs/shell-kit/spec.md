@@ -1,4 +1,10 @@
-## ADDED Requirements
+# shell-kit Specification
+
+## Purpose
+
+Makes the container's interactive shell usable rather than bare: oh-my-zsh with a configured theme, direnv hooks, and the related shell setup an agent or a user dropping into `asylum shell` expects to find.
+
+## Requirements
 
 ### Requirement: Shell configuration kit
 The system SHALL provide a `shell` kit that installs oh-my-zsh, configures the zsh theme, sets up direnv hooks, configures terminal size handling, and provides a default tmux configuration. The kit SHALL be default-on.

@@ -1,3 +1,11 @@
+# versioned-docs Specification
+
+## Purpose
+
+Publishes the documentation site once per release rather than only from the tip of main, so a user on an older asylum can read the docs that match their binary. Versions are deployed with mike under their own URL prefixes, `dev` tracks main, release tags produce stable versions, and the root URL redirects to the newest stable one.
+
+## Requirements
+
 ### Requirement: Version selector
 The docs site SHALL display a version selector dropdown in the header that lists all deployed versions. The selector SHALL allow users to switch between versions without losing their current page context.
 

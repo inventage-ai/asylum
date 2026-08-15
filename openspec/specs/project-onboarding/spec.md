@@ -1,3 +1,9 @@
+# project-onboarding Specification
+
+## Purpose
+
+Runs the setup work a freshly started container needs before an agent is useful — dependency installs and similar — as tasks contributed by active profiles. Pending work is confirmed in a single prompt, executed via `docker exec` with output streamed to the user, and tracked by input hash so it does not repeat needlessly.
+
 ## Requirements
 
 ### Requirement: Task detection

@@ -1,4 +1,10 @@
-## ADDED Requirements
+# config-isolation Specification
+
+## Purpose
+
+Controls where an agent's config directory comes from: `shared` uses the host's directly, `isolated` an asylum-managed copy shared across projects, `project` a per-project copy. The choice is prompted for on first run with Claude and persisted, with a defined fallback for when no layer and no wizard supplied a value.
+
+## Requirements
 
 ### Requirement: Config isolation levels
 The system SHALL support three agent config isolation levels: `shared` (host config), `isolated` (asylum-managed, shared across projects), and `project` (per-project isolation).

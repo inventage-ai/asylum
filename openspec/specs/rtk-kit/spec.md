@@ -1,4 +1,10 @@
-## ADDED Requirements
+# rtk-kit Specification
+
+## Purpose
+
+Defines the opt-in `rtk` kit, which installs RTK — a token-reduction proxy for LLM agents — and wires its generated hooks and RTK.md into the agent's config directory at container start. Being opt-in, it also contributes the commented config entry, the rules snippet describing `rtk gain` and `rtk discover`, a version banner line, and its own documentation page.
+
+## Requirements
 
 ### Requirement: RTK kit registration
 The system SHALL register an `rtk` kit with tier `TierOptIn`, no dependencies, tool name `rtk`, and `NeedsMount: true`.

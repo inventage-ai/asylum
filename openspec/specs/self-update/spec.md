@@ -1,4 +1,10 @@
-## ADDED Requirements
+# self-update Specification
+
+## Purpose
+
+Replaces the running asylum binary with a newer one from GitHub Releases, choosing the asset for the detected OS and architecture. The target comes from the stable channel by default, from the `dev` pre-release with `--dev`, or from the configured `release-channel` when no flag is given. Replacement is atomic — a temporary file in the same directory, then a rename — so an interrupted update cannot leave a half-written binary.
+
+## Requirements
 
 ### Requirement: Update to latest stable release
 The `self-update` subcommand SHALL query the GitHub Releases API for the latest non-prerelease and download the matching binary for the current OS and architecture, replacing the running binary atomically. When a version argument is provided, the specified release tag SHALL be fetched instead.

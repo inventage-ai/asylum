@@ -1,4 +1,10 @@
-## ADDED Requirements
+# agent-interface Specification
+
+## Purpose
+
+Defines the contract every coding agent implements — its name, binary, config directories, environment variables, session detection, and command generation — plus the registry that resolves an agent by name. This is what keeps asylum agent-agnostic: adding an agent means implementing the interface, not touching the container or image layers.
+
+## Requirements
 
 ### Requirement: Agent interface
 The agent package SHALL define an Agent interface with methods: Name, Binary, NativeConfigDir, ContainerConfigDir, AsylumConfigDir, EnvVars, HasSession, Command — matching PLAN.md section 8. The `Command` method SHALL accept an options parameter that carries context from the container layer (e.g. the shared kit-skills directory path), so agent implementations can tailor their launch command accordingly.

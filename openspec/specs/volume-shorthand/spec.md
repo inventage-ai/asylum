@@ -1,4 +1,10 @@
-## ADDED Requirements
+# volume-shorthand Specification
+
+## Purpose
+
+Accepts a shorthand volume form alongside full Docker syntax, where naming a single path mounts it at the same path inside the container. Because asylum mounts the project at its real host path, host and container paths usually match, and repeating them in config is noise.
+
+## Requirements
 
 ### Requirement: Volume shorthand parsing
 The volume parser SHALL support both standard Docker volume syntax and shorthand forms where the container path equals the host path.

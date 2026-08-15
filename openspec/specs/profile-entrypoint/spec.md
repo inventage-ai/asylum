@@ -1,4 +1,10 @@
-## ADDED Requirements
+# profile-entrypoint Specification
+
+## Purpose
+
+Assembles the container entrypoint at image build time from an embedded core fragment, each active kit's entrypoint snippet, and a tail, instead of shipping one monolithic script. The welcome banner reports versions only for tools the active kits actually installed, so it never advertises something that isn't there.
+
+## Requirements
 
 ### Requirement: Entrypoint decomposition
 The monolithic entrypoint.sh SHALL be split into an embedded core fragment (PATH setup, git config, SSH, direnv, Docker daemon) and an embedded tail fragment (welcome banner, exec).

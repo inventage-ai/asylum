@@ -1,4 +1,10 @@
-## ADDED Requirements
+# config-disabled-toggle Specification
+
+## Purpose
+
+Adds and removes a kit's `disabled: true` line in the YAML config file in place, so toggling a kit off and on again preserves the user's surrounding comments and formatting instead of rewriting the file from a parsed model.
+
+## Requirements
 
 ### Requirement: Set disabled flag on kit entry
 The system SHALL provide a function to add `disabled: true` as the first property under a kit's YAML entry in the config file, using text-based editing that preserves comments and formatting.

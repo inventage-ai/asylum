@@ -1,4 +1,10 @@
-## ADDED Requirements
+# agent-companions Specification
+
+## Purpose
+
+Lets a primary agent declare other installed agents as companions, so their config directories and environment variables are present in the container without those agents being launched. This is what allows a Claude plugin to shell out to `codex` and find `~/.codex` where it expects. Companion declarations are one-directional and never alter how the primary itself starts, resumes, or is described to the sandbox.
+
+## Requirements
 
 ### Requirement: Companion list configuration
 The system SHALL accept an optional `companions` field on each entry under `agents` in YAML config, whose value is a list of agent names. The field SHALL merge using last-wins overlay semantics: an overlay that omits `companions` SHALL inherit the base value; an overlay that sets `companions` (including to an empty list) SHALL replace the base value, allowing higher-precedence config layers to clear inherited companions.

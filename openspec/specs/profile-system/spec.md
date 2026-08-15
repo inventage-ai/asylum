@@ -1,4 +1,10 @@
-## MODIFIED Requirements
+# profile-system Specification
+
+## Purpose
+
+Covers the shape of the `Kit` struct — the fields a kit uses to contribute Dockerfile and entrypoint snippets, cache directories, onboarding tasks, sub-kits, and dependencies — along with dependency validation and default-on inclusion during resolution.
+
+## Requirements
 
 ### Requirement: Kit struct
 A kit SHALL be a Go struct with fields: Name, Description, DockerSnippet, EntrypointSnippet, BannerLines, CacheDirs, OnboardingTasks, SubKits, Deps, and DefaultOn.

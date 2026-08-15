@@ -1,4 +1,10 @@
-## ADDED Requirements
+# dockerfile-ordering Specification
+
+## Purpose
+
+Keeps the order of kit snippets in the generated Dockerfile stable across builds, because reordering them invalidates layer caches and forces rebuilds that changed nothing. The chosen order is persisted in `state.json`: sources present in the previous build keep their relative positions, new ones are appended, and only the suffix after a removal is re-sorted, with kit priority breaking ties. Agent snippets always follow the kit block.
+
+## Requirements
 
 ### Requirement: Static Dockerfile priority
 Each kit SHALL have a `DockerPriority` integer field that represents its preferred position in the Dockerfile. Lower values indicate earlier placement (more stable, more expensive layers). Agent installs SHALL NOT have a priority and SHALL NOT participate in priority-based ordering.

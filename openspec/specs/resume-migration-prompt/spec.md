@@ -1,4 +1,10 @@
-## ADDED Requirements
+# resume-migration-prompt Specification
+
+## Purpose
+
+Explains a behavior change to users who would otherwise be surprised by it: asylum stopped resuming the previous session by default, so an existing installation gets a one-time dialog offering to restore the old behavior. Fresh installs never see it, since they have nothing to be surprised about, and it is suppressed outside a terminal. State records that it has been shown.
+
+## Requirements
 
 ### Requirement: One-time upgrade dialog for existing users
 On the first invocation of `asylum` after upgrading to the version that ships the default-new-session behaviour change, asylum SHALL present a one-time interactive TUI dialog informing the user that the default session behaviour has changed and offering to restore the previous auto-resume behaviour via a config flag. The dialog SHALL be shown at most once per user.

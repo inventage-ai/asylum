@@ -1,4 +1,10 @@
-## ADDED Requirements
+# binary-signing Specification
+
+## Purpose
+
+Makes released binaries verifiable and runnable without security warnings: darwin builds are code-signed and notarized with Apple, every binary gets a SHA256 checksum and SLSA build provenance, and the install script can verify what it downloaded. Signing happens in an ephemeral CI keychain that is destroyed after use, so the certificate never persists on a runner.
+
+## Requirements
 
 ### Requirement: Darwin binaries are code-signed
 The release workflow SHALL sign all darwin binaries with a Developer ID Application certificate using `codesign` with hardened runtime and secure timestamp.

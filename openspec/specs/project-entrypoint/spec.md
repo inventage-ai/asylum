@@ -1,4 +1,10 @@
-## ADDED Requirements
+# project-entrypoint Specification
+
+## Purpose
+
+Builds a second, project-level entrypoint script from the kits active for that project and copies it into the project image, where the base entrypoint sources it. Project kit banner lines are exported as `PROJECT_BANNER` so they appear in the welcome output alongside the base image's.
+
+## Requirements
 
 ### Requirement: Project entrypoint assembly
 The image package SHALL provide an `assembleProjectEntrypoint` function that builds a project-level entrypoint script from project kit `EntrypointSnippet`s and `BannerLines`. The script SHALL begin with `#!/bin/bash` and `set -e`.

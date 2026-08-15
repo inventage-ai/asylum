@@ -1,3 +1,11 @@
+# kit-credentials Specification
+
+## Purpose
+
+Gives kits a uniform way to pass host credentials into the container, so tooling that needs authentication works in the sandbox without the user re-authenticating. A kit contributes a `CredentialFunc` that produces mounts; the user controls it per kit via a `credentials` config field that accepts `auto`, an explicit list, or `false`. The Maven implementation is specified here as the worked example: it discovers server IDs from `pom.xml` and mounts a filtered `settings.xml` carrying only the matching `<server>` entries.
+
+## Requirements
+
 ### Requirement: Kit credential function
 The Kit struct SHALL support an optional `CredentialFunc` field of type `func(CredentialOpts) ([]CredentialMount, error)`. Kits that do not handle credentials SHALL leave this field nil.
 

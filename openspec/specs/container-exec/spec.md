@@ -1,4 +1,10 @@
-## ADDED Requirements
+# container-exec Specification
+
+## Purpose
+
+Lets several terminals share one container per project. The first invocation starts a detached container holding an idle process; later invocations exec into it, skipping the image build. Each session exits independently, signals are forwarded so agents shut down cleanly, and the container is removed once the last exec session is gone.
+
+## Requirements
 
 ### Requirement: Detect running container
 The docker package SHALL provide a function to check if a container with a given name is currently running.

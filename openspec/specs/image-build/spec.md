@@ -1,4 +1,10 @@
-## ADDED Requirements
+# image-build Specification
+
+## Purpose
+
+Builds asylum's two image tiers and decides when each needs rebuilding: a shared base image that carries global packages and rebuilds when the embedded Dockerfile or entrypoint changes, and a per-project image generated from project-layer packages and kit contributions. Also fixes who installs what — apt packages as root, language packages as the container user — and announces before a build starts, since builds are slow enough that silence reads as a hang.
+
+## Requirements
 
 ### Requirement: Base image auto-rebuild
 The image package SHALL detect when the embedded Dockerfile or entrypoint.sh has changed and rebuild the base image automatically. `EnsureBase` SHALL be called on every asylum invocation regardless of container state. When a running container exists and `docker inspect` fails, asylum SHALL treat images as up to date rather than erroring out.

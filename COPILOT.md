@@ -13,7 +13,7 @@ Config & LSP
 
 MCP servers
 - MCP servers are configured in `~/.copilot/mcp-config.json` and managed via the `copilot mcp` subcommands. The GitHub MCP server is built-in; no extra setup needed for it.
-- See `openspec/specs/copilot-mcp/spec.md` for Asylum's MCP plumbing contract.
+- Asylum contributes no MCP plumbing of its own for Copilot.
 
 Session resume
 - Copilot's `session-state` directory is global to the config dir and copilot's `--resume` picker lists every recent session regardless of which project they came from. Auto-passing `--resume` purely on `session-state` content would expose unrelated projects' context.

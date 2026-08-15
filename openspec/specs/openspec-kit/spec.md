@@ -1,4 +1,10 @@
-## ADDED Requirements
+# openspec-kit Specification
+
+## Purpose
+
+Defines the default-on `openspec` kit: it installs `@fission-ai/openspec` via npm, bakes the preferred OpenSpec global config into the image so initialization produces a consistent setup, and contributes a rules snippet telling the in-container agent that OpenSpec is available and how to use it.
+
+## Requirements
 
 ### Requirement: OpenSpec CLI kit
 The system SHALL provide an `openspec` kit that installs the OpenSpec CLI (`@fission-ai/openspec`) via npm. The kit SHALL declare a dependency on the `node` kit and SHALL be default-on.

@@ -1,4 +1,10 @@
-## ADDED Requirements
+# kit-dependencies Specification
+
+## Purpose
+
+Lets a kit declare that it needs another kit, and validates those declarations during resolution. Kits that install a tool via a runtime someone else provides (the Gemini CLI needing `node`, for example) would otherwise fail deep in an image build rather than up front with a clear message.
+
+## Requirements
 
 ### Requirement: Kit dependency declaration
 Kits SHALL be able to declare dependencies on other kits via a `Deps` field containing kit names.

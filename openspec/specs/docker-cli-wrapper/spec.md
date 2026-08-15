@@ -1,4 +1,10 @@
-## ADDED Requirements
+# docker-cli-wrapper Specification
+
+## Purpose
+
+Wraps the `docker` CLI thinly for the operations asylum needs — daemon availability, image build, label inspection, removal and pruning. Shelling out keeps asylum free of the Docker SDK's dependency tree, and confining the calls to one package keeps that decision from leaking everywhere.
+
+## Requirements
 
 ### Requirement: Docker availability check
 The docker package SHALL verify the Docker daemon is running before any operation.

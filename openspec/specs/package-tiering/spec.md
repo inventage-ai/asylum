@@ -1,4 +1,10 @@
-## ADDED Requirements
+# package-tiering Specification
+
+## Purpose
+
+Decides whether a configured package or `shell.build` command belongs in the shared base image or a project image. Global-config entries build once into the base and are reused everywhere, but only when their provider kit is actually in the base; a package named in both layers goes to the base rather than being installed twice.
+
+## Requirements
 
 ### Requirement: Package provenance tiering
 The system SHALL determine, for each configured package and `shell.build` run-command, whether it installs into the base image or the project image based on the config layer that declared it. Entries declared in the global config (`~/.asylum/config.yaml`) SHALL install into the base image. Entries declared in a project config layer (`.asylum` or `.asylum.local`) SHALL install into the project image. This tiering SHALL apply uniformly to all package types: `apt`, node `npm`, python `pip`, `cx-lang`, and `shell.build` run-commands.

@@ -1,4 +1,10 @@
-## ADDED Requirements
+# readme-landing Specification
+
+## Purpose
+
+Keeps the README a short landing page — pitch, comparison against similar sandboxes, and what ships out of the box — rather than a manual, since the documentation site carries the detail. Length is capped deliberately so the README stays scannable as features accumulate.
+
+## Requirements
 
 ### Requirement: README structure
 The README SHALL be restructured as a concise landing page (~120-150 lines) with sections: pitch, comparison table, what's included, install, quick start, configuration overview, commands overview, kits overview, building from source, and license. Each overview section SHALL link to the corresponding docs site page.

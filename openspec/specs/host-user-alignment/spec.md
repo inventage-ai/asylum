@@ -1,4 +1,10 @@
-## ADDED Requirements
+# host-user-alignment Specification
+
+## Purpose
+
+Gives the container user the same home directory path as the host user, so absolute symlinks and absolute paths written on either side resolve on the other. Holding that invariant means no script or kit snippet may hardcode a home path or username: shell code uses `$HOME` and Dockerfile snippets use the `${USERNAME}` build arg.
+
+## Requirements
 
 ### Requirement: Container home directory matches host
 The container user SHALL be created with a home directory path matching the host user's home directory, passed as a build argument.

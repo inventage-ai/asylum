@@ -1,4 +1,10 @@
-## ADDED Requirements
+# docs-site Specification
+
+## Purpose
+
+Defines the public documentation site: an MkDocs Material configuration at the repo root, a page per command, kit and concept under `docs/`, and a GitHub Actions workflow that deploys it to GitHub Pages. Also names the pages that must cover first-run behavior and Maven credential injection specifically.
+
+## Requirements
 
 ### Requirement: MkDocs configuration
 The project root SHALL contain a `mkdocs.yml` that configures MkDocs Material with site name, theme, navigation structure, and search. The navigation SHALL include sections for Getting Started, Commands, Configuration, Kits, Concepts, and Development.

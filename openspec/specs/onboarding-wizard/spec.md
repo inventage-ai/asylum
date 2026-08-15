@@ -1,3 +1,11 @@
+# onboarding-wizard Specification
+
+## Purpose
+
+Collects everything asylum needs to ask the user before a container starts — agents, kits, config isolation, credentials — into one wizard rather than a sequence of disconnected prompts. It runs before the image build so selections that shape the image take effect, presents only steps that are actually pending, and is skipped entirely when nothing is.
+
+## Requirements
+
 ### Requirement: Unified onboarding flow
 Before starting a container, the system SHALL collect all pending onboarding steps and present them as a single wizard flow. On first-run invocations, the flow SHALL include the agent selection step, the optional default-agent step, the kit selection step, the isolation step (if applicable), and the credentials step (if applicable). On non-first-run invocations, the flow SHALL include only the isolation and credentials steps when their values are unconfigured. The wizard SHALL run before `ensureImages` so image-shaping selections affect the build. If no steps are pending, the wizard SHALL be skipped entirely.
 

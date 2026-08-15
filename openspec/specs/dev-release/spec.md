@@ -1,4 +1,10 @@
-## ADDED Requirements
+# dev-release Specification
+
+## Purpose
+
+Publishes a rolling `dev` build from every push to main — all four targets, signed, notarized, checksummed — so the dev release channel has something current to update to. It is marked a pre-release so GitHub's `releases/latest` continues to resolve to the newest stable version.
+
+## Requirements
 
 ### Requirement: Rolling dev release on push to main
 A CI workflow SHALL build all four binary targets, sign and notarize darwin binaries, generate checksums, and publish them as a `dev` pre-release on every push to the `main` branch.

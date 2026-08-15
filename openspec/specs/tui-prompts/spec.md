@@ -1,4 +1,10 @@
-## ADDED Requirements
+# tui-prompts Specification
+
+## Purpose
+
+Provides the interactive building blocks the wizard and `asylum config` are built from: single-select, multi-select with checkboxes, options carrying a label and optional description, and a wizard that runs several steps in one session. Also requires the tabbed UI to keep selections when the user moves between tabs, so nothing is silently lost before confirming.
+
+## Requirements
 
 ### Requirement: Single-choice prompt
 The TUI package SHALL provide a `Select` function that displays a list of options and returns the selected index.

@@ -1,3 +1,11 @@
+# hidden-kit-flag Specification
+
+## Purpose
+
+Lets a kit exist and be configurable without appearing in any interactive picker. Some kits (notably `apt`) are configured by editing YAML rather than chosen from a list, and offering them in the config TUI or the new-kit prompt would only invite confusion.
+
+## Requirements
+
 ### Requirement: Hidden field on Kit struct
 The Kit struct SHALL have a `Hidden bool` field. When set to true, the kit SHALL be excluded from all interactive selection surfaces.
 

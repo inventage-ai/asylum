@@ -1,4 +1,10 @@
-## ADDED Requirements
+# kit-config-sync Specification
+
+## Purpose
+
+Writes newly detected kits into an existing config file without disturbing what the user wrote. A kit the user accepted is inserted live; an opt-in kit, or any new kit found in a non-interactive session, is inserted commented out so it is discoverable but inert. Kits supply their own structured YAML nodes for this, and a config with no `kits` mapping gets one created.
+
+## Requirements
 
 ### Requirement: Insert active kit into existing config
 When a new kit with tier `TierDefault` is activated (by user consent or first-run), the system SHALL insert it into the `kits` mapping of `~/.asylum/config.yaml` using `yaml.Node` tree manipulation, preserving existing comments and key ordering.

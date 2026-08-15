@@ -1,4 +1,10 @@
-## ADDED Requirements
+# config-loading Specification
+
+## Purpose
+
+Loads and merges asylum's configuration layers — global, project, local, then CLI flags — into one resolved config. Merge semantics differ by kind and are specified here: scalars are last-wins, lists concatenate, and CLI flags override scalars but append to lists. Also covers reading the Java version from `.tool-versions` and the `release-channel` and `default-resume` keys.
+
+## Requirements
 
 ### Requirement: Three-layer config loading
 The config system SHALL load config from `~/.asylum/config.yaml`, the project layer, and the local layer in order, merging each layer on top of the previous. Before loading, each file SHALL be migrated from v1 format if necessary.

@@ -1,4 +1,10 @@
-## ADDED Requirements
+# e2e-testing Specification
+
+## Purpose
+
+Exercises full asylum workflows against real Docker — container start, command execution, cleanup — while keeping the suite fast enough to be worth running. Speed comes from an `echo` agent that needs no credentials, a minimal config with no kits, and compiling the binary once per run.
+
+## Requirements
 
 ### Requirement: Echo agent for testing
 The agent package SHALL include an `echo` agent that runs the shell `echo` command with any provided args. It requires no CLI installation and no config directory.

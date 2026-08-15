@@ -1,3 +1,11 @@
+# port-allocation Specification
+
+## Purpose
+
+Gives every project a private, stable range of forwarded ports so two sandboxes running side by side never collide on a dev server port. Allocations live in a file-locked registry at `~/.asylum/ports.json`, start at 7001 to stay clear of the browser-restricted range above 10000, and are surfaced to the agent through the sandbox rules file so it knows which ports it may bind.
+
+## Requirements
+
 ### Requirement: Global port registry
 The system SHALL maintain a global port registry at `~/.asylum/ports.json` that maps project directories to allocated port ranges. The file SHALL be locked during read/write operations to prevent concurrent corruption. New allocations SHALL start from base port `7001` to avoid the browser-restricted range at and above `10000`.
 

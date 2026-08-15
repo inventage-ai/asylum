@@ -1,4 +1,10 @@
-## ADDED Requirements
+# cleanup-command Specification
+
+## Purpose
+
+Removes the containers, images, and state asylum leaves behind, scoped to the current project by default and to everything with `--all`. Disk use grows quietly across projects, and this is the supported way to reclaim it rather than hand-picking Docker resources.
+
+## Requirements
 
 ### Requirement: Cleanup command
 The `cleanup` command SHALL remove asylum resources. By default it scopes cleanup to the current project. With `--all`, it removes all asylum images, volumes, and cached data after user confirmation.

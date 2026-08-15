@@ -1,4 +1,10 @@
-## MODIFIED Requirements
+# agent-install Specification
+
+## Purpose
+
+Covers the `config` field on an agent's config entry, which selects that agent's config directory isolation level. Leaving it unset is meaningful: it is what triggers the first-run prompt rather than silently assuming a mode.
+
+## Requirements
 
 ### Requirement: Agents config field
 The AgentConfig struct SHALL include a `Config` field accepting values `shared`, `isolated`, or `project` to control the agent's config directory isolation level.

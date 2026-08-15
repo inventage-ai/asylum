@@ -1,3 +1,11 @@
+# runarg-pipeline Specification
+
+## Purpose
+
+Turns every contributor to a `docker run` command line — core, kits, config, CLI flags — into `RunArg` values resolved through one pipeline, instead of string concatenation scattered across the codebase. Priority decides who wins when two sources set the same thing, an equal-priority disagreement aborts with both origins named rather than silently picking one, and the output order is deterministic so image and container behavior is reproducible.
+
+## Requirements
+
 ### Requirement: RunArg type
 The system SHALL represent every docker run **option** as a `RunArg` struct containing: `Flag` (the docker flag, e.g. `-p`, `-v`, `-e`, `--privileged`), `Value` (the flag's value, empty for boolean flags), `Source` (human-readable origin label), and `Priority` (integer, higher wins). The docker subcommand (`run`) and mode flag (`-d`) SHALL NOT be represented as RunArgs.
 

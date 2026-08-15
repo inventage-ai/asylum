@@ -1,4 +1,10 @@
-## ADDED Requirements
+# copilot-session Specification
+
+## Purpose
+
+Scopes Copilot session resume to the current project. Copilot's `session-state/` directory is global to its config dir and `copilot --resume` offers every recent session regardless of where it came from, so asylum tracks per-project markers to avoid resuming another project's conversation.
+
+## Requirements
 
 ### Requirement: Project-scoped copilot session detection
 Copilot's `session-state/` directory is global to the config dir, and `copilot --resume` lists every recent session regardless of which project they came from. Asylum SHALL gate the `--resume` flag on an Asylum-owned per-project marker stored at `<configDir>/asylum-projects/<encoded-project-path>/.has_session`. The marker SHALL be written by `WriteMarker` after a successful first launch of copilot in a given project. A project SHALL NOT inherit another project's marker, even when both share the same copilot config dir.

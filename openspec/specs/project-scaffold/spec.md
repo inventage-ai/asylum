@@ -1,4 +1,10 @@
-## ADDED Requirements
+# project-scaffold Specification
+
+## Purpose
+
+Records the repository's initial skeleton: the Go module and its single YAML dependency, the package layout under `cmd/` and `internal/`, and the Makefile targets that cross-compile for all four supported platforms.
+
+## Requirements
 
 ### Requirement: Go module initialization
 The project SHALL have a valid Go module at `github.com/inventage-ai/asylum` with `gopkg.in/yaml.v3` as a dependency.

@@ -1,4 +1,10 @@
-## ADDED Requirements
+# mise-java Specification
+
+## Purpose
+
+Installs the configured JDK versions and Gradle through mise, so a project can pick a Java version and switch between several. The default version reaches the container as `ASYLUM_JAVA_VERSION`, mise is activated in the entrypoint so managed tools land on PATH, and a default version outside the pre-installed set is installed into the project image rather than the shared base.
+
+## Requirements
 
 ### Requirement: Java versions managed by mise
 The java kit's `DockerSnippetFunc` SHALL generate the mise install command from the configured `Versions` list (defaulting to `[17, 21, 25]` when no config is provided). The default version SHALL be set from `DefaultVersion` config (defaulting to `21`).

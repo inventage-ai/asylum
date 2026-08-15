@@ -1,4 +1,10 @@
-## ADDED Requirements
+# stale-container-detection Specification
+
+## Purpose
+
+Notices when a container that is still running no longer matches what config now asks for, so a user isn't left in a sandbox built from stale inputs. Two kinds of drift are detected: the container's image no longer being the current one, and runtime settings such as volumes, environment variables and ports having changed, compared through a hash stored as a Docker label at creation. Image freshness is checked on every invocation, and active exec sessions are counted so a rebuild doesn't disrupt another terminal.
+
+## Requirements
 
 ### Requirement: Image staleness detection on running container
 When a container is already running, asylum SHALL compare the container's image ID against the expected image tag's ID before exec'ing into it.

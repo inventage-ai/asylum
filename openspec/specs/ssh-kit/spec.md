@@ -1,4 +1,10 @@
-## ADDED Requirements
+# ssh-kit Specification
+
+## Purpose
+
+Gives the container an SSH identity for Git operations, at a level of exposure the user picks. `isolated` (the default) generates a dedicated ed25519 key so the host's own keys never enter the sandbox, `project` does the same per project, and `shared` mounts the host's `~/.ssh` directly. The host's `known_hosts` is mounted in the generated-key modes so accepted host keys persist.
+
+## Requirements
 
 ### Requirement: SSH kit registration
 The system SHALL register an `ssh` kit with `TierAlwaysOn` tier, providing SSH key management and credential mounting.

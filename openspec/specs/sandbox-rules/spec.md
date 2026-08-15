@@ -1,3 +1,11 @@
+# sandbox-rules Specification
+
+## Purpose
+
+Tells the agent what environment it woke up in. On each container start asylum generates a markdown rules file describing the sandbox identity, user, version, allocated ports, and the tools each active kit provides, then mounts it read-only where the agent will read it, alongside a fuller embedded reference document. Kits contribute their own sections, so the description stays accurate as the kit set changes.
+
+## Requirements
+
 ### Requirement: Kit rules snippet field
 The `Kit` struct SHALL have a `RulesSnippet string` field. Kits MAY populate it with a markdown fragment describing the tools and capabilities they provide to the sandbox.
 

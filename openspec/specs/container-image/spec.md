@@ -1,4 +1,10 @@
-## ADDED Requirements
+# container-image Specification
+
+## Purpose
+
+Covers what the image provides at runtime: the agent CLIs named in config, common CLI tools reachable under their canonical names, `ASYLUM_`-prefixed environment variables, and a welcome banner reporting the versions actually installed. The base entrypoint sources a project entrypoint when one exists, so per-project setup runs before the banner.
+
+## Requirements
 
 ### Requirement: All three agent CLIs installed
 The Dockerfile SHALL install agent CLIs based on the active agents config. When no agents config is specified (default), only Claude Code SHALL be installed.

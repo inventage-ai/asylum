@@ -1,4 +1,10 @@
-## ADDED Requirements
+# kit-state-tracking Specification
+
+## Purpose
+
+Remembers which kits an installation has already seen, in `~/.asylum/state.json`, so asylum can tell a genuinely new kit from one the user already declined. Without that record every upgrade would re-offer every optional kit. The list is updated once the sync flow completes.
+
+## Requirements
 
 ### Requirement: Persistent kit state
 The system SHALL maintain a state file at `~/.asylum/state.json` that tracks which kits the installation has previously seen.

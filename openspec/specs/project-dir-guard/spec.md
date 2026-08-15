@@ -1,4 +1,8 @@
-# project-dir-guard
+# project-dir-guard Specification
+
+## Purpose
+
+Stops a container from being opened directly on the user's home directory or the filesystem root, where a sandboxed agent would have the run of everything. Such invocations are redirected into a fresh dated workspace under `~/asylum-workspace/`, with a visible warning naming the path so the user knows where their work landed.
 
 ## Requirements
 

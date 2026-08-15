@@ -1,3 +1,11 @@
+# github-kit-credentials Specification
+
+## Purpose
+
+Supplies the container with the host's GitHub authentication, so `gh` works inside the sandbox without a separate login. The kit reads the host token via `gh auth token` and writes it into a container-side `hosts.yml`, degrading quietly to no credentials when the host isn't authenticated.
+
+## Requirements
+
 ### Requirement: GitHub credential provider
 The GitHub kit SHALL provide a `CredentialFunc` that extracts the `gh` auth token from the host via `gh auth token` and generates a `hosts.yml` file for the container.
 

@@ -1,4 +1,10 @@
-## ADDED Requirements
+# kit-defaults Specification
+
+## Purpose
+
+Defines how a kit gets into the resolved set without being named in config. Each kit declares an activation tier — always-on, default-on, or opt-in — and always-on kits are included even when the user names an explicit kit set. `disabled: true` is the escape hatch that overrides both default-on and always-on behavior.
+
+## Requirements
 
 ### Requirement: Always-on kits
 Kits with tier `TierAlwaysOn` SHALL be included in the resolved set when the user specifies explicit kits but does not mention the always-on kit, unless explicitly disabled.

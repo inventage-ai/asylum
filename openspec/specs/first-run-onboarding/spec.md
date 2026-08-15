@@ -1,4 +1,10 @@
-## ADDED Requirements
+# first-run-onboarding Specification
+
+## Purpose
+
+Handles the very first `asylum` invocation on a host, detected by the absence of `~/.asylum/config.yaml`. It offers credential support for whichever active kits provide it, writes the resulting config, and keeps all of that logic in `internal/firstrun/` rather than spread through the CLI entry point.
+
+## Requirements
 
 ### Requirement: First-run detection
 The system SHALL detect a first-run condition by checking whether `~/.asylum/config.yaml` exists at startup, captured before `WriteDefaults` runs. If the file does not exist, the system SHALL treat the invocation as first-run and SHALL run the full first-run wizard (agents + kits, in addition to isolation and credentials) before loading the resolved config used by `ensureImages`. The `~/.asylum/agents/` directory is no longer used as the first-run signal — it remains in use by the resume-migration prompt under different semantics.

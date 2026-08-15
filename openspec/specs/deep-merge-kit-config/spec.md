@@ -1,4 +1,10 @@
-## ADDED Requirements
+# deep-merge-kit-config Specification
+
+## Purpose
+
+Merges the `kits` and `agents` maps per key rather than wholesale, so a project config can adjust one option of a kit without discarding the global entry for it. Within a kit's config, fields merge through struct-tag-driven reflection, which is what lets some fields accumulate across layers while others are last-wins.
+
+## Requirements
 
 ### Requirement: Per-key kit map merge
 When merging two config layers, the `Kits` map SHALL be merged per-key: overlay keys add to or override base keys, and base keys not present in the overlay SHALL be preserved.

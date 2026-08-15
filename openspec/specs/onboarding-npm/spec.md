@@ -1,3 +1,9 @@
+# onboarding-npm Specification
+
+## Purpose
+
+Installs a Node.js project's dependencies inside the container on first start, so an agent doesn't open on a project with no `node_modules`. Locates package.json directories, picks the install command from the lockfile present, and re-runs only when that lockfile's hash changes.
+
 ## Requirements
 
 ### Requirement: Detect Node.js projects with lockfiles

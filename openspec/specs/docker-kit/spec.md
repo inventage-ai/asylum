@@ -1,4 +1,10 @@
-## ADDED Requirements
+# docker-kit Specification
+
+## Purpose
+
+Installs a full Docker engine inside the container so an agent can build and run containers itself, not just talk to a socket. Because that needs `--privileged`, the flag is tied to this kit being active and is not granted otherwise. The Docker CLI stays in the core image either way, so `docker` against an external daemon works without the kit.
+
+## Requirements
 
 ### Requirement: Docker kit definition
 The system SHALL provide a `docker` kit that installs Docker engine (docker-ce, buildx, compose), adds the container user to the docker group, and starts the Docker daemon at container startup.

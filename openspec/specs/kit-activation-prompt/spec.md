@@ -1,4 +1,10 @@
-## ADDED Requirements
+# kit-activation-prompt Specification
+
+## Purpose
+
+Tells an existing installation about kits added in a newer asylum release, instead of silently enabling them or leaving them undiscovered. Default and opt-in kits are offered in an interactive multiselect; always-on kits are announced but not offered, since declining them is not an option; and utility subcommands that never build a container skip the prompt entirely.
+
+## Requirements
 
 ### Requirement: Interactive prompt for new kits
 When new `TierDefault` or `TierOptIn` kits are detected in an interactive terminal session, the system SHALL present a single `tui.MultiSelect` prompt listing all new promptable kits. `TierDefault` kits SHALL be pre-selected; `TierOptIn` kits SHALL be unselected. The user can toggle any kit. Selected kits are activated in `config.yaml`; deselected kits are added as comments.

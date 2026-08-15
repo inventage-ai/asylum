@@ -1,4 +1,10 @@
-## ADDED Requirements
+# kit-snippet-generation Specification
+
+## Purpose
+
+Lets a kit compute its contributions from its own config rather than supplying fixed text. A kit may provide functions that generate its Dockerfile snippet, its project-image snippet, its sandbox rules fragment, and its environment variables, each receiving that kit's resolved config. This is what allows one kit definition to install different versions or packages depending on what the user configured.
+
+## Requirements
 
 ### Requirement: Config-driven Docker snippet generation
 A kit MAY provide a `DockerSnippetFunc` that receives the kit's `*SnippetConfig` and returns a Dockerfile snippet. When present, the assembly layer SHALL call it instead of using the static `DockerSnippet` string. When `*SnippetConfig` is nil (kit has no user config), the func SHALL still be called and MUST return a sensible default.

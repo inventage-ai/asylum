@@ -1,4 +1,10 @@
-## ADDED Requirements
+# shadow-node-modules Specification
+
+## Purpose
+
+Backs each `node_modules` directory in the project with a named Docker volume instead of the bind mount, because native modules built inside the container are wrong for the host and vice versa, and the sync cost over a bind mount is high. The feature can be turned off in config, and `cleanup` removes the volumes it created.
+
+## Requirements
 
 ### Requirement: Detect node_modules directories
 The system SHALL walk the project directory to find every `package.json` and return the `node_modules` path next to it, whether or not `node_modules` exists yet. It SHALL skip `node_modules` directories themselves and irrelevant heavy directories during the walk.

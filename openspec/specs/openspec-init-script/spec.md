@@ -1,4 +1,10 @@
-## ADDED Requirements
+# openspec-init-script Specification
+
+## Purpose
+
+Ships `asylum-openspec-init`, a script that sets OpenSpec up in a project non-interactively — something the agent cannot do itself, since `openspec init` prompts. It picks the `--tools` value from the active agent reported by `ASYLUM_AGENT`, is safe to re-run against an already-initialized project, and materializes the preferred workflow set.
+
+## Requirements
 
 ### Requirement: OpenSpec init script on PATH
 The `openspec` kit SHALL install an executable `asylum-openspec-init` script on the container PATH. The script SHALL initialize OpenSpec in the current project non-interactively using the project's preferred settings, requiring no flags or arguments from the caller.

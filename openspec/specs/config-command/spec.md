@@ -1,4 +1,10 @@
-## ADDED Requirements
+# config-command Specification
+
+## Purpose
+
+Provides `asylum config`, a tabbed TUI for editing the settings users change most often — active kits, kit credentials, and agent config isolation — without hand-editing YAML. Changes across all tabs are applied together on confirm, and activating a kit for the first time clears any commented-out placeholder block left in the config file.
+
+## Requirements
 
 ### Requirement: Config subcommand launches tabbed TUI
 The system SHALL provide an `asylum config` subcommand that launches an interactive tabbed TUI with three tabs: Kits, Credentials, and Isolation.
