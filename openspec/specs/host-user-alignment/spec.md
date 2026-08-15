@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Gives the container user the same home directory path as the host user, so absolute symlinks and absolute paths written on either side resolve on the other. Holding that invariant means no script or kit snippet may hardcode a home path or username: shell code uses `$HOME` and Dockerfile snippets use the `${USERNAME}` build arg.
+Gives the container user the same home directory path as the host user, so absolute symlinks and absolute paths written on either side resolve on the other. Holding that invariant means no script or kit snippet may hardcode a home path or username: shell code uses `$HOME` and Dockerfile snippets use the `${USERNAME}` build arg. The home path also participates in the base image hash, so an image built for one host home is not reused for another.
 
 ## Requirements
 
@@ -16,6 +16,17 @@ The container user SHALL be created with a home directory path matching the host
 #### Scenario: Linux host
 - **WHEN** the host home directory is `/home/simon`
 - **THEN** the container user's home directory is `/home/simon`
+
+### Requirement: Home directory participates in the base image hash
+The base image hash SHALL include the home directory path, so an image built for one host home directory is not reused for another.
+
+#### Scenario: Build args include home directory
+- **WHEN** the base image is built
+- **THEN** build args include USER_ID, GROUP_ID, USERNAME, and USER_HOME from the host
+
+#### Scenario: Home directory change triggers rebuild
+- **WHEN** a user builds on a different machine with a different home directory
+- **THEN** the base image hash changes and a rebuild is triggered
 
 ### Requirement: Absolute symlinks resolve correctly
 Absolute-path symlinks created on the host SHALL resolve correctly inside the container when the containing directory is mounted.

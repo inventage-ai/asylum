@@ -41,11 +41,15 @@ Each kit SHALL declare an activation tier: `TierAlwaysOn` (active even without c
 - **THEN** it is active only if the user explicitly adds it to their config
 
 ### Requirement: Kit disabling
-A kit SHALL be disableable by setting `disabled: true` in its KitConfig. This overrides default-on behavior and can disable globally-configured kits at project level.
+Presence of a kit's key in the `kits` map means the kit is configured. A kit SHALL be disableable by setting `disabled: true` in its KitConfig. This overrides default-on behavior and can disable globally-configured kits at project level. A higher-precedence layer MAY set `disabled: false` to re-enable a kit that a lower layer disabled.
 
 #### Scenario: Disable global kit at project level
 - **WHEN** global config has `kits: {java: {}, github: {}}` and project config has `kits: {github: {disabled: true}}`
 - **THEN** java is active but github is not
+
+#### Scenario: Kit re-enabled at project level overrides global disabled
+- **WHEN** global config has `kits: {ast-grep: {disabled: true}}` and project config has `kits: {ast-grep: {disabled: false}}`
+- **THEN** the ast-grep kit is active in the merged config
 
 #### Scenario: Disabled kit not resolved
 - **WHEN** a kit has `disabled: true` in its KitConfig

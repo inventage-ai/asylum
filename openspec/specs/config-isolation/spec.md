@@ -2,9 +2,20 @@
 
 ## Purpose
 
-Controls where an agent's config directory comes from: `shared` uses the host's directly, `isolated` an asylum-managed copy shared across projects, `project` a per-project copy. The choice is prompted for on first run with Claude and persisted, with a defined fallback for when no layer and no wizard supplied a value.
+Controls where an agent's config directory comes from: `shared` uses the host's directly, `isolated` an asylum-managed copy shared across projects, `project` a per-project copy. The level is set per agent via `agents.<agent>.config`, prompted for on first run with Claude and persisted, with a defined `shared` fallback for when no layer and no wizard supplied a value.
 
 ## Requirements
+
+### Requirement: Agent isolation config field
+The AgentConfig struct SHALL include a `Config` field accepting values `shared`, `isolated`, or `project` to control the agent's config directory isolation level.
+
+#### Scenario: AgentConfig with isolation level
+- **WHEN** config YAML contains `agents: { claude: { config: shared } }`
+- **THEN** the parsed AgentConfig has Config set to `"shared"`
+
+#### Scenario: AgentConfig without isolation level
+- **WHEN** config YAML contains `agents: { claude: {} }` or `agents: { claude: }`
+- **THEN** the parsed AgentConfig has Config as empty string (triggers prompt on first run)
 
 ### Requirement: Config isolation levels
 The system SHALL support three agent config isolation levels: `shared` (host config), `isolated` (asylum-managed, shared across projects), and `project` (per-project isolation).

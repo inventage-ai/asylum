@@ -19,7 +19,7 @@ The system SHALL detect a first-run condition by checking whether `~/.asylum/con
 
 #### Scenario: Non-interactive mode
 - **WHEN** asylum starts non-interactively (stdin is not a TTY) on what would be a first-run invocation
-- **THEN** the system SHALL skip the wizard entirely and SHALL apply today's silent defaults (claude only, TierDefault kits, isolated config, no credentials)
+- **THEN** the system SHALL skip the wizard entirely and SHALL apply today's silent defaults (claude only, TierDefault kits, no credentials), writing no isolation value so the `shared` fallback applies
 
 ### Requirement: Credential file detection
 The system SHALL include a credentials step in the onboarding wizard when any active kit has credential support (non-nil CredentialFunc) but no `credentials` config is set. The step SHALL be a multiselect listing all credential-capable kits. Detection is based on "not configured" status, not first-run detection.
