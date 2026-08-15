@@ -33,6 +33,9 @@ func (Claude) EnvVars() map[string]string {
 	home, _ := os.UserHomeDir()
 	return map[string]string{
 		"CLAUDE_CONFIG_DIR": filepath.Join(home, ".claude"),
+		// /ide dials the IDE's port on the container's own loopback by default,
+		// where nothing listens; the host IDE is reachable via the host gateway.
+		"CLAUDE_CODE_IDE_HOST_OVERRIDE": "host.docker.internal",
 	}
 }
 

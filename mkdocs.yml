@@ -81,6 +81,7 @@ nav:
     - Mounts: concepts/mounts.md
     - Sessions: concepts/sessions.md
     - Agents: concepts/agents.md
+    - IDE Integration: concepts/ide-integration.md
     - Security Model: concepts/security-model.md
   - Development:
     - Building from Source: development/building-from-source.md

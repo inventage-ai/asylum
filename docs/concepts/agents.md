@@ -30,9 +30,13 @@ agent: gemini
 
 ## Config Isolation
 
-Asylum controls how each agent's config directory is managed inside the container. Three modes are available: `shared` (host config mounted directly), `isolated` (default — separate copy in `~/.asylum/agents/<agent>/`), and `project` (per-project copy).
+Asylum controls how each agent's config directory is managed inside the container. Three modes are available: `shared` (default — host config mounted directly), `isolated` (separate copy in `~/.asylum/agents/<agent>/`), and `project` (per-project copy).
 
 On first run with Claude, Asylum prompts you to choose a mode. See [Config Isolation](isolation.md) for full details.
+
+## IDE Integration
+
+Claude Code's `/ide` connects a sandboxed session to an IDE running on your host, giving the agent selection context, diagnostics and a diff view. It requires Docker Desktop and `shared` config isolation. See [IDE Integration](ide-integration.md) for the full set of limitations.
 
 ## Passing Extra Args
 

@@ -286,6 +286,21 @@ Then paste it into your Git host's SSH keys settings (GitHub: *Settings → SSH 
 
 You may also replace the generated key with your own — drop your private/public pair into `~/.asylum/ssh/` (isolated) or the project-specific directory (project mode), and asylum will mount them as-is without regenerating.
 
+## IDE Integration
+
+Claude Code's `/ide` connects to an IDE (VS Code, IntelliJ) running on the **host**, giving the sandboxed session selection context, diagnostics and the diff view. The connection is manual: run `/ide` in the session. Claude's own `autoConnectIde` setting makes it automatic, and it persists because it lives in the mounted config directory.
+
+Two preconditions must hold, and neither produces an error message when it doesn't — `/ide` just lists no IDE:
+
+- **Docker Desktop engine.** The container reaches the host IDE through `host.docker.internal`. On a native Linux engine that address resolves to the bridge gateway, which cannot reach a host process bound to `127.0.0.1`.
+- **`shared` agent config isolation** (the default). The IDE writes lock files to the host's `~/.claude/ide/`, and only `shared` mounts that directory into the container. Under `isolated` or `project` the container gets its own config directory and sees no lock files.
+
+```yaml
+agents:
+  claude:
+    config: shared
+```
+
 ## Troubleshooting
 
 ### Container won't start
