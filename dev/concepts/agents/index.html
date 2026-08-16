@@ -16,7 +16,7 @@
         <link rel="prev" href="../sessions/">
       
       
-        <link rel="next" href="../security-model/">
+        <link rel="next" href="../ide-integration/">
       
       
         
@@ -520,6 +520,34 @@
     
   
     version
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../commands/update/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    update
   
 
     
@@ -1516,6 +1544,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ide-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IDE Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#passing-extra-args" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1563,6 +1602,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ide-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    IDE Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1752,6 +1819,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#ide-integration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        IDE Integration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#passing-extra-args" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1865,8 +1943,10 @@ asylum<span class="w"> </span>-a<span class="w"> </span>pi<span class="w">      
 <div class="highlight"><pre><span></span><code><span class="nt">agent</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">gemini</span>
 </code></pre></div>
 <h2 id="config-isolation">Config Isolation<a class="headerlink" href="#config-isolation" title="Permanent link">&para;</a></h2>
-<p>Asylum controls how each agent's config directory is managed inside the container. Three modes are available: <code>shared</code> (host config mounted directly), <code>isolated</code> (default — separate copy in <code>~/.asylum/agents/&lt;agent&gt;/</code>), and <code>project</code> (per-project copy).</p>
+<p>Asylum controls how each agent's config directory is managed inside the container. Three modes are available: <code>shared</code> (default — host config mounted directly), <code>isolated</code> (separate copy in <code>~/.asylum/agents/&lt;agent&gt;/</code>), and <code>project</code> (per-project copy).</p>
 <p>On first run with Claude, Asylum prompts you to choose a mode. See <a href="../isolation/">Config Isolation</a> for full details.</p>
+<h2 id="ide-integration">IDE Integration<a class="headerlink" href="#ide-integration" title="Permanent link">&para;</a></h2>
+<p>Claude Code's <code>/ide</code> connects a sandboxed session to an IDE running on your host, giving the agent selection context, diagnostics and a diff view. It requires Docker Desktop and <code>shared</code> config isolation. See <a href="../ide-integration/">IDE Integration</a> for the full set of limitations.</p>
 <h2 id="passing-extra-args">Passing Extra Args<a class="headerlink" href="#passing-extra-args" title="Permanent link">&para;</a></h2>
 <p>Use <code>--</code> to pass flags to the agent:</p>
 <div class="highlight"><pre><span></span><code>asylum<span class="w"> </span>--<span class="w"> </span>--verbose
