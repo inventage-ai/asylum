@@ -1932,25 +1932,25 @@
 
 <span class="nt">kits</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">java</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;17&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"17"</span><span class="p p-Indicator">]</span>
 <span class="w">  </span><span class="nt">node</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">onboarding</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
 <span class="w">    </span><span class="nt">packages</span><span class="p">:</span>
-<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;@anthropic-ai/claude-mcp-server-filesystem&quot;</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"@anthropic-ai/claude-mcp-server-filesystem"</span>
 <span class="w">  </span><span class="nt">docker</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span>
 <span class="w">  </span><span class="nt">title</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">tab-title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;🤖</span><span class="nv"> </span><span class="s">{project}&quot;</span>
+<span class="w">    </span><span class="nt">tab-title</span><span class="p">:</span><span class="w"> </span><span class="s">"🤖</span><span class="nv"> </span><span class="s">{project}"</span>
 
 <span class="nt">ports</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;3000&quot;</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;8080:80&quot;</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"3000"</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"8080:80"</span>
 
 <span class="nt">volumes</span><span class="p">:</span>
 <span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">~/shared-data:/data:ro</span>
 
 <span class="nt">env</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">MY_API_KEY</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;abc123&quot;</span>
-<span class="w">  </span><span class="nt">DEBUG</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+<span class="w">  </span><span class="nt">MY_API_KEY</span><span class="p">:</span><span class="w"> </span><span class="s">"abc123"</span>
+<span class="w">  </span><span class="nt">DEBUG</span><span class="p">:</span><span class="w"> </span><span class="s">"true"</span>
 </code></pre></div>
 <h2 id="top-level-fields">Top-Level Fields<a class="headerlink" href="#top-level-fields" title="Permanent link">&para;</a></h2>
 <table>
@@ -2009,8 +2009,8 @@
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">docker</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">{}</span><span class="w">                    </span><span class="c1"># enable with defaults</span>
 <span class="w">  </span><span class="nt">java</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;17&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;21&quot;</span><span class="p p-Indicator">]</span><span class="w">      </span><span class="c1"># configure specific options</span>
-<span class="w">    </span><span class="nt">default-version</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;17&quot;</span>
+<span class="w">    </span><span class="nt">versions</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">"17"</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">"21"</span><span class="p p-Indicator">]</span><span class="w">      </span><span class="c1"># configure specific options</span>
+<span class="w">    </span><span class="nt">default-version</span><span class="p">:</span><span class="w"> </span><span class="s">"17"</span>
 <span class="w">  </span><span class="nt">node</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">shadow-node-modules</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span><span class="w">  </span><span class="c1"># disable a feature</span>
 <span class="w">  </span><span class="nt">github</span><span class="p">:</span>
@@ -2020,8 +2020,8 @@
 <h2 id="ports">Ports<a class="headerlink" href="#ports" title="Permanent link">&para;</a></h2>
 <p>Forward ports from the container to the host:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">ports</span><span class="p">:</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;3000&quot;</span><span class="w">        </span><span class="c1"># same port on host and container</span>
-<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;8080:80&quot;</span><span class="w">     </span><span class="c1"># host:container</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"3000"</span><span class="w">        </span><span class="c1"># same port on host and container</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">"8080:80"</span><span class="w">     </span><span class="c1"># host:container</span>
 </code></pre></div>
 <h2 id="volumes">Volumes<a class="headerlink" href="#volumes" title="Permanent link">&para;</a></h2>
 <p>Mount additional directories:</p>
@@ -2032,8 +2032,8 @@
 <p>Tilde (<code>~</code>) is expanded to the home directory. Valid mount options: <code>ro</code>, <code>rw</code>, <code>z</code>, <code>Z</code>, <code>shared</code>, <code>slave</code>, <code>private</code>, <code>cached</code>, <code>delegated</code>.</p>
 <h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="nt">env</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">API_KEY</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;secret&quot;</span>
-<span class="w">  </span><span class="nt">DEBUG</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;true&quot;</span>
+<span class="w">  </span><span class="nt">API_KEY</span><span class="p">:</span><span class="w"> </span><span class="s">"secret"</span>
+<span class="w">  </span><span class="nt">DEBUG</span><span class="p">:</span><span class="w"> </span><span class="s">"true"</span>
 </code></pre></div>
 <p>Asylum also reads <code>.env</code> files from the project root (mounted as <code>--env-file</code>).</p>
 <h2 id="merge-rules">Merge Rules<a class="headerlink" href="#merge-rules" title="Permanent link">&para;</a></h2>

@@ -1821,13 +1821,13 @@
 <p>Depends on the <a href="../node/">Node.js</a> kit (installed via npm).</p>
 <h2 id="usage">Usage<a class="headerlink" href="#usage" title="Permanent link">&para;</a></h2>
 <div class="highlight"><pre><span></span><code><span class="c1"># Search for a pattern</span>
-sg<span class="w"> </span>run<span class="w"> </span>--pattern<span class="w"> </span><span class="s1">&#39;console.log($ARG)&#39;</span><span class="w"> </span>--lang<span class="w"> </span>js
+sg<span class="w"> </span>run<span class="w"> </span>--pattern<span class="w"> </span><span class="s1">'console.log($ARG)'</span><span class="w"> </span>--lang<span class="w"> </span>js
 
 <span class="c1"># Lint with rules</span>
 sg<span class="w"> </span>scan
 
 <span class="c1"># Rewrite matches</span>
-sg<span class="w"> </span>rewrite<span class="w"> </span>--pattern<span class="w"> </span><span class="s1">&#39;console.log($ARG)&#39;</span><span class="w"> </span>--rewrite<span class="w"> </span><span class="s1">&#39;logger.info($ARG)&#39;</span><span class="w"> </span>--lang<span class="w"> </span>js
+sg<span class="w"> </span>rewrite<span class="w"> </span>--pattern<span class="w"> </span><span class="s1">'console.log($ARG)'</span><span class="w"> </span>--rewrite<span class="w"> </span><span class="s1">'logger.info($ARG)'</span><span class="w"> </span>--lang<span class="w"> </span>js
 </code></pre></div>
 <p>Patterns use <code>$VAR</code> as wildcards to match any AST node. See the <a href="https://ast-grep.github.io/">ast-grep documentation</a> for full pattern syntax.</p>
 
