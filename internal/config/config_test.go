@@ -771,6 +771,16 @@ func TestMergeKitConfig(t *testing.T) {
 			},
 		},
 		{
+			name: "schemes concat",
+			base: &KitConfig{Schemes: []string{"dropshare5"}},
+			over: &KitConfig{Schemes: []string{"vscode"}},
+			check: func(t *testing.T, kc *KitConfig) {
+				if len(kc.Schemes) != 2 || kc.Schemes[0] != "dropshare5" || kc.Schemes[1] != "vscode" {
+					t.Errorf("schemes = %v, want [dropshare5 vscode]", kc.Schemes)
+				}
+			},
+		},
+		{
 			name: "versions replace",
 			base: &KitConfig{Versions: []string{"17", "21"}},
 			over: &KitConfig{Versions: []string{"25"}},

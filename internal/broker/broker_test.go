@@ -126,7 +126,7 @@ func TestEnsureBrokerSkipsSpawnWhenAlive(t *testing.T) {
 	startTestServer(t, ep, "live", nil)
 	// A live broker answers, so no process is spawned — the bogus exec path is
 	// never used and EnsureBroker returns nil.
-	if err := EnsureBroker("c", "/nonexistent/asylum", ep, "live", nil); err != nil {
+	if err := EnsureBroker("c", "/nonexistent/asylum", ep, "live", nil, nil); err != nil {
 		t.Errorf("EnsureBroker with live broker: %v", err)
 	}
 }
@@ -135,7 +135,7 @@ func TestEnsureBrokerSpawnsWhenDead(t *testing.T) {
 	ep := tcpEndpoint(t) // free port, nothing listening
 	// EnsureBroker tries to spawn; the bogus exec path makes the spawn fail,
 	// surfacing that it attempted to start one.
-	if err := EnsureBroker("c", "/nonexistent/asylum", ep, "tok", nil); err == nil {
+	if err := EnsureBroker("c", "/nonexistent/asylum", ep, "tok", nil, nil); err == nil {
 		t.Error("EnsureBroker with no broker: want spawn error, got nil")
 	}
 }

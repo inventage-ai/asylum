@@ -4,6 +4,7 @@
 
 ### Added
 - Claude Code's `/ide` now connects to an IDE running on the host (VS Code, IntelliJ), so a sandboxed session gets selection context, diagnostics and the diff view. Requires Docker Desktop and `shared` agent config isolation (the default). The in-container reference names both preconditions, and a new [IDE Integration](https://asylum.inventage.ai/concepts/ide-integration/) docs page details the full set of limitations.
+- `kits.browser-open.schemes` — allowlist extra URL schemes the container may open on the host (e.g. `dropshare5` for [Dropshare](https://dropshare.app)). `http`/`https` remain the only schemes allowed by default; the list accumulates across config layers.
 - `asylum update` — on-demand refresh of the cached agent versions followed by an image rebuild if any version changed. Unlike `self-update` (which updates the asylum binary), this updates the agent CLIs baked into the container image, and exits without starting a container.
 
 ### Changed

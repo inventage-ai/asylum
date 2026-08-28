@@ -2,8 +2,10 @@ package main
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 
+	"github.com/inventage-ai/asylum/internal/config"
 	"github.com/inventage-ai/asylum/internal/container"
 	"github.com/inventage-ai/asylum/internal/kit"
 )
@@ -517,4 +519,30 @@ func clonePackages(m map[string][]string) map[string][]string {
 		out[k] = append([]string(nil), v...)
 	}
 	return out
+}
+
+func TestBrokerEnv(t *testing.T) {
+	cases := []struct {
+		name string
+		cfg  config.Config
+		want []string
+	}{
+		{"no kit entry", config.Config{}, []string{"ASYLUM_OPEN_SCHEMES="}},
+		{"no schemes", config.Config{Kits: map[string]*config.KitConfig{"browser-open": {}}}, []string{"ASYLUM_OPEN_SCHEMES="}},
+		{
+			"schemes normalized",
+			config.Config{Kits: map[string]*config.KitConfig{"browser-open": {Schemes: []string{"DropShare5:///", "vscode"}}}},
+			[]string{"ASYLUM_OPEN_SCHEMES=dropshare5,vscode"},
+		},
+		{
+			"only invalid entries",
+			config.Config{Kits: map[string]*config.KitConfig{"browser-open": {Schemes: []string{"1foo"}}}},
+			[]string{"ASYLUM_OPEN_SCHEMES="},
+		},
+	}
+	for _, c := range cases {
+		if got := brokerEnv(c.cfg); !slices.Equal(got, c.want) {
+			t.Errorf("%s: brokerEnv() = %v, want %v", c.name, got, c.want)
+		}
+	}
 }

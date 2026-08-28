@@ -63,6 +63,7 @@ type KitConfig struct {
 	Count               int          `yaml:"count,omitempty"`
 	Credentials         *Credentials `yaml:"credentials,omitempty"`
 	Isolation           string       `yaml:"isolation,omitempty"`
+	Schemes             []string     `yaml:"schemes,omitempty" merge:"concat"`
 }
 
 // AgentConfig holds per-agent configuration.
@@ -192,6 +193,7 @@ func (c Config) KitSnippetConfig(name string) *kit.SnippetConfig {
 	return &kit.SnippetConfig{
 		Versions:       kc.Versions,
 		DefaultVersion: kc.DefaultVersion,
+		Schemes:        kc.Schemes,
 	}
 }
 

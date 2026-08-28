@@ -125,8 +125,9 @@ func authWrap(token string, h http.HandlerFunc) http.HandlerFunc {
 // The token is passed to the child via its environment, not argv: process
 // command lines are world-readable (/proc/<pid>/cmdline), while environ is
 // readable only by the owning user, so this keeps the token off multi-user
-// hosts' ps output.
-func EnsureBroker(cname, execPath string, ep Endpoint, token string, kitNames []string) error {
+// hosts' ps output. The broker process reads no config of its own, so any
+// kit configuration its handlers need rides along in env as "KEY=value" entries.
+func EnsureBroker(cname, execPath string, ep Endpoint, token string, kitNames, env []string) error {
 	if alive(ep, token) {
 		return nil
 	}
@@ -135,7 +136,7 @@ func EnsureBroker(cname, execPath string, ep Endpoint, token string, kitNames []
 		args = append(args, "--kits", strings.Join(kitNames, ","))
 	}
 	cmd := exec.Command(execPath, args...)
-	cmd.Env = append(os.Environ(), "ASYLUM_BROKER_TOKEN="+token)
+	cmd.Env = append(append(os.Environ(), "ASYLUM_BROKER_TOKEN="+token), env...)
 	// Detach from the session so the broker outlives the current asylum process.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 	return cmd.Start()

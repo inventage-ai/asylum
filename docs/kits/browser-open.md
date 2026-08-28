@@ -8,7 +8,7 @@ Open URLs from inside the container in your real browser on the host.
 
 Agents often print a URL — a dev-server preview, a generated report, an OAuth login link. Many agents render a full-screen TUI that disables text selection in the terminal, so you cannot even copy the URL. This kit lets the agent open it for you: running `open <url>` (or `xdg-open <url>`, or anything that honours `$BROWSER`) inside the container opens the URL in your host's default browser.
 
-Only `http` and `https` URLs are opened.
+Only `http` and `https` URLs are opened, unless you allowlist more schemes (see [Configuration](#configuration)).
 
 This is unrelated to the [agent-browser](agent-browser.md) kit: agent-browser drives a headless browser for the agent to read pages; browser-open shows a page to *you*.
 
@@ -21,6 +21,27 @@ kits:
   browser-open:
     disabled: true
 ```
+
+### Allowing other URL schemes
+
+`http` and `https` are the only schemes opened by default. To let the container hand a URL to a host app that registers its own scheme — [Dropshare](https://dropshare.app), an editor, a note tool — list the scheme under `schemes`:
+
+```yaml
+kits:
+  browser-open:
+    schemes:
+      - dropshare5
+```
+
+With that in place, `open "dropshare5:///upload?path=/tmp/report.pdf"` inside the container reaches Dropshare on your Mac.
+
+Entries are matched case-insensitively and may be written in whichever form the tool's documentation uses — `dropshare5`, `dropshare5:`, `dropshare5://`, and `dropshare5:///` all mean the same scheme. An entry that is not a valid URL scheme is reported as a warning at session start and ignored; the rest stay in effect. `http` and `https` never need listing.
+
+The list **accumulates across config layers**: a scheme allowed in `~/.asylum/config.yaml` stays allowed when a project `.asylum` adds one of its own. The agent's sandbox rules name the configured schemes, so it knows they are available.
+
+The allowlist is read when the container's host broker starts, so a change to `schemes` takes effect the next time the container starts, not mid-session.
+
+Allowlisting a scheme is a real capability grant: anything running in the container can then launch the host app registered for that scheme with an argument of its choosing. Add the schemes you want, not a catch-all — `file`, in particular, would let the container open arbitrary host files in host apps.
 
 ## How It Works
 

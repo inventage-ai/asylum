@@ -65,6 +65,7 @@ type ContainerOpts struct {
 type SnippetConfig struct {
 	Versions       []string
 	DefaultVersion string
+	Schemes        []string
 }
 
 // CredentialOpts is passed to a kit's CredentialFunc.

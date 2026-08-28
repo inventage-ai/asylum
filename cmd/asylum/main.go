@@ -513,7 +513,7 @@ func main() {
 	// back from the container env (baked at creation), so this covers both the
 	// create path and attaching to an already-running container, and respawns
 	// the broker if it has died.
-	ensureBroker(cname, allKits)
+	ensureBroker(cname, allKits, cfg)
 
 	// Exec session into the running container
 	execArgs := container.ExecArgs(container.ExecOpts{
@@ -847,7 +847,7 @@ func runBroker(args []string) {
 // ensureBroker starts (or respawns) the host broker for a running container,
 // using the connection params baked into the container env. It is a no-op when
 // no broker env is present (no route-providing kit, or a pre-broker container).
-func ensureBroker(cname string, kits []*kit.Kit) {
+func ensureBroker(cname string, kits []*kit.Kit, cfg config.Config) {
 	env, err := docker.InspectEnv(cname)
 	if err != nil {
 		return
@@ -877,9 +877,26 @@ func ensureBroker(cname string, kits []*kit.Kit) {
 		log.Warn("host broker: %v", err)
 		return
 	}
-	if err := broker.EnsureBroker(cname, execPath, ep, token, routeKitNames(kits)); err != nil {
+	if err := broker.EnsureBroker(cname, execPath, ep, token, routeKitNames(kits), brokerEnv(cfg)); err != nil {
 		log.Warn("host broker: %v", err)
 	}
+}
+
+// brokerEnv returns the kit configuration the broker process needs, as env
+// entries. The broker reads no config of its own, so the allowlist of extra URL
+// schemes the browser-open kit may hand to the host travels with the spawn. It
+// is always set — an empty value overrides any same-named variable inherited
+// from the user's shell — and is fixed for the broker's lifetime: a config
+// change applies at the next container start.
+func brokerEnv(cfg config.Config) []string {
+	var schemes, rejected []string
+	if kc := cfg.KitOption("browser-open"); kc != nil {
+		schemes, rejected = kit.NormalizeSchemes(kc.Schemes)
+	}
+	for _, entry := range rejected {
+		log.Warn("browser-open: ignoring invalid URL scheme %q", entry)
+	}
+	return []string{kit.OpenSchemesEnv + "=" + strings.Join(schemes, ",")}
 }
 
 // hostSocketPath is the per-container broker socket path on the host.
