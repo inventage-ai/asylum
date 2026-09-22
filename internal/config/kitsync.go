@@ -83,7 +83,10 @@ func SyncNewKits(asylumDir string, interactive bool, promptFn func([]*kit.Kit) [
 		for _, k := range promptable {
 			if slices.Contains(activated, k.Name) {
 				if k.ConfigSnippet != "" {
-					if err := SyncKitToConfig(configPath, k.Name, k.ConfigSnippet); err != nil {
+					// Opt-in kits author their snippet commented out, so it has
+					// to be uncommented here or accepting the prompt writes an
+					// entry that enables nothing.
+					if err := SyncKitToConfig(configPath, k.Name, kit.UncommentSnippet(k.ConfigSnippet)); err != nil {
 						log.Error("sync kit %s: %v", k.Name, err)
 					}
 				}

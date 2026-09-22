@@ -3,12 +3,16 @@
 ## Unreleased
 
 ### Added
+- `iterm` kit (opt-in, macOS) — reports session state to the iTerm2 status bar from inside the container: a working/idle dot and the running tool's name, driven by the hooks iTerm2 already configures. Also silences those hooks, which otherwise fail on every tool call inside a container because they name a macOS binary. The container drives only iTerm2's own `cc-status`, never `it2`, and addresses only the terminal session it was started from.
 - Claude Code's `/ide` now connects to an IDE running on the host (VS Code, IntelliJ), so a sandboxed session gets selection context, diagnostics and the diff view. Requires Docker Desktop and `shared` agent config isolation (the default). The in-container reference names both preconditions, and a new [IDE Integration](https://asylum.inventage.ai/concepts/ide-integration/) docs page details the full set of limitations.
 - `kits.browser-open.schemes` — allowlist extra URL schemes the container may open on the host (e.g. `dropshare5` for [Dropshare](https://dropshare.app)). `http`/`https` remain the only schemes allowed by default; the list accumulates across config layers.
 - `asylum update` — on-demand refresh of the cached agent versions followed by an image rebuild if any version changed. Unlike `self-update` (which updates the asylum binary), this updates the agent CLIs baked into the container image, and exits without starting a container.
 
 ### Changed
 - The background agent-version refresh now runs at most once every 24 hours (previously hourly), and the interval is configurable via `version-check-interval` (a Go duration, e.g. `24h`) in the config.
+
+### Fixed
+- Accepting a newly-offered opt-in kit at the kit-sync prompt now actually enables it. The snippet written to the config was copied verbatim from the kit's authored (commented-out) form, so the kit stayed off and the prompt appeared to do nothing. Affects `rtk`, `cx`, and `iterm`.
 
 ## 0.8.0 — 2026-07-22
 
@@ -19,6 +23,7 @@ Agents can now open URLs in your real host browser — the fix for full-screen T
 - Host broker — a small host-side HTTP server, scoped to a container's lifetime, that serves token-authenticated routes contributed by kits. It lets the sandbox ask the host to perform actions it can't do itself, starts automatically, respawns if it dies, and stops with the container. It is never reachable beyond the host: a Unix domain socket mounted only into that container on a native Linux engine, or a `127.0.0.1` loopback bind reached via `host.docker.internal` on Docker Desktop/macOS.
 
 ### Fixed
+
 - `asylum run <cmd>` failed to find tools installed via `~/.local/bin`, fnm, or mise (e.g. `asylum run claude auth login`, `asylum run node …`) with `executable file not found in $PATH`. Command mode exec'd the argv bare, so it never sourced the shell rc that sets up those paths. It now runs through a login shell (`zsh -c "source ~/.zshrc && exec …"`) like agent and shell modes do, with arguments shell-quoted.
 
 ## 0.7.2 — 2026-07-14

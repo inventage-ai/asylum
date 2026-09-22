@@ -1851,3 +1851,60 @@ func TestCoreVolumesCompanionDoesNotAffectAgentsMount(t *testing.T) {
 		t.Errorf("~/.agents must not be mounted when primary is isolated, got %v", args)
 	}
 }
+
+func TestExecArgsSessionEnv(t *testing.T) {
+	projectDir := t.TempDir()
+	env := map[string]string{"ASYLUM_SESSION": "sealed-blob", "ASYLUM_OTHER": "2"}
+
+	tests := []struct {
+		name string
+		opts ExecOpts
+		want []string
+	}{
+		{
+			name: "shell mode",
+			opts: ExecOpts{ContainerName: "test", Mode: ModeShell, SessionEnv: env},
+			want: []string{"exec", "-it", "-e", "ASYLUM_OTHER=2", "-e", "ASYLUM_SESSION=sealed-blob", "test", "/bin/zsh"},
+		},
+		{
+			name: "admin shell mode keeps the user flag first",
+			opts: ExecOpts{ContainerName: "test", Mode: ModeAdminShell, SessionEnv: env},
+			want: []string{"exec", "-it", "-u", "root", "-e", "ASYLUM_OTHER=2", "-e", "ASYLUM_SESSION=sealed-blob", "test", "/bin/zsh"},
+		},
+		{
+			name: "command mode",
+			opts: ExecOpts{ContainerName: "test", Mode: ModeCommand, ExtraArgs: []string{"ls"}, SessionEnv: env},
+			want: []string{"exec", "-it", "-e", "ASYLUM_OTHER=2", "-e", "ASYLUM_SESSION=sealed-blob", "test", "zsh", "-c", "source ~/.zshrc && exec 'ls'"},
+		},
+		{
+			name: "agent mode",
+			opts: ExecOpts{
+				ContainerName: "test",
+				Mode:          ModeAgent,
+				Agent:         stubAgent{hasSession: false},
+				ProjectDir:    projectDir,
+				SessionEnv:    env,
+			},
+			want: []string{"exec", "-it", "-e", "ASYLUM_OTHER=2", "-e", "ASYLUM_SESSION=sealed-blob", "test", "stub"},
+		},
+		{
+			name: "nil session env adds nothing",
+			opts: ExecOpts{ContainerName: "test", Mode: ModeShell},
+			want: []string{"exec", "-it", "test", "/bin/zsh"},
+		},
+		{
+			name: "empty session env adds nothing",
+			opts: ExecOpts{ContainerName: "test", Mode: ModeShell, SessionEnv: map[string]string{}},
+			want: []string{"exec", "-it", "test", "/bin/zsh"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ExecArgs(tt.opts)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("ExecArgs() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

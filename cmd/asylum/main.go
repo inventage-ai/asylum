@@ -525,6 +525,7 @@ func main() {
 		DefaultResume: cfg.ResumeByDefault() && !suppressResumeFromSeed,
 		Config:        cfg,
 		Kits:          allKits,
+		SessionEnv:    kit.ItermSessionEnv(allKits),
 	})
 
 	setTabTitle(cfg.TabTitle(), projectDir, agentName, containerMode)

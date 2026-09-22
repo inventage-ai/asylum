@@ -301,6 +301,21 @@ agents:
     config: shared
 ```
 
+## iTerm2 Status Bar
+
+The opt-in `iterm` kit reports session state to the iTerm2 status bar of the terminal the session runs in — a colored dot for working or idle, plus the name of the running tool. It is driven by the hooks iTerm2 already wrote into `~/.claude/settings.json`, so nothing needs to be configured by hand.
+
+```yaml
+kits:
+  iterm:
+```
+
+Without the kit those hooks still fire inside the container and fail, because they name a macOS binary. The kit puts a shim at that path so the hook reaches the host's own `cc-status` through the broker instead.
+
+It disables itself when it cannot work: no iTerm2 on the host, or a session started from another terminal, means no status updates and no errors.
+
+iTerm2 only offers its Claude Code onboarding when the foreground job is named `claude`, which under Asylum is `docker`. A user who has never accepted that offer has no hooks and gets nothing from this kit; they install it from **iTerm2 → Install Claude Code Integration**.
+
 ## Troubleshooting
 
 ### Container won't start

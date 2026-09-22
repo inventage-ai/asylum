@@ -73,6 +73,7 @@ nav:
     - Browser: kits/agent-browser.md
     - RTK: kits/rtk.md
     - cx: kits/cx.md
+    - iTerm2: kits/iterm.md
     - APT Packages: kits/apt.md
   - Concepts:
     - Overview: concepts/index.md

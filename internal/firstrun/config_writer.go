@@ -109,7 +109,7 @@ func buildKitsBlock(c Choices) string {
 // differs from the kit's authored default — keeping format intact in the
 // common "no change" path.
 func pickKitSnippet(k *kit.Kit, c Choices) (string, bool) {
-	authoredActive := snippetIsActive(k.ConfigSnippet)
+	authoredActive := kit.SnippetIsActive(k.ConfigSnippet)
 	if !isSelectable(k) {
 		return k.ConfigSnippet, authoredActive
 	}
@@ -118,9 +118,9 @@ func pickKitSnippet(k *kit.Kit, c Choices) (string, bool) {
 		return k.ConfigSnippet, selected
 	}
 	if selected {
-		return uncommentSnippet(k.ConfigSnippet), true
+		return kit.UncommentSnippet(k.ConfigSnippet), true
 	}
-	return commentSnippet(k.ConfigSnippet), false
+	return kit.CommentSnippet(k.ConfigSnippet), false
 }
 
 // isSelectable reports whether the kit can be toggled by the wizard's kit
@@ -142,70 +142,6 @@ func agentPickerNames() []string {
 	}
 	sort.Strings(out)
 	return out
-}
-
-// snippetIsActive reports whether the snippet's first non-blank, non-comment
-// line is uncommented. Kits author their `ConfigSnippet` in either active or
-// commented form depending on their default tier; this lets the writer
-// preserve that choice for non-selectable kits.
-func snippetIsActive(snippet string) bool {
-	for _, line := range strings.Split(snippet, "\n") {
-		t := strings.TrimLeft(line, " ")
-		if t == "" {
-			continue
-		}
-		return !strings.HasPrefix(t, "#")
-	}
-	return false
-}
-
-// uncommentSnippet strips a single `# ` (or `#` alone) following the leading
-// indent on each line. Blank lines are preserved unchanged. Lines without a
-// `#` after the indent are returned as-is so inner commented details inside
-// an otherwise-active snippet survive correctly.
-func uncommentSnippet(s string) string {
-	lines := strings.Split(s, "\n")
-	for i, line := range lines {
-		idx := leadingSpaceLen(line)
-		rest := line[idx:]
-		switch {
-		case rest == "":
-			// blank line, leave it
-		case strings.HasPrefix(rest, "# "):
-			lines[i] = line[:idx] + rest[2:]
-		case rest == "#":
-			lines[i] = line[:idx]
-		}
-	}
-	return strings.Join(lines, "\n")
-}
-
-// commentSnippet inserts a `# ` after the leading indent on each non-blank
-// line that isn't already a comment. Lines already commented at the YAML
-// level are left alone — the whole block ends up commented either way, and
-// skipping them avoids ugly `# # versions:` artifacts when an authored
-// active snippet contains inner hint-comment lines.
-func commentSnippet(s string) string {
-	lines := strings.Split(s, "\n")
-	for i, line := range lines {
-		idx := leadingSpaceLen(line)
-		if idx == len(line) {
-			continue // blank
-		}
-		if strings.HasPrefix(line[idx:], "#") {
-			continue
-		}
-		lines[i] = line[:idx] + "# " + line[idx:]
-	}
-	return strings.Join(lines, "\n")
-}
-
-func leadingSpaceLen(s string) int {
-	i := 0
-	for i < len(s) && s[i] == ' ' {
-		i++
-	}
-	return i
 }
 
 const configFooter = `

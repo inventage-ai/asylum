@@ -776,6 +776,11 @@ type ExecOpts struct {
 	DefaultResume bool
 	Config        config.Config
 	Kits          []*kit.Kit
+	// SessionEnv carries environment variables scoped to this session rather
+	// than to the container. A container is created once and serves many
+	// sessions, so anything that describes the terminal the session was
+	// started from has to be set here, on the exec, not baked in at creation.
+	SessionEnv map[string]string
 }
 
 func ExecArgs(opts ExecOpts) []string {
@@ -787,6 +792,9 @@ func ExecArgs(opts ExecOpts) []string {
 	}
 	if opts.Mode == ModeAdminShell {
 		args = append(args, "-u", "root")
+	}
+	for _, k := range slices.Sorted(maps.Keys(opts.SessionEnv)) {
+		args = append(args, "-e", k+"="+opts.SessionEnv[k])
 	}
 	args = append(args, opts.ContainerName)
 

@@ -517,3 +517,96 @@ func TestKitExistsInFile(t *testing.T) {
 	}
 }
 
+// registerStubOptIn adds an opt-in kit whose snippet is authored commented out,
+// which is how every opt-in kit writes it.
+func registerStubOptIn(t *testing.T, name string) {
+	t.Helper()
+	kit.Register(&kit.Kit{
+		Name:          name,
+		Description:   "Stub opt-in kit",
+		Tier:          kit.TierOptIn,
+		ConfigSnippet: "  # " + name + ":              # Stub opt-in kit\n",
+		ConfigComment: name + ":                # Stub opt-in kit",
+	})
+}
+
+// stubSyncDir prepares a config and state where only `name` is unknown, so it
+// is the single kit the sync offers.
+func stubSyncDir(t *testing.T, name string) (dir, configPath string) {
+	t.Helper()
+	dir = t.TempDir()
+	configPath = filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(configPath, []byte("version: \"0.2\"\nkits:\n  docker: {}\n"), 0644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	var known []string
+	for _, n := range kit.All() {
+		if n != name {
+			known = append(known, n)
+		}
+	}
+	if err := SaveState(dir, State{KnownKits: known}); err != nil {
+		t.Fatalf("save state: %v", err)
+	}
+	return dir, configPath
+}
+
+// hasActiveEntry reports whether the config has an uncommented `name:` key.
+func hasActiveEntry(text, name string) bool {
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(strings.TrimLeft(line, " "), name+":") {
+			return true
+		}
+	}
+	return false
+}
+
+// Opt-in kits author their snippet commented out. Accepting one at the prompt
+// has to normalise it to active form — writing the authored text verbatim left
+// the kit disabled, which was indistinguishable from the prompt doing nothing.
+func TestSyncNewKits_AcceptedOptInKitIsEnabled(t *testing.T) {
+	const name = "stuboptaccept"
+	registerStubOptIn(t, name)
+	dir, configPath := stubSyncDir(t, name)
+
+	prompted := false
+	_, err := SyncNewKits(dir, true, func(ks []*kit.Kit) []string {
+		prompted = true
+		return []string{name}
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !prompted {
+		t.Fatal("the opt-in kit was never offered")
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !hasActiveEntry(string(data), name) {
+		t.Errorf("accepted opt-in kit was not enabled; config is:\n%s", data)
+	}
+}
+
+func TestSyncNewKits_DeclinedOptInKitStaysCommented(t *testing.T) {
+	const name = "stuboptdecline"
+	registerStubOptIn(t, name)
+	dir, configPath := stubSyncDir(t, name)
+
+	if _, err := SyncNewKits(dir, true, func([]*kit.Kit) []string { return nil }); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hasActiveEntry(string(data), name) {
+		t.Errorf("declined opt-in kit was enabled; config is:\n%s", data)
+	}
+	if !strings.Contains(string(data), name) {
+		t.Errorf("declined opt-in kit was not offered as a comment; config is:\n%s", data)
+	}
+}

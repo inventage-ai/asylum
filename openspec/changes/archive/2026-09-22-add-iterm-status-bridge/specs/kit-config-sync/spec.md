@@ -1,9 +1,5 @@
-# kit-config-sync Specification
+## MODIFIED Requirements
 
-## Purpose
-
-Writes newly detected kits into an existing config file without disturbing what the user wrote. A kit the user accepted is inserted live; an opt-in kit, or any new kit found in a non-interactive session, is inserted commented out so it is discoverable but inert. Kits supply their own structured YAML nodes for this, and a config with no `kits` mapping gets one created.
-## Requirements
 ### Requirement: Insert active kit into existing config
 When a new kit is activated — by user consent at the kit-sync prompt, or by first-run defaults — the system SHALL insert it as an **active** entry into the `kits` mapping of `~/.asylum/config.yaml` using `yaml.Node` tree manipulation, preserving existing comments and key ordering.
 
@@ -35,29 +31,3 @@ When a new kit with tier `TierOptIn` is detected and **not** accepted by the use
 #### Scenario: Declined opt-in kit stays commented
 - **WHEN** an opt-in kit is offered at the kit-sync prompt and the user does not accept it
 - **THEN** the entry written to the config is commented out and the kit stays inactive
-
-### Requirement: Non-interactive default-on kits added as comments
-When the session is non-interactive and a new `TierDefault` kit is detected, the system SHALL insert it as a commented-out entry instead of an active entry.
-
-#### Scenario: Non-interactive adds commented
-- **WHEN** a new `TierDefault` kit is detected and stdin is not a terminal
-- **THEN** the kit is added to the config as a commented-out entry (same as `TierOptIn`)
-
-### Requirement: Config without kits mapping
-When `config.yaml` exists but has no `kits` key, the system SHALL create the mapping before inserting kit entries.
-
-#### Scenario: Add kits mapping to minimal config
-- **WHEN** `config.yaml` contains only `agent: claude` with no `kits` key
-- **THEN** a `kits` mapping is created and new kit entries are inserted into it
-
-### Requirement: Kit provides structured config nodes
-Each kit SHALL provide a `ConfigNodes` method that returns `yaml.Node` key-value pairs for insertion into the kits mapping. This replaces text-based `ConfigSnippet` for config modification purposes.
-
-#### Scenario: Simple kit with no options
-- **WHEN** kit `docker` provides its config nodes
-- **THEN** it returns a scalar key node (`docker`) with a line comment and an empty mapping value node
-
-#### Scenario: Kit with nested options
-- **WHEN** kit `java` provides its config nodes
-- **THEN** it returns a scalar key node (`java`) and a mapping value node containing `versions` and `default-version` entries
-
