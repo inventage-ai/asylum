@@ -174,7 +174,12 @@ func itermStatusHandler(_ broker.Ctx, w http.ResponseWriter, r *http.Request) {
 
 	payload, err := io.ReadAll(http.MaxBytesReader(w, r.Body, itermMaxBody))
 	if err != nil {
-		http.Error(w, "hook payload too large", http.StatusRequestEntityTooLarge)
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			http.Error(w, "hook payload too large", http.StatusRequestEntityTooLarge)
+			return
+		}
+		http.Error(w, "could not read hook payload", http.StatusBadRequest)
 		return
 	}
 
@@ -195,6 +200,10 @@ func itermStatusHandler(_ broker.Ctx, w http.ResponseWriter, r *http.Request) {
 
 	cmd := exec.Command(statusBin)
 	cmd.Stdin = bytes.NewReader(payload)
+	// The broker inherits asylum's working directory, which is usually the
+	// project the container can write to. cc-status resolves it2 through
+	// /usr/bin/env, so keep the child out of any directory the sandbox controls.
+	cmd.Dir = home
 	// Both are overridden, not just the one cc-status reads today: the broker
 	// inherited this session-scoped pair from whichever tab spawned it, and a
 	// stale leftover is what made every session paint that tab.
@@ -204,7 +213,10 @@ func itermStatusHandler(_ broker.Ctx, w http.ResponseWriter, r *http.Request) {
 		"PATH="+itermUtilitiesDir+string(os.PathListSeparator)+os.Getenv("PATH"),
 	)
 	if err := cmd.Run(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// Reported host-side only: the error text carries host paths, and the
+		// caller can do nothing with it either way.
+		log.Warn("iterm: %v", err)
+		http.Error(w, "host status binary failed", http.StatusInternalServerError)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

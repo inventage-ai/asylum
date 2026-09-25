@@ -610,3 +610,40 @@ func TestSyncNewKits_DeclinedOptInKitStaysCommented(t *testing.T) {
 		t.Errorf("declined opt-in kit was not offered as a comment; config is:\n%s", data)
 	}
 }
+
+// Default-tier kits author their snippet already active, with inner hint
+// comments showing the options available. Those hints must survive as comments
+// — activating them would silently pin versions and install packages nobody
+// asked for.
+func TestSyncNewKits_ActiveSnippetKeepsInnerHintsCommented(t *testing.T) {
+	const name = "stubdefault"
+	kit.Register(&kit.Kit{
+		Name:        name,
+		Description: "Stub default kit",
+		Tier:        kit.TierDefault,
+		ConfigSnippet: "  " + name + ":\n" +
+			"    # versions:\n" +
+			"    #   - 3.14\n",
+		ConfigComment: name + ":",
+	})
+	dir, configPath := stubSyncDir(t, name)
+
+	if _, err := SyncNewKits(dir, true, func([]*kit.Kit) []string { return []string{name} }); err != nil {
+		t.Fatal(err)
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(data)
+	if !hasActiveEntry(text, name) {
+		t.Fatalf("default kit was not enabled; config is:\n%s", text)
+	}
+	if !strings.Contains(text, "# versions:") {
+		t.Errorf("inner hint comment was promoted to live config; config is:\n%s", text)
+	}
+	if strings.Contains(text, "- 3.14") && !strings.Contains(text, "#   - 3.14") {
+		t.Errorf("hint value became a real setting; config is:\n%s", text)
+	}
+}

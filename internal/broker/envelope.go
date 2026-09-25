@@ -128,16 +128,26 @@ func sessionKey() ([]byte, error) {
 	if _, err := rand.Read(key); err != nil {
 		return nil, err
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-	if errors.Is(err, fs.ErrExist) {
-		return sessionKey()
-	}
+	// Write to a temp file and link it into place. A concurrent creator then
+	// either wins the link or reads a complete key, never a half-written one,
+	// and a crash mid-write cannot leave a permanently unusable key behind.
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".session.key-*")
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
-	if _, err := f.Write(key); err != nil {
+	defer os.Remove(tmp.Name())
+	if _, err := tmp.Write(key); err != nil {
+		tmp.Close()
 		return nil, err
+	}
+	if err := tmp.Close(); err != nil {
+		return nil, err
+	}
+	if err := os.Link(tmp.Name(), path); err != nil {
+		if !errors.Is(err, fs.ErrExist) {
+			return nil, err
+		}
+		return sessionKey() // another process won; read its key
 	}
 	return key, nil
 }
