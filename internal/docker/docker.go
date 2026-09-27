@@ -282,3 +282,9 @@ func ListImages(filter string) ([]string, error) {
 	}
 	return images, nil
 }
+
+// CopyOut returns a command that streams a container path to stdout as a tar
+// archive. -L follows symlinks, resolved inside the container's filesystem.
+func CopyOut(container, path string) *exec.Cmd {
+	return exec.Command("docker", "cp", "-L", container+":"+path, "-")
+}

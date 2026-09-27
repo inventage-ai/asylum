@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- `dropshare` kit (opt-in, macOS) — `asylum-dropshare <file>` uploads a file from the container through Dropshare on the host and prints the share URL, so agents can link screenshots and artifacts in GitHub issues without you pasting the link back. Ships a `dropshare` skill. A single callback applet in `~/.asylum/dropshare/` returns the link; the clipboard is never read.
 - `iterm` kit (opt-in, macOS) — reports session state to the iTerm2 status bar from inside the container: a working/idle dot and the running tool's name, driven by the hooks iTerm2 already configures. Also silences those hooks, which otherwise fail on every tool call inside a container because they name a macOS binary. The container drives only iTerm2's own `cc-status`, never `it2`, and addresses only the terminal session it was started from.
 - Claude Code's `/ide` now connects to an IDE running on the host (VS Code, IntelliJ), so a sandboxed session gets selection context, diagnostics and the diff view. Requires Docker Desktop and `shared` agent config isolation (the default). The in-container reference names both preconditions, and a new [IDE Integration](https://asylum.inventage.ai/concepts/ide-integration/) docs page details the full set of limitations.
 - `kits.browser-open.schemes` — allowlist extra URL schemes the container may open on the host (e.g. `dropshare5` for [Dropshare](https://dropshare.app)). `http`/`https` remain the only schemes allowed by default; the list accumulates across config layers.

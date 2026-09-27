@@ -19,6 +19,7 @@ Kits are modular bundles that group everything needed for a language or tool: in
 | [ast-grep](ast-grep.md) | AST-based code search, lint, and rewrite (`sg`) | Opt-in |
 | [agent-browser](agent-browser.md) | Browser automation via agent-browser | Opt-in |
 | [cx](cx.md) | Semantic code navigation for AI agents | Opt-in |
+| [dropshare](dropshare.md) | Upload project files through Dropshare on the host (macOS) | Opt-in |
 | [apt](apt.md) | Extra apt packages in the project image | Opt-in |
 
 ## Activation Tiers
