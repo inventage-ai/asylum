@@ -247,11 +247,33 @@ func TestBasePackageBlock(t *testing.T) {
 // When only global packages are configured, the project-tier map is empty and
 // EnsureProject returns the base tag without building a project image.
 func TestEnsureProject_EmptyProjectPackagesReturnsBase(t *testing.T) {
-	tag, err := EnsureProject(nil, nil, map[string][]string{}, nil, "test", false, false)
+	tag, err := EnsureProject(nil, nil, map[string][]string{}, nil, "test", false)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if tag != baseTag {
 		t.Errorf("expected %q, got %q", baseTag, tag)
+	}
+}
+
+func TestProjectImageCurrent(t *testing.T) {
+	tests := []struct {
+		name                               string
+		existing, existingBase, hash, base string
+		noCache, want                      bool
+	}{
+		{"matching", "p1", "b1", "p1", "b1", false, true},
+		{"packages changed", "p0", "b1", "p1", "b1", false, false},
+		{"base rebuilt elsewhere", "p1", "b0", "p1", "b1", false, false},
+		{"image predates base label", "p1", "", "p1", "b1", false, false},
+		{"no image", "", "", "p1", "b1", false, false},
+		{"no-cache", "p1", "b1", "p1", "b1", true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := projectImageCurrent(tt.existing, tt.existingBase, tt.hash, tt.base, tt.noCache); got != tt.want {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

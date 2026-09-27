@@ -12,6 +12,7 @@
 - The background agent-version refresh now runs at most once every 24 hours (previously hourly), and the interval is configurable via `version-check-interval` (a Go duration, e.g. `24h`) in the config.
 
 ### Fixed
+- Project images now rebuild when the shared base image changed during another project's run. Before, only the project that triggered the base rebuild picked it up, so kit changes, agent updates, and Asylum upgrades never reached the other projects' containers.
 - Accepting a newly-offered opt-in kit at the kit-sync prompt now actually enables it. The snippet written to the config was copied verbatim from the kit's authored (commented-out) form, so the kit stayed off and the prompt appeared to do nothing. Affects `rtk`, `cx`, and `iterm`.
 
 ## 0.8.0 — 2026-07-22

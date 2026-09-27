@@ -151,6 +151,12 @@ func baseHash(orderedIDs []string, snippetOf map[string]string, packageBlock, ag
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
+// projectImageCurrent reports whether an existing project image matches both
+// the generated Dockerfile and the base image it has to be built on.
+func projectImageCurrent(existing, existingBase, hash, base string, noCache bool) bool {
+	return !noCache && existing == hash && existingBase == base
+}
+
 func buildImage(dockerfileContent []byte, extraFiles map[string][]byte, tag string, labels, buildArgs map[string]string, noCache bool) error {
 	tmpDir, err := os.MkdirTemp("", "asylum-build-")
 	if err != nil {
@@ -233,7 +239,7 @@ func EnsureBase(profiles []*kit.Kit, agentInstalls []*agent.AgentInstall, global
 	return true, orderedIDs, nil
 }
 
-func EnsureProject(projectProfiles []*kit.Kit, allKits []*kit.Kit, packages map[string][]string, kitConfig func(string) *kit.SnippetConfig, version string, baseRebuilt bool, noCache bool) (string, error) {
+func EnsureProject(projectProfiles []*kit.Kit, allKits []*kit.Kit, packages map[string][]string, kitConfig func(string) *kit.SnippetConfig, version string, noCache bool) (string, error) {
 	profileSnippets := kit.AssembleDockerSnippets(projectProfiles, kitConfig)
 	projectEntrypoint := assembleProjectEntrypoint(projectProfiles)
 	kitProjectSnippets := kit.AssembleProjectSnippets(allKits, kitConfig)
@@ -253,8 +259,15 @@ func EnsureProject(projectProfiles []*kit.Kit, allKits []*kit.Kit, packages map[
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte(dockerfile)))
 	tag := "asylum:proj-" + hash[:12]
 
-	existing, err := docker.InspectLabel(tag, "asylum.packages.hash")
-	if err == nil && existing == hash && !baseRebuilt && !noCache {
+	// The base is shared across projects, so another project's run may have
+	// rebuilt it since this image was built.
+	base, err := docker.InspectLabel(baseTag, "asylum.hash")
+	if err != nil {
+		return "", err
+	}
+	existing, _ := docker.InspectLabel(tag, "asylum.packages.hash")
+	existingBase, _ := docker.InspectLabel(tag, "asylum.base.hash")
+	if projectImageCurrent(existing, existingBase, hash, base, noCache) {
 		log.Info("project image up to date")
 		return tag, nil
 	}
@@ -264,6 +277,7 @@ func EnsureProject(projectProfiles []*kit.Kit, allKits []*kit.Kit, packages map[
 
 	labels := map[string]string{
 		"asylum.packages.hash": hash,
+		"asylum.base.hash":     base,
 		"asylum.version":       version,
 	}
 

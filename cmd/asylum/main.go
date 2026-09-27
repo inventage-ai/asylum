@@ -1284,7 +1284,7 @@ func collectOnboarding(cfg config.Config) map[string]bool {
 // fail (e.g. docker inspect errors), it falls through gracefully.
 func ensureImages(globalKits, projectKits, allKits []*kit.Kit, agentInstalls []*agent.AgentInstall, cfg config.Config, version string, versions versions.VersionMap, noCache bool, state *config.State, containerRunning bool) (imageTag string, stateChanged bool) {
 	globalPkgs := collectGlobalPackages(globalKits)
-	baseRebuilt, newOrder, err := image.EnsureBase(globalKits, agentInstalls, globalPkgs, cfg.KitSnippetConfig, version, versions, noCache, state.DockerSourceOrder)
+	_, newOrder, err := image.EnsureBase(globalKits, agentInstalls, globalPkgs, cfg.KitSnippetConfig, version, versions, noCache, state.DockerSourceOrder)
 	if err != nil {
 		if containerRunning {
 			log.Warn("image check: %v (using running container)", err)
@@ -1298,7 +1298,7 @@ func ensureImages(globalKits, projectKits, allKits []*kit.Kit, agentInstalls []*
 	}
 
 	projectPkgs := subtractPackages(collectPackages(cfg), globalPkgs)
-	imageTag, err = image.EnsureProject(projectKits, allKits, projectPkgs, cfg.KitSnippetConfig, version, baseRebuilt, noCache)
+	imageTag, err = image.EnsureProject(projectKits, allKits, projectPkgs, cfg.KitSnippetConfig, version, noCache)
 	if err != nil {
 		if containerRunning {
 			log.Warn("image check: %v (using running container)", err)

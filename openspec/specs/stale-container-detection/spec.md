@@ -96,7 +96,11 @@ The config hash SHALL be stored as a Docker label (`asylum.config.hash`) on the 
 
 #### Scenario: Container running, base image changed
 - **WHEN** a container is running and `EnsureBase` detects a hash mismatch
-- **THEN** `EnsureBase` SHALL rebuild the base image, `EnsureProject` SHALL rebuild the project image (due to `baseRebuilt` flag), and the running container SHALL be detected as stale
+- **THEN** `EnsureBase` SHALL rebuild the base image, `EnsureProject` SHALL rebuild the project image because it was built on a different base, and the running container SHALL be detected as stale
+
+#### Scenario: Base image changed by another project's run
+- **WHEN** a project's container is running on a project image, and the base image was rebuilt during another project's invocation
+- **THEN** the next invocation for this project SHALL rebuild its project image, and the running container SHALL be detected as stale
 
 #### Scenario: EnsureBase inspect failure with running container
 - **WHEN** `docker inspect` fails during `EnsureBase` and a container is running

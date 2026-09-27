@@ -52,7 +52,7 @@ e2e/                        End-to-end tests (Docker-based, separate from integr
 ### Key Behaviors
 
 - **First-run wizard** (`firstrun/`) guides kit selection and agent config seeding on first use. Agent config is seeded from host (`~/.claude` → `~/.asylum/agents/claude/`), but resume is skipped for that first session since seeded data doesn't represent a container session.
-- **Two-tier images**: a base image (shared across projects, kit-driven) and per-project images (project-specific packages, kits). Base image rebuild invalidates all project images (`baseRebuilt` flag cascades to `EnsureProject`).
+- **Two-tier images**: a base image (shared across projects, kit-driven) and per-project images (project-specific packages, kits). Each project image records the base hash it was built on (`asylum.base.hash`), so a base rebuild invalidates every project image, including those of projects whose run did not trigger it.
 - **Kit-driven image assembly**: Dockerfile and entrypoint are assembled from core templates + kit snippets + tail. Each kit registers Dockerfile, entrypoint, config, and rules snippets. Kits have tiers (global vs project-level).
 - **Config migration**: v1→v2 migration (`config/migrate.go`) handles schema evolution. New kits are detected and offered via `config/kitsync.go`.
 - **Port allocation**: `ports/` maintains a file-locked registry so each project gets non-overlapping host port ranges.

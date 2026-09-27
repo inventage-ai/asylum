@@ -26,7 +26,7 @@ The image package SHALL detect when the embedded Dockerfile or entrypoint.sh has
 - **THEN** `EnsureBase` SHALL still be called and return the expected tag for comparison
 
 ### Requirement: Project image generation
-The image package SHALL generate a project-specific Dockerfile from the project-layer packages config, kit project snippets, and project kit entrypoint/banner snippets, and build it when any of these are present. Packages declared in the global config SHALL NOT be included in the project image (they are installed in the base image). `EnsureProject` SHALL be called on every asylum invocation regardless of container state. `EnsureProject` SHALL NOT accept kit-specific parameters (e.g., java version); kit-specific project image contributions SHALL be provided by kits via `ProjectSnippetFunc`.
+The image package SHALL generate a project-specific Dockerfile from the project-layer packages config, kit project snippets, and project kit entrypoint/banner snippets, and build it when any of these are present. Packages declared in the global config SHALL NOT be included in the project image (they are installed in the base image). `EnsureProject` SHALL be called on every asylum invocation regardless of container state. `EnsureProject` SHALL NOT accept kit-specific parameters (e.g., java version); kit-specific project image contributions SHALL be provided by kits via `ProjectSnippetFunc`. The project image SHALL record the hash of the base image it was built on, and SHALL be considered up to date only if both its packages hash and its recorded base hash match the current values.
 
 #### Scenario: No packages configured
 - **WHEN** project-layer packages config is empty, no kits have project snippets, and no project kits have entrypoint snippets or banner lines
@@ -41,8 +41,12 @@ The image package SHALL generate a project-specific Dockerfile from the project-
 - **THEN** `asylum:latest` is returned as the image tag and no project image is built
 
 #### Scenario: Project image up to date
-- **WHEN** `asylum:proj-<hash>` already exists with matching packages hash
+- **WHEN** `asylum:proj-<hash>` already exists with matching packages hash and was built on the current base image
 - **THEN** no rebuild occurs
+
+#### Scenario: Base image rebuilt by another project
+- **WHEN** `asylum:proj-<hash>` exists with matching packages hash, but the base image was rebuilt since, for example during another project's run
+- **THEN** the project image is rebuilt on the current base image
 
 #### Scenario: Kit contributes project snippet
 - **WHEN** a kit's `ProjectSnippetFunc` returns a non-empty Dockerfile snippet
