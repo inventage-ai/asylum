@@ -45,7 +45,7 @@ func TestProjectImageBuild(t *testing.T) {
 	ensureBaseImage(t)
 
 	packages := map[string][]string{"apt": {"tree"}}
-	tag, err := image.EnsureProject(nil, nil, packages, nil, testVersion, false, false)
+	tag, err := image.EnsureProject(nil, nil, packages, nil, testVersion, false)
 	if err != nil {
 		t.Fatalf("EnsureProject failed: %v", err)
 	}
@@ -70,13 +70,13 @@ func TestProjectImageCaching(t *testing.T) {
 	ensureBaseImage(t)
 
 	packages := map[string][]string{"apt": {"tree"}}
-	tag1, err := image.EnsureProject(nil, nil, packages, nil, testVersion, false, false)
+	tag1, err := image.EnsureProject(nil, nil, packages, nil, testVersion, false)
 	if err != nil {
 		t.Fatalf("first EnsureProject failed: %v", err)
 	}
 	t.Cleanup(func() { docker.RemoveImages(tag1) })
 
-	tag2, err := image.EnsureProject(nil, nil, packages, nil, testVersion, false, false)
+	tag2, err := image.EnsureProject(nil, nil, packages, nil, testVersion, false)
 	if err != nil {
 		t.Fatalf("second EnsureProject failed: %v", err)
 	}
@@ -88,7 +88,7 @@ func TestProjectImageCaching(t *testing.T) {
 func TestProjectImageNoPackages(t *testing.T) {
 	ensureBaseImage(t)
 
-	tag, err := image.EnsureProject(nil, nil, nil, nil, testVersion, false, false)
+	tag, err := image.EnsureProject(nil, nil, nil, nil, testVersion, false)
 	if err != nil {
 		t.Fatalf("EnsureProject failed: %v", err)
 	}
