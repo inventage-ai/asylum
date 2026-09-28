@@ -1963,7 +1963,7 @@
 
 <h1 id="iterm2-kit">iTerm2 Kit<a class="headerlink" href="#iterm2-kit" title="Permanent link">&para;</a></h1>
 <p>Report session state to the iTerm2 status bar from inside the container.</p>
-<p><strong>Activation: Opt-in</strong> — macOS with iTerm2 only.</p>
+<p><strong>Activation: Opt-in</strong> — macOS with iTerm2 only. Asylum only offers it on a macOS host. On other hosts it is left out of the first-run wizard, the new-kit prompt, <code>asylum config</code>, and generated configs. Enabling it by hand still works as configured.</p>
 <h2 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
 <p>iTerm2 ships a Claude Code integration that paints session state into the status bar: an orange dot while a tool runs, green when idle, and a line of detail naming the tool. iTerm2 wires it up itself, as ten hook entries in <code>~/.claude/settings.json</code> all pointing at <code>~/.config/iterm2/cc-status</code>.</p>
 <p>Inside a container that integration is not just missing, it is broken. Under <code>shared</code> agent config isolation the container reads the host's real <code>settings.json</code>, so all ten hooks fire — and <code>cc-status</code> is a macOS binary that cannot execute on Linux. Every tool call of every session takes a failing hook.</p>
