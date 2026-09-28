@@ -1112,8 +1112,6 @@ func runCleanupAll() {
 	log.Info("agent config (~/.asylum/agents/) preserved — delete manually if needed")
 }
 
-// removeProjectsDir removes project data but skips directories with active
-// session counters to avoid killing running containers.
 // removeTree is os.RemoveAll that also removes read-only subtrees, which tools
 // like the Go toolchain leave in Claude's temp root. Deleting an entry needs
 // write permission on its parent, so only directories get chmod-ed.
@@ -1133,6 +1131,8 @@ func removeTree(path string) error {
 	return os.RemoveAll(path)
 }
 
+// removeProjectsDir removes project data but skips directories with active
+// session counters to avoid killing running containers.
 func removeProjectsDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {

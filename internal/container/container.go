@@ -219,8 +219,6 @@ func ContainerName(projectDir string) string {
 	return fmt.Sprintf("asylum-%x-%s", h[:6], sanitizeProject(projectDir))
 }
 
-// OldContainerName returns the pre-migration container name format (hash only,
-// no project suffix). Used during migration to find old project directories.
 // SecondaryContainerName names a container for a project plus a specific agent
 // set. It is used when the primary container does not support the requested
 // agent: folding the sorted agent set into the hash keeps the name distinct
@@ -232,6 +230,8 @@ func SecondaryContainerName(projectDir string, agents []string) string {
 	return fmt.Sprintf("asylum-%x-%s", h[:6], sanitizeProject(projectDir))
 }
 
+// OldContainerName returns the pre-migration container name format (hash only,
+// no project suffix). Used during migration to find old project directories.
 func OldContainerName(projectDir string) string {
 	h := sha256.Sum256([]byte(projectDir))
 	return fmt.Sprintf("asylum-%x", h[:6])
