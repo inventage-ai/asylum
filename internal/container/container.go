@@ -120,6 +120,12 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	}
 	all = append(all, coreEnvs...)
 
+	claudeTemp, err := claudeTempArgs(home, containerName, opts)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	all = append(all, claudeTemp...)
+
 	// Host-broker connection parameters, consumed by kit-provided shims that
 	// forward requests (e.g. opening a URL) to the host broker. The transport is
 	// a Unix socket (native Linux) or loopback TCP via host.docker.internal.
@@ -460,6 +466,40 @@ func coreEnvVars(home string, opts RunOpts) ([]kit.RunArg, error) {
 	}
 
 	return args, nil
+}
+
+// claudeInstalled reports whether Claude runs in the session, as primary agent or companion.
+func claudeInstalled(opts RunOpts) bool {
+	return opts.Agent.Name() == "claude" || slices.Contains(opts.Config.AgentCompanions(opts.Agent.Name()), "claude")
+}
+
+// claudeTempArgs moves Claude's temp root (scratchpad, task output) onto a
+// per-project host dir, mounted at its real path so printed paths open on the
+// host. TMPDIR stays untouched so other tools keep the fast container /tmp.
+// XDG_RUNTIME_DIR keeps Claude's Unix sockets off the host mount.
+func claudeTempArgs(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
+	if !claudeInstalled(opts) {
+		return nil, nil
+	}
+
+	dir := filepath.Join(home, ".asylum", "projects", cname, "tmp")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, fmt.Errorf("create claude temp dir: %w", err)
+	}
+
+	// Claude refuses a symlinked temp root.
+	if resolved, err := filepath.EvalSymlinks(dir); err == nil {
+		dir = resolved
+	}
+
+	arg := func(flag, value string) kit.RunArg {
+		return kit.RunArg{Flag: flag, Value: value, Source: "core", Priority: kit.PriorityCore}
+	}
+	return []kit.RunArg{
+		arg("-v", dir+":"+dir),
+		arg("-e", "CLAUDE_CODE_TMPDIR="+dir),
+		arg("-e", fmt.Sprintf("XDG_RUNTIME_DIR=/run/user/%d", os.Getuid())),
+	}, nil
 }
 
 // kitCredentialArgs produces RunArgs for kit credential mounts.

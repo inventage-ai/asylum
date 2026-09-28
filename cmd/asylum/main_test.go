@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
 	"runtime"
 	"slices"
@@ -563,5 +565,28 @@ func TestConfigurableKitsSkipKitsForAnotherHost(t *testing.T) {
 		if slices.Contains(names, name) {
 			t.Errorf("Kits tab lists %s, which is hidden or always on", name)
 		}
+	}
+}
+
+func TestRemoveTreeReadOnly(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "proj")
+	ro := filepath.Join(root, "tmp", "mod", "toolchain")
+	if err := os.MkdirAll(filepath.Join(ro, "bin"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ro, "bin", "go"), nil, 0444); err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range []string{filepath.Join(ro, "bin"), ro} {
+		if err := os.Chmod(d, 0555); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := removeTree(root); err != nil {
+		t.Fatalf("removeTree: %v", err)
+	}
+	if _, err := os.Stat(root); !os.IsNotExist(err) {
+		t.Errorf("expected %s to be gone, stat err = %v", root, err)
 	}
 }

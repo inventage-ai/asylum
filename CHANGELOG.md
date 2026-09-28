@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- Claude Code's scratchpad and background task output now persist across container restarts, and the paths Claude prints open unchanged on the host. Claude sessions get `CLAUDE_CODE_TMPDIR` pointed at `~/.asylum/projects/<container>/tmp`, mounted at its real path. `TMPDIR` is untouched, so other tools keep the fast container `/tmp`. Nothing is pruned automatically, and `asylum cleanup` removes the directory.
 - `dropshare` kit (opt-in, macOS) — `asylum-dropshare <file>` uploads a file from the container through Dropshare on the host and prints the share URL, so agents can link screenshots and artifacts in GitHub issues without you pasting the link back. Ships a `dropshare` skill. A single callback applet in `~/.asylum/dropshare/` returns the link; the clipboard is never read. Only offered on macOS hosts.
 - `iterm` kit (opt-in, macOS) — reports session state to the iTerm2 status bar from inside the container: a working/idle dot and the running tool's name, driven by the hooks iTerm2 already configures. Also silences those hooks, which otherwise fail on every tool call inside a container because they name a macOS binary. The container drives only iTerm2's own `cc-status`, never `it2`, and addresses only the terminal session it was started from. Only offered on macOS hosts.
 - Claude Code's `/ide` now connects to an IDE running on the host (VS Code, IntelliJ), so a sandboxed session gets selection context, diagnostics and the diff view. Requires Docker Desktop and `shared` agent config isolation (the default). The in-container reference names both preconditions, and a new [IDE Integration](https://asylum.inventage.ai/concepts/ide-integration/) docs page details the full set of limitations.
@@ -13,6 +14,7 @@
 - The background agent-version refresh now runs at most once every 24 hours (previously hourly), and the interval is configurable via `version-check-interval` (a Go duration, e.g. `24h`) in the config.
 
 ### Fixed
+- `asylum cleanup` now removes read-only directories, such as a Go module cache, instead of stopping with "permission denied" and leaving the project data half-deleted.
 - Project images now rebuild when the shared base image changed during another project's run. Before, only the project that triggered the base rebuild picked it up, so kit changes, agent updates, and Asylum upgrades never reached the other projects' containers.
 - Accepting a newly-offered opt-in kit at the kit-sync prompt now actually enables it. The snippet written to the config was copied verbatim from the kit's authored (commented-out) form, so the kit stayed off and the prompt appeared to do nothing. Affects `rtk`, `cx`, and `iterm`.
 

@@ -26,7 +26,7 @@ Running `asylum cleanup` from a project directory removes:
 |----------|---------|
 | Project container | Yes |
 | Project volumes (`<container>-*`) | Yes |
-| Project data (`~/.asylum/projects/<container>/`) | Yes |
+| Project data (`~/.asylum/projects/<container>/`: history, credentials, Claude temp files) | Yes |
 | Port allocation for project | Yes |
 | Base image | No |
 | Other projects | No |

@@ -219,6 +219,8 @@ Manual ports and automatic ports work independently — both are forwarded.
 
 The project directory is bind-mounted at its real host path (not `/workspace`), preserving absolute paths between host and container.
 
+In Claude sessions, `CLAUDE_CODE_TMPDIR` points at `~/.asylum/projects/<container>/tmp`, mounted at the same path. Claude's scratchpad and background task output therefore survive container restarts, and their paths open unchanged on the host. `XDG_RUNTIME_DIR` is `/run/user/<uid>`, which keeps Claude's sockets off the host mount.
+
 ### Volume Shorthand
 
 In config files:

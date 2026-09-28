@@ -11,8 +11,11 @@ Asylum mounts your project, config, caches, and tools into the container. Your p
 | SSH keys | Depends on [SSH isolation](../kits/ssh.md) | `~/.ssh/` | Read-only (keys), Read-write (known_hosts) |
 | Agent config | Depends on [isolation mode](isolation.md) | Agent-specific path | Read-write |
 | Shell history | `~/.asylum/projects/<id>/history/` | `~/.shell_history/` | Read-write |
+| Claude temp root (Claude sessions only) | `~/.asylum/projects/<id>/tmp/` | Same path | Read-write |
 | Direnv approvals | `~/.local/share/direnv/allow` | Same path | Read-only |
 | `.env` file | `$PWD/.env` | Loaded as `--env-file` | — |
+
+Claude Code keeps its scratchpad and background task output under `CLAUDE_CODE_TMPDIR`, which Asylum points at the temp root. The files survive container restarts, and any path Claude prints opens unchanged on the host. Asylum never prunes the directory. `asylum cleanup` removes it with the rest of the project data. Other tools keep using the container's local `/tmp`.
 
 ## Cache Volumes
 

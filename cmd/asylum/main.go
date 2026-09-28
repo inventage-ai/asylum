@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -1014,7 +1016,7 @@ func runCleanupProject() {
 	} else {
 		projDir := filepath.Join(home, ".asylum", "projects", cname)
 		if _, err := os.Stat(projDir); err == nil {
-			if err := os.RemoveAll(projDir); err != nil {
+			if err := removeTree(projDir); err != nil {
 				log.Error("remove project data: %v", err)
 				errs++
 			}
@@ -1098,7 +1100,7 @@ func runCleanupAll() {
 			log.Error("home dir: %v", err)
 			return
 		}
-		if err := os.RemoveAll(filepath.Join(home, ".asylum", "cache")); err != nil {
+		if err := removeTree(filepath.Join(home, ".asylum", "cache")); err != nil {
 			log.Error("remove cache: %v", err)
 		}
 		if err := removeProjectsDir(filepath.Join(home, ".asylum", "projects")); err != nil {
@@ -1112,6 +1114,25 @@ func runCleanupAll() {
 
 // removeProjectsDir removes project data but skips directories with active
 // session counters to avoid killing running containers.
+// removeTree is os.RemoveAll that also removes read-only subtrees, which tools
+// like the Go toolchain leave in Claude's temp root. Deleting an entry needs
+// write permission on its parent, so only directories get chmod-ed.
+func removeTree(path string) error {
+	err := os.RemoveAll(path)
+	if !errors.Is(err, fs.ErrPermission) {
+		return err
+	}
+	filepath.WalkDir(path, func(p string, d fs.DirEntry, err error) error {
+		if err == nil && d.IsDir() {
+			if info, err := d.Info(); err == nil {
+				os.Chmod(p, info.Mode().Perm()|0700)
+			}
+		}
+		return nil
+	})
+	return os.RemoveAll(path)
+}
+
 func removeProjectsDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
@@ -1134,7 +1155,7 @@ func removeProjectsDir(dir string) error {
 				continue
 			}
 		}
-		os.RemoveAll(filepath.Join(dir, e.Name()))
+		removeTree(filepath.Join(dir, e.Name()))
 	}
 	if skipped == 0 {
 		return os.Remove(dir)

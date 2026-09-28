@@ -62,6 +62,7 @@ ARG USER_HOME=/home/claude
 
 RUN groupadd -g ${GROUP_ID} ${USERNAME} || true && \
     useradd -m -d ${USER_HOME} -u ${USER_ID} -g ${GROUP_ID} -s /bin/zsh ${USERNAME} && \
+    install -d -m 0700 -o ${USER_ID} -g ${GROUP_ID} /run/user/${USER_ID} && \
     echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/${USERNAME} && \
     chmod 0440 /etc/sudoers.d/${USERNAME}
 

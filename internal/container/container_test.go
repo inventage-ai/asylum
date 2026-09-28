@@ -1934,3 +1934,51 @@ func TestSandboxRulesKitsForAnotherHost(t *testing.T) {
 		t.Error("an enabled dropshare kit is missing from Active Kits")
 	}
 }
+
+func TestClaudeTempArgs(t *testing.T) {
+	tests := []struct {
+		name  string
+		agent agent.Agent
+		cfg   config.Config
+		want  bool
+	}{
+		{"claude primary", claudeStubAgent{}, config.Config{}, true},
+		{"claude companion", stubAgent{}, config.Config{Agents: map[string]*config.AgentConfig{
+			"stub": {Companions: &[]string{"claude"}},
+		}}, true},
+		{"no claude", stubAgent{}, config.Config{}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			cname := "asylum-tmp-test"
+			args, err := claudeTempArgs(home, cname, RunOpts{Config: tt.cfg, Agent: tt.agent})
+			if err != nil {
+				t.Fatalf("claudeTempArgs: %v", err)
+			}
+
+			dir := filepath.Join(home, ".asylum", "projects", cname, "tmp")
+			if resolved, err := filepath.EvalSymlinks(filepath.Dir(dir)); err == nil {
+				dir = filepath.Join(resolved, "tmp")
+			}
+			wants := []kit.RunArg{
+				{Flag: "-v", Value: dir + ":" + dir},
+				{Flag: "-e", Value: "CLAUDE_CODE_TMPDIR=" + dir},
+				{Flag: "-e", Value: fmt.Sprintf("XDG_RUNTIME_DIR=/run/user/%d", os.Getuid())},
+			}
+			for _, w := range wants {
+				if got := hasRunArg(args, w.Flag, w.Value); got != tt.want {
+					t.Errorf("RunArg{%s %s} present = %v, want %v", w.Flag, w.Value, got, tt.want)
+				}
+			}
+			if _, err := os.Stat(dir); (err == nil) != tt.want {
+				t.Errorf("temp dir exists = %v, want %v", err == nil, tt.want)
+			}
+			for _, a := range args {
+				if a.Flag == "-e" && strings.HasPrefix(a.Value, "TMPDIR=") {
+					t.Errorf("unexpected %s", a.Value)
+				}
+			}
+		})
+	}
+}
