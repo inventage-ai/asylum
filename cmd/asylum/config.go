@@ -39,11 +39,7 @@ func runConfig() {
 	var kitOptions []tui.Option
 	var kitDefaultSel []int
 	var kitNames []string // parallel to kitOptions
-	for _, name := range kit.All() {
-		k := kit.Get(name)
-		if k.Tier == kit.TierAlwaysOn || k.Hidden {
-			continue
-		}
+	for _, k := range configurableKits() {
 		kitOptions = append(kitOptions, tui.Option{Label: k.Name, Description: k.Description})
 		kitNames = append(kitNames, k.Name)
 		if activeKits[k.Name] {
@@ -147,4 +143,18 @@ func runConfig() {
 	}
 
 	log.Success("Config updated")
+}
+
+// configurableKits returns the kits the Kits tab lists. Kits missing from it
+// are left untouched when the tab is saved, so an entry for a kit this host
+// doesn't offer survives.
+func configurableKits() []*kit.Kit {
+	var out []*kit.Kit
+	for _, name := range kit.All() {
+		k := kit.Get(name)
+		if k.Tier != kit.TierAlwaysOn && !k.Hidden && k.Available() {
+			out = append(out, k)
+		}
+	}
+	return out
 }

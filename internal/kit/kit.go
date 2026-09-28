@@ -2,6 +2,7 @@ package kit
 
 import (
 	"fmt"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -121,6 +122,7 @@ type Kit struct {
 	EnvFunc            func(*SnippetConfig) map[string]string          // container env vars contributed by this kit
 	ProjectSnippetFunc func(*SnippetConfig) string                     // Dockerfile commands for the project image
 	Hidden             bool                                            // exclude from interactive selection UIs (config TUI, kit sync prompt, sandbox rules disabled list)
+	HostOS             string                                          // runtime.GOOS the kit works on; empty means any. Other hosts never offer it (see Available)
 	NeedsMount         bool                                            // kit uses mount --bind at runtime (requires SYS_ADMIN)
 	ProvidesSkills     bool                                            // kit stages Claude skills under /opt/asylum-skills/.claude/skills/<name>/ at build time
 	DockerPriority     int                                             // lower = earlier in Dockerfile (stable/expensive first); 0 means default (50)
@@ -146,6 +148,15 @@ func Register(k *Kit) {
 // Get returns a registered kit by name, or nil if not found.
 func Get(name string) *Kit {
 	return registry[name]
+}
+
+// hostOS is the host's operating system, replaced in tests.
+var hostOS = runtime.GOOS
+
+// Available reports whether the kit works on this host. Unavailable kits are
+// never offered, but still work when a config enables them.
+func (k *Kit) Available() bool {
+	return k.HostOS == "" || k.HostOS == hostOS
 }
 
 // All returns the names of all registered top-level kits in sorted order.
@@ -474,13 +485,14 @@ func CredentialCapableKits() []*Kit {
 	return result
 }
 
-// AssembleConfigSnippets returns all registered kits' ConfigSnippets in sorted
-// order, with commented-out snippets grouped after active ones.
+// AssembleConfigSnippets returns the ConfigSnippets of all registered kits
+// available on this host in sorted order, with commented-out snippets grouped
+// after active ones.
 func AssembleConfigSnippets() string {
 	var active, commented strings.Builder
 	for _, name := range All() {
 		k := registry[name]
-		if k.ConfigSnippet == "" {
+		if k.ConfigSnippet == "" || !k.Available() {
 			continue
 		}
 		trimmed := strings.TrimSpace(k.ConfigSnippet)

@@ -3,6 +3,7 @@ package firstrun
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -213,5 +214,25 @@ func TestWriteConfig_RoundTrip(t *testing.T) {
 	}
 	if got := string(data); got != BuildConfig(choices) {
 		t.Errorf("WriteConfig output diverges from BuildConfig")
+	}
+}
+
+// macOS-only kits are neither offered nor written on other hosts, even when
+// selected.
+func TestFirstRunSkipsKitsForAnotherHost(t *testing.T) {
+	offered := runtime.GOOS == "darwin"
+	out := BuildConfig(Choices{
+		DefaultAgent: "claude",
+		Agents:       map[string]bool{"claude": true},
+		Kits:         map[string]bool{"iterm": true, "dropshare": true},
+	})
+	choices := defaultKitChoices()
+	for _, name := range []string{"iterm", "dropshare"} {
+		if got := strings.Contains(out, name+":"); got != offered {
+			t.Errorf("config mentions %s = %v, want %v on %s", name, got, offered, runtime.GOOS)
+		}
+		if _, got := choices[name]; got != offered {
+			t.Errorf("picker offers %s = %v, want %v on %s", name, got, offered, runtime.GOOS)
+		}
 	}
 }

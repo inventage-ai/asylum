@@ -659,3 +659,47 @@ func TestJavaSnippetGeneration(t *testing.T) {
 		}
 	})
 }
+
+func TestKitAvailable(t *testing.T) {
+	tests := []struct {
+		name, kitOS, host string
+		want              bool
+	}{
+		{"any host", "", "linux", true},
+		{"matching host", "darwin", "darwin", true},
+		{"other host", "darwin", "linux", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer swap(&hostOS, tt.host)()
+			if got := (&Kit{HostOS: tt.kitOS}).Available(); got != tt.want {
+				t.Errorf("Available() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestMacOSOnlyKits(t *testing.T) {
+	for _, host := range []string{"linux", "darwin"} {
+		defer swap(&hostOS, host)()
+		for _, name := range []string{"iterm", "dropshare"} {
+			if got, want := Get(name).Available(), host == "darwin"; got != want {
+				t.Errorf("%s on %s: Available() = %v, want %v", name, host, got, want)
+			}
+		}
+	}
+}
+
+func TestAssembleConfigSnippetsSkipsUnavailableKits(t *testing.T) {
+	for _, host := range []string{"linux", "darwin"} {
+		t.Run(host, func(t *testing.T) {
+			defer swap(&hostOS, host)()
+			out := AssembleConfigSnippets()
+			for _, name := range []string{"iterm:", "dropshare:"} {
+				if got, want := strings.Contains(out, name), host == "darwin"; got != want {
+					t.Errorf("snippets mention %s = %v, want %v", name, got, want)
+				}
+			}
+		})
+	}
+}

@@ -2,6 +2,7 @@ package main
 
 import (
 	"reflect"
+	"runtime"
 	"slices"
 	"testing"
 
@@ -543,6 +544,24 @@ func TestBrokerEnv(t *testing.T) {
 	for _, c := range cases {
 		if got := brokerEnv(c.cfg); !slices.Equal(got, c.want) {
 			t.Errorf("%s: brokerEnv() = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+func TestConfigurableKitsSkipKitsForAnotherHost(t *testing.T) {
+	var names []string
+	for _, k := range configurableKits() {
+		names = append(names, k.Name)
+	}
+	offered := runtime.GOOS == "darwin"
+	for _, name := range []string{"iterm", "dropshare"} {
+		if got := slices.Contains(names, name); got != offered {
+			t.Errorf("Kits tab lists %s = %v, want %v on %s", name, got, offered, runtime.GOOS)
+		}
+	}
+	for _, name := range []string{"apt", "shell", "ssh"} {
+		if slices.Contains(names, name) {
+			t.Errorf("Kits tab lists %s, which is hidden or always on", name)
 		}
 	}
 }

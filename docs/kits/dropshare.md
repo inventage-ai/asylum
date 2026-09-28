@@ -2,7 +2,7 @@
 
 Upload files through [Dropshare](https://dropshare.app) on your Mac and get the share URL back inside the container.
 
-**Activation: Opt-in** — macOS with Dropshare 5 only.
+**Activation: Opt-in** — macOS with Dropshare 5 only. Asylum only offers it on a macOS host. On other hosts it is left out of the first-run wizard, the new-kit prompt, `asylum config`, and generated configs. Enabling it by hand still works as configured.
 
 ```yaml
 kits:

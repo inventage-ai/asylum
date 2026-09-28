@@ -55,6 +55,7 @@ var dropshareSkill string
 func init() {
 	Register(&Kit{
 		Name:           dropshareKitName,
+		HostOS:         "darwin",
 		Description:    "Upload files through Dropshare on the host",
 		Tier:           TierOptIn,
 		Tools:          []string{"asylum-dropshare"},

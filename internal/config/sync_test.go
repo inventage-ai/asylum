@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"slices"
 	"strings"
 	"testing"
 
@@ -251,10 +253,10 @@ func TestSyncNewKits_NoConfigFile(t *testing.T) {
 		t.Error("expected no sync when config.yaml doesn't exist")
 	}
 
-	// State should be populated with all kits so next run doesn't re-prompt
+	// State should hold every kit this host offers so next run doesn't re-prompt
 	state, _ := LoadState(dir)
-	if len(state.KnownKits) != len(kit.All()) {
-		t.Errorf("expected state to contain all %d kits, got %d", len(kit.All()), len(state.KnownKits))
+	if want := availableKits(); len(state.KnownKits) != len(want) {
+		t.Errorf("expected state to contain all %d available kits, got %d", len(want), len(state.KnownKits))
 	}
 }
 
@@ -645,5 +647,49 @@ func TestSyncNewKits_ActiveSnippetKeepsInnerHintsCommented(t *testing.T) {
 	}
 	if strings.Contains(text, "- 3.14") && !strings.Contains(text, "#   - 3.14") {
 		t.Errorf("hint value became a real setting; config is:\n%s", text)
+	}
+}
+
+func availableKits() []string {
+	return slices.DeleteFunc(kit.All(), func(n string) bool { return !kit.Get(n).Available() })
+}
+
+// On a host a macOS-only kit doesn't work on, kit sync neither prompts for it
+// nor writes a comment for it, and leaves it unknown so a Mac sharing this
+// state still offers it.
+func TestSyncNewKits_KitsForAnotherHost(t *testing.T) {
+	dir := t.TempDir()
+	configPath := filepath.Join(dir, "config.yaml")
+	os.WriteFile(configPath, []byte("version: \"0.2\"\nkits:\n  docker: {}\n"), 0644)
+	known := slices.DeleteFunc(kit.All(), func(n string) bool { return n == "iterm" || n == "dropshare" })
+	SaveState(dir, State{KnownKits: append(known, "from-another-host")})
+
+	var prompted []string
+	_, err := SyncNewKits(dir, true, func(ks []*kit.Kit) []string {
+		for _, k := range ks {
+			prompted = append(prompted, k.Name)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	offered := runtime.GOOS == "darwin"
+	cfg, _ := os.ReadFile(configPath)
+	state, _ := LoadState(dir)
+	for _, name := range []string{"iterm", "dropshare"} {
+		if got := slices.Contains(prompted, name); got != offered {
+			t.Errorf("%s prompted = %v, want %v on %s", name, got, offered, runtime.GOOS)
+		}
+		if got := strings.Contains(string(cfg), name+":"); got != offered {
+			t.Errorf("config mentions %s = %v, want %v on %s", name, got, offered, runtime.GOOS)
+		}
+		if got := slices.Contains(state.KnownKits, name); got != offered {
+			t.Errorf("%s known = %v, want %v on %s", name, got, offered, runtime.GOOS)
+		}
+	}
+	if !slices.Contains(state.KnownKits, "from-another-host") {
+		t.Error("a kit another host recorded as known was dropped")
 	}
 }

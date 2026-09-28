@@ -89,7 +89,7 @@ func buildKitsBlock(c Choices) string {
 	var active, commented strings.Builder
 	for _, name := range kit.All() {
 		k := kit.Get(name)
-		if k == nil || k.ConfigSnippet == "" {
+		if k == nil || k.ConfigSnippet == "" || !k.Available() {
 			continue
 		}
 		snippet, wantActive := pickKitSnippet(k, c)
@@ -124,9 +124,9 @@ func pickKitSnippet(k *kit.Kit, c Choices) (string, bool) {
 }
 
 // isSelectable reports whether the kit can be toggled by the wizard's kit
-// multi-select. Always-on and hidden kits stay out of the picker.
+// multi-select. Always-on, hidden, and unavailable kits stay out of the picker.
 func isSelectable(k *kit.Kit) bool {
-	return k.Tier != kit.TierAlwaysOn && !k.Hidden
+	return k.Tier != kit.TierAlwaysOn && !k.Hidden && k.Available()
 }
 
 // agentPickerNames returns all registered agent install names except the

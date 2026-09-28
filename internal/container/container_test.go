@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"reflect"
 	"slices"
 	"strings"
@@ -1906,5 +1907,30 @@ func TestExecArgsSessionEnv(t *testing.T) {
 				t.Errorf("ExecArgs() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestSandboxRulesKitsForAnotherHost(t *testing.T) {
+	rules := func(kits []*kit.Kit) string {
+		dir, err := generateSandboxRules(t.TempDir(), "asylum-rules-hostos", kits, nil, "dev", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		data, _ := os.ReadFile(filepath.Join(dir, "asylum-sandbox.md"))
+		return string(data)
+	}
+
+	// Inactive: listed as disabled only where the kit works.
+	offered := runtime.GOOS == "darwin"
+	_, disabled, _ := strings.Cut(rules(nil), "## Disabled Kits")
+	for _, name := range []string{"iterm", "dropshare"} {
+		if got := strings.Contains(disabled, "**"+name+"**"); got != offered {
+			t.Errorf("Disabled Kits lists %s = %v, want %v on %s", name, got, offered, runtime.GOOS)
+		}
+	}
+
+	// Enabled: active on every host.
+	if content := rules([]*kit.Kit{kit.Get("dropshare")}); !strings.Contains(content, "### Dropshare (dropshare kit)") {
+		t.Error("an enabled dropshare kit is missing from Active Kits")
 	}
 }

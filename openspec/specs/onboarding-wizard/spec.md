@@ -106,7 +106,7 @@ When the agent multi-select produced more than one selection, the wizard SHALL p
 - **THEN** the default-agent step SHALL be skipped
 
 ### Requirement: Kit selection step
-On first-run invocations, the wizard SHALL include a multi-select step listing top-level kits (registry entries with no `/` in `Name`) excluding kits with `Tier == TierAlwaysOn`. `TierDefault` kits SHALL be pre-checked; `TierAvailable` kits SHALL be unchecked. Selection SHALL write uncommented `kits:` entries for chosen kits and commented entries for unchosen kits, matching the existing comment-vs-active pattern used by `WriteDefaults`. The step SHALL be skipped when not first-run.
+On first-run invocations, the wizard SHALL include a multi-select step listing top-level kits (registry entries with no `/` in `Name`) excluding kits with `Tier == TierAlwaysOn` and kits that are not available on the host. `TierDefault` kits SHALL be pre-checked; `TierAvailable` kits SHALL be unchecked. Selection SHALL write uncommented `kits:` entries for chosen kits and commented entries for unchosen kits, matching the existing comment-vs-active pattern used by `WriteDefaults`. The step SHALL be skipped when not first-run.
 
 #### Scenario: First run with defaults accepted
 - **WHEN** the user presses enter without changing the kit selection
@@ -131,6 +131,10 @@ On first-run invocations, the wizard SHALL include a multi-select step listing t
 #### Scenario: Subsequent run
 - **WHEN** the user runs `asylum` on a non-first-run invocation
 - **THEN** the kit step SHALL NOT be included in the wizard
+
+#### Scenario: Kits for another host OS excluded
+- **WHEN** the kit multi-select is presented on a Linux host
+- **THEN** `iterm` and `dropshare` SHALL NOT appear in the options, and SHALL NOT be written to `~/.asylum/config.yaml` as active or commented entries
 
 ### Requirement: Welcome banner
 On first-run invocations where the wizard will present at least one step, the wizard SHALL print a one-line welcome banner before the first step.

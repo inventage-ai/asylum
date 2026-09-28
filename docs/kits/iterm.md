@@ -2,7 +2,7 @@
 
 Report session state to the iTerm2 status bar from inside the container.
 
-**Activation: Opt-in** — macOS with iTerm2 only.
+**Activation: Opt-in** — macOS with iTerm2 only. Asylum only offers it on a macOS host. On other hosts it is left out of the first-run wizard, the new-kit prompt, `asylum config`, and generated configs. Enabling it by hand still works as configured.
 
 ## What It Does
 

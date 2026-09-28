@@ -31,15 +31,19 @@ func SyncNewKits(asylumDir string, interactive bool, promptFn func([]*kit.Kit) [
 	// pre-config version) or needs v1→v2 migration, the user already has
 	// their kits configured (or will get them via WriteDefaults).
 	// Mark all kits as seen so they aren't prompted.
+	// Kits for another host OS are neither offered nor recorded as known, so
+	// a host that can use them still offers them when it shares this state.
+	offered := slices.DeleteFunc(kit.All(), func(name string) bool { return !kit.Get(name).Available() })
+
 	if _, err := os.Stat(configPath); os.IsNotExist(err) || NeedsMigration(configPath) {
-		state.KnownKits = kit.All()
+		state.KnownKits = markKnown(state.KnownKits, offered)
 		if err := SaveState(asylumDir, state); err != nil {
 			return false, fmt.Errorf("save state: %w", err)
 		}
 		return false, nil
 	}
 
-	newKits := NewKits(kit.All(), state)
+	newKits := NewKits(offered, state)
 	if len(newKits) == 0 {
 		return false, nil
 	}
@@ -108,11 +112,20 @@ func SyncNewKits(asylumDir string, interactive bool, promptFn func([]*kit.Kit) [
 		}
 	}
 
-	// Update state with all currently registered kits
-	state.KnownKits = kit.All()
+	state.KnownKits = markKnown(state.KnownKits, offered)
 	if err := SaveState(asylumDir, state); err != nil {
 		return true, fmt.Errorf("save state: %w", err)
 	}
 
 	return true, nil
+}
+
+// markKnown adds names to known, keeping what other hosts recorded.
+func markKnown(known, names []string) []string {
+	for _, name := range names {
+		if !slices.Contains(known, name) {
+			known = append(known, name)
+		}
+	}
+	return known
 }

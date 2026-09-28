@@ -47,6 +47,7 @@ type itermSession struct {
 func init() {
 	Register(&Kit{
 		Name:        itermKitName,
+		HostOS:      "darwin",
 		Description: "Drive the iTerm2 status bar from a containerized session",
 		Tier:        TierOptIn,
 		ConfigSnippet: `  # iterm:              # iTerm2 status bar integration (macOS)
