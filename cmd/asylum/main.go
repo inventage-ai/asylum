@@ -81,21 +81,6 @@ func main() {
 		die("resolve project dir: %v", err)
 	}
 
-	reuse := slices.Contains(extraArgs, "--continue") || slices.Contains(extraArgs, "--resume")
-	if home, err := os.UserHomeDir(); err != nil {
-		die("home dir: %v", err)
-	} else if dir, outcome, err := workspace.Resolve(projectDir, home, reuse); err != nil {
-		die("create workspace: %v", err)
-	} else if outcome != workspace.Unchanged {
-		if outcome == workspace.Reused {
-			log.Warn("Your home directory can't be sandboxed. Continuing in the newest workspace:")
-		} else {
-			log.Warn("Your home directory can't be sandboxed. Started a fresh workspace:")
-		}
-		log.Warn("  %s", dir)
-		projectDir = dir
-	}
-
 	kitSnippets := kit.AssembleConfigSnippets()
 
 	// Sync new kits to config (detect newly registered kits, prompt, update config)
@@ -178,6 +163,10 @@ func main() {
 		Volumes: flags.Volumes,
 		Env:     flags.Env,
 		Java:    flags.Java,
+	}
+
+	if subcommand != "update" {
+		projectDir = redirectUnsafeDir(projectDir, home, containerMode, extraArgs, cliFlags, kitSnippets)
 	}
 
 	// On first-run we defer config writing until the wizard supplies the
@@ -951,6 +940,63 @@ func runDocker(args []string) int {
 		die("docker exec: %v", err)
 	}
 	return 0
+}
+
+// redirectUnsafeDir moves a run from the home directory or / into a workspace.
+// Resume flags pick the newest workspace where the agent has a session; shell
+// and run pick the newest one whose container is running.
+func redirectUnsafeDir(projectDir, home string, mode container.Mode, extraArgs []string, cliFlags config.CLIFlags, kitSnippets string) string {
+	var accept func(string) bool
+	match := workspace.Continued
+	switch {
+	case mode != container.ModeAgent:
+		if names, err := docker.RunningNames(); err == nil {
+			accept = func(dir string) bool { return names[container.ContainerName(dir)] }
+		}
+		match = workspace.Attached
+	case slices.Contains(extraArgs, "--continue") || slices.Contains(extraArgs, "--resume"):
+		accept = sessionFilter(home, cliFlags, kitSnippets)
+	}
+
+	dir, outcome, err := workspace.Resolve(projectDir, home, accept, match)
+	if err != nil {
+		die("create workspace: %v", err)
+	}
+	switch outcome {
+	case workspace.Unchanged:
+		return projectDir
+	case workspace.Continued:
+		log.Warn("Your home directory can't be sandboxed. Continuing in the newest workspace with a session:")
+	case workspace.Attached:
+		log.Warn("Your home directory can't be sandboxed. Attaching to the running workspace:")
+	default:
+		log.Warn("Your home directory can't be sandboxed. Started a fresh workspace:")
+	}
+	log.Warn("  %s", dir)
+	return dir
+}
+
+// sessionFilter accepts workspaces where the active agent has a session. The
+// home directory as project dir yields the global config plus CLI flags,
+// because a directory named .asylum is not read as a project config.
+func sessionFilter(home string, cliFlags config.CLIFlags, kitSnippets string) func(string) bool {
+	cfg, err := config.Load(home, cliFlags, kitSnippets)
+	if err != nil {
+		return nil
+	}
+	name := cfg.Agent
+	if name == "" {
+		name = "claude"
+	}
+	a, err := agent.Get(name)
+	if err != nil {
+		return nil
+	}
+	isolation := cfg.AgentIsolation(name)
+	return func(dir string) bool {
+		configDir, err := agent.ResolveConfigDir(a, isolation, container.ContainerName(dir))
+		return err == nil && a.HasSession(configDir, dir)
+	}
 }
 
 func resolveMode(subcommand string, admin bool) container.Mode {

@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,7 +29,8 @@ type Outcome int
 const (
 	Unchanged Outcome = iota // safe directory, used as-is
 	Fresh                    // new workspace created
-	Reused                   // newest existing workspace reused
+	Continued                // existing workspace with an agent session
+	Attached                 // existing workspace with a running container
 )
 
 func parseWords(data []byte) []string {
@@ -56,21 +58,21 @@ func name(date string, r *rand.Rand) string {
 
 // Resolve returns projectDir unchanged when it is safe to sandbox. When it is
 // the home directory or filesystem root, it redirects to a workspace under
-// ~/asylum-workspace/. With reuse set, that is the most recently modified
-// existing workspace. Otherwise, or when none exists, it creates a fresh
-// <YYYY-MM-DD>-<three-words>/ directory.
-func Resolve(projectDir, home string, reuse bool) (string, Outcome, error) {
+// ~/asylum-workspace/: the most recently modified existing workspace that
+// accept allows, reported as match, or else a fresh
+// <YYYY-MM-DD>-<three-words>/ directory. A nil accept always creates a fresh one.
+func Resolve(projectDir, home string, accept func(dir string) bool, match Outcome) (string, Outcome, error) {
 	if !unsafe(projectDir, home) {
 		return projectDir, Unchanged, nil
 	}
 	base := filepath.Join(home, "asylum-workspace")
-	if reuse {
-		dir, err := newest(base)
+	if accept != nil {
+		dir, err := newest(base, accept)
 		if err != nil {
 			return "", Unchanged, err
 		}
 		if dir != "" {
-			return dir, Reused, nil
+			return dir, match, nil
 		}
 	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -81,9 +83,9 @@ func Resolve(projectDir, home string, reuse bool) (string, Outcome, error) {
 	return dir, Fresh, nil
 }
 
-// newest returns the most recently modified generated workspace under base,
-// or "" when there is none.
-func newest(base string) (string, error) {
+// newest returns the most recently modified generated workspace under base
+// that accept allows, or "" when there is none.
+func newest(base string, accept func(string) bool) (string, error) {
 	entries, err := os.ReadDir(base)
 	if os.IsNotExist(err) {
 		return "", nil
@@ -91,8 +93,11 @@ func newest(base string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var best string
-	var bestTime time.Time
+	type candidate struct {
+		dir   string
+		mtime time.Time
+	}
+	var candidates []candidate
 	for _, e := range entries {
 		if !e.IsDir() || !namePattern.MatchString(e.Name()) {
 			continue
@@ -101,11 +106,15 @@ func newest(base string) (string, error) {
 		if err != nil {
 			continue
 		}
-		if best == "" || info.ModTime().After(bestTime) {
-			best, bestTime = filepath.Join(base, e.Name()), info.ModTime()
+		candidates = append(candidates, candidate{filepath.Join(base, e.Name()), info.ModTime()})
+	}
+	slices.SortFunc(candidates, func(a, b candidate) int { return b.mtime.Compare(a.mtime) })
+	for _, c := range candidates {
+		if accept(c.dir) {
+			return c.dir, nil
 		}
 	}
-	return best, nil
+	return "", nil
 }
 
 func create(base, date string, r *rand.Rand) (string, error) {

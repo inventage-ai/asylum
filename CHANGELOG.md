@@ -11,8 +11,8 @@
 - `asylum update` — on-demand refresh of the cached agent versions followed by an image rebuild if any version changed. Unlike `self-update` (which updates the asylum binary), this updates the agent CLIs baked into the container image, and exits without starting a container.
 
 ### Changed
-- `asylum --continue` and `asylum --resume` from the home directory now reuse the newest workspace under `~/asylum-workspace/` instead of creating a fresh, empty one where there was nothing to resume. Plain launches still start a fresh workspace.
-- Claude Code no longer asks whether you trust the project folder. Before, this happened on every start in the home directory, because Claude never remembers trust there. Asylum sets `CLAUDE_CODE_SANDBOXED=1`, since the container is the trust boundary. Repo-supplied hooks and MCP servers now start without a prompt. Set `env: {CLAUDE_CODE_SANDBOXED: ""}` to restore the dialog.
+- From the home directory, `asylum --continue` and `asylum --resume` now reuse the newest workspace under `~/asylum-workspace/` where the agent has a session, instead of creating a fresh, empty one with nothing to resume. `asylum shell` and `asylum run` attach to the newest workspace whose container is running. Plain launches still start a fresh workspace, and `self-update` and `update` no longer create one.
+- Claude Code no longer asks whether you trust the project folder. Before, this happened on every start in the home directory, because Claude never remembers trust there. Asylum sets `CLAUDE_CODE_SANDBOXED=1`, because Claude already runs with `--dangerously-skip-permissions` there and the dialog added little. Repo-supplied hooks and MCP servers now start without a prompt. Set `env: {CLAUDE_CODE_SANDBOXED: ""}` to restore the dialog.
 - The background agent-version refresh now runs at most once every 24 hours (previously hourly), and the interval is configurable via `version-check-interval` (a Go duration, e.g. `24h`) in the config.
 
 ### Fixed

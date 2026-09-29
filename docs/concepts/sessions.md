@@ -34,7 +34,15 @@ The flag is layered like every other config value — set it globally, override 
 
 ### From the Home Directory
 
-Asylum never sandboxes your home directory or `/`. Launched from either, it moves into a workspace under `~/asylum-workspace/<YYYY-MM-DD>-<three-words>/` and prints the path. A plain launch always creates a fresh workspace. With `--continue` or `--resume`, asylum instead reuses the newest existing workspace, meaning the one modified most recently, so the agent finds the session to resume. Directories you create yourself under `~/asylum-workspace/` are never picked. If no workspace exists yet, asylum creates a fresh one.
+Asylum never sandboxes your home directory or `/`. Launched from either, it moves into a workspace under `~/asylum-workspace/<YYYY-MM-DD>-<three-words>/` and prints the path. Which workspace depends on what you launch:
+
+| Launch from `~` | Workspace |
+|---|---|
+| `asylum` | Always a fresh one |
+| `asylum --continue` / `--resume` | The newest one where the agent has a session |
+| `asylum shell` / `asylum run …` | The newest one whose container is running |
+
+"Newest" means most recently modified. When no workspace qualifies, asylum creates a fresh one. Directories you create yourself under `~/asylum-workspace/` are never picked, and `self-update`, `update` and `cleanup` never redirect.
 
 ### Upgrade Dialog
 

@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"maps"
 	"testing"
 )
 
@@ -48,5 +49,16 @@ func TestCountExecSessions(t *testing.T) {
 				t.Errorf("countExecSessions() = %d, want %d", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestParseNames(t *testing.T) {
+	got := parseNames("asylum-8a3fef05032f-asylum\nasylum-b269a7c11f58-proj\n\n")
+	want := map[string]bool{"asylum-8a3fef05032f-asylum": true, "asylum-b269a7c11f58-proj": true}
+	if !maps.Equal(got, want) {
+		t.Errorf("parseNames() = %v, want %v", got, want)
+	}
+	if got := parseNames(""); len(got) != 0 {
+		t.Errorf("parseNames(\"\") = %v, want empty", got)
 	}
 }

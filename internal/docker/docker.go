@@ -201,6 +201,24 @@ func IsRunning(name string) bool {
 	return err == nil && strings.TrimSpace(string(out)) == "true"
 }
 
+// RunningNames returns the names of all running containers from a single
+// docker ps call.
+func RunningNames() (map[string]bool, error) {
+	out, err := exec.Command("docker", "ps", "--format", "{{.Names}}").Output()
+	if err != nil {
+		return nil, err
+	}
+	return parseNames(string(out)), nil
+}
+
+func parseNames(out string) map[string]bool {
+	names := map[string]bool{}
+	for _, n := range strings.Fields(out) {
+		names[n] = true
+	}
+	return names
+}
+
 func ListVolumes(prefix string) ([]string, error) {
 	cmd := exec.Command("docker", "volume", "ls", "--format", "{{.Name}}")
 	out, err := cmd.Output()

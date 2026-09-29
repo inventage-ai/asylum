@@ -1,30 +1,6 @@
-# project-dir-guard Specification
+# Spec Delta
 
-## Purpose
-
-Stops a container from being opened directly on the user's home directory or the filesystem root, where a sandboxed agent would have the run of everything. Such invocations are redirected into a dated workspace under `~/asylum-workspace/`, fresh on a plain launch, or an existing one when resuming or attaching a shell, with a visible warning naming the path so the user knows where their work landed.
-
-## Requirements
-
-### Requirement: Unsafe project directory detection
-
-On the container-run path, asylum SHALL classify the resolved project directory as unsafe to sandbox when it is exactly the user's home directory or the filesystem root `/`. All other directories SHALL be treated as safe and used unchanged.
-
-#### Scenario: Home directory is unsafe
-- **WHEN** asylum is launched and the resolved project directory equals the user's home directory
-- **THEN** the directory is classified as unsafe and the redirect to a fresh workspace is triggered
-
-#### Scenario: Filesystem root is unsafe
-- **WHEN** asylum is launched and the resolved project directory equals the filesystem root `/`
-- **THEN** the directory is classified as unsafe and the redirect to a fresh workspace is triggered
-
-#### Scenario: A normal project directory is safe
-- **WHEN** asylum is launched in a directory that is neither the home directory nor the filesystem root
-- **THEN** the directory is used as-is and no workspace is created
-
-#### Scenario: A subdirectory of home is safe
-- **WHEN** asylum is launched in a subdirectory of the home directory (e.g. `~/projects/foo`)
-- **THEN** the directory is used as-is and no workspace is created
+## MODIFIED Requirements
 
 ### Requirement: Redirect to a fresh dated workspace
 
@@ -45,14 +21,6 @@ When the project directory is unsafe and no reuse rule selects an existing works
 #### Scenario: Name collision is avoided
 - **WHEN** a generated workspace path already exists
 - **THEN** asylum generates a different name so an existing directory is never reused for a fresh workspace
-
-### Requirement: Workspace name generation
-
-The three words in a workspace name SHALL be drawn from a wordlist embedded in the binary via `go:embed`, and the date prefix SHALL be the current date formatted as `YYYY-MM-DD`.
-
-#### Scenario: Name format
-- **WHEN** a workspace name is generated
-- **THEN** it has the form `<YYYY-MM-DD>-<word>-<word>-<word>` using words from the embedded wordlist
 
 ### Requirement: Announce the redirect
 
@@ -113,6 +81,8 @@ When the project directory is unsafe, asylum runs in agent mode, and the argumen
 #### Scenario: Safe directories are unaffected
 - **WHEN** `asylum --continue` is run in a safe project directory
 - **THEN** that directory is used unchanged
+
+## ADDED Requirements
 
 ### Requirement: Shell and run attach to a running workspace
 

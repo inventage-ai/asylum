@@ -42,7 +42,7 @@ func TestNameFormat(t *testing.T) {
 }
 
 func TestResolveSafe(t *testing.T) {
-	dir, outcome, err := Resolve("/home/alice/projects/foo", "/home/alice", false)
+	dir, outcome, err := Resolve("/home/alice/projects/foo", "/home/alice", nil, Continued)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,7 +56,7 @@ func TestResolveSafe(t *testing.T) {
 
 func TestResolveRedirectsHome(t *testing.T) {
 	home := t.TempDir()
-	dir, outcome, err := Resolve(home, home, false)
+	dir, outcome, err := Resolve(home, home, nil, Continued)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func TestResolveRedirectsHome(t *testing.T) {
 
 func TestResolveRedirectsRoot(t *testing.T) {
 	home := t.TempDir()
-	_, outcome, err := Resolve("/", home, false)
+	_, outcome, err := Resolve("/", home, nil, Continued)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,18 +105,26 @@ func TestResolveCollisionReroll(t *testing.T) {
 	}
 }
 
-func TestResolveReuse(t *testing.T) {
+func TestResolveFilter(t *testing.T) {
 	const older, newer = "2026-09-01-red-fox-jumps", "2026-09-02-blue-owl-sings"
+	all := func(string) bool { return true }
+	only := func(name string) func(string) bool {
+		return func(dir string) bool { return filepath.Base(dir) == name }
+	}
 	tests := []struct {
 		name    string
 		entries map[string]time.Duration // directory → age
-		want    string                   // expected base name; "" means a fresh workspace
+		link    bool                     // add a newest symlink to older
+		accept  func(string) bool
+		want    string // expected base name; "" means a fresh workspace
 	}{
-		{"newest by mtime wins", map[string]time.Duration{older: 2 * time.Hour, newer: time.Hour}, newer},
-		{"mtime beats name date", map[string]time.Duration{older: time.Hour, newer: 2 * time.Hour}, older},
-		{"non-matching name ignored", map[string]time.Duration{older: 2 * time.Hour, "notes": 0}, older},
-		{"no workspace falls back to fresh", map[string]time.Duration{"notes": 0}, ""},
-		{"missing base falls back to fresh", nil, ""},
+		{"newest accepted wins", map[string]time.Duration{older: 2 * time.Hour, newer: time.Hour}, false, all, newer},
+		{"newer rejected is skipped", map[string]time.Duration{older: 2 * time.Hour, newer: time.Hour}, false, only(older), older},
+		{"nil filter is fresh", map[string]time.Duration{older: time.Hour}, false, nil, ""},
+		{"nothing accepted is fresh", map[string]time.Duration{older: time.Hour}, false, only("none"), ""},
+		{"non-matching name ignored", map[string]time.Duration{older: 2 * time.Hour, "notes": 0}, false, all, older},
+		{"symlink ignored", map[string]time.Duration{older: 2 * time.Hour}, true, only("2026-09-03-gold-elk-runs"), ""},
+		{"missing base is fresh", nil, false, all, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -132,26 +140,32 @@ func TestResolveReuse(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
+			if tt.link {
+				if err := os.Symlink(filepath.Join(base, older), filepath.Join(base, "2026-09-03-gold-elk-runs")); err != nil {
+					t.Fatal(err)
+				}
+			}
 
-			dir, outcome, err := Resolve(home, home, true)
+			dir, outcome, err := Resolve(home, home, tt.accept, Attached)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if tt.want == "" {
-				if outcome != Fresh || !namePattern.MatchString(filepath.Base(dir)) {
+				_, existed := tt.entries[filepath.Base(dir)]
+				if outcome != Fresh || existed || !namePattern.MatchString(filepath.Base(dir)) {
 					t.Errorf("got %q (outcome %v), want a fresh workspace", dir, outcome)
 				}
 				return
 			}
-			if outcome != Reused || dir != filepath.Join(base, tt.want) {
-				t.Errorf("got %q (outcome %v), want reused %q", dir, outcome, tt.want)
+			if outcome != Attached || dir != filepath.Join(base, tt.want) {
+				t.Errorf("got %q (outcome %v), want %q with the match outcome", dir, outcome, tt.want)
 			}
 		})
 	}
 }
 
-func TestResolveReuseSafeDirUnchanged(t *testing.T) {
-	dir, outcome, err := Resolve("/home/alice/projects/foo", "/home/alice", true)
+func TestResolveFilterSafeDirUnchanged(t *testing.T) {
+	dir, outcome, err := Resolve("/home/alice/projects/foo", "/home/alice", func(string) bool { return true }, Continued)
 	if err != nil {
 		t.Fatal(err)
 	}
