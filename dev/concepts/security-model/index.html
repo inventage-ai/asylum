@@ -1712,6 +1712,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#claudes-workspace-trust-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude's workspace trust dialog
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#opt-in-bypass-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1970,6 +1981,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#claudes-workspace-trust-dialog" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Claude's workspace trust dialog
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#opt-in-bypass-modes" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2060,6 +2082,11 @@
 </ul>
 <h3 id="malicious-or-compromised-code">Malicious or compromised code<a class="headerlink" href="#malicious-or-compromised-code" title="Permanent link">&para;</a></h3>
 <p>Docker is a convenience boundary, not a security boundary against untrusted code. Container escapes exist, privileged mode removes most remaining isolation, and the attack surface (mounted sockets, the agent's network access, your SSH key) is large. <strong>Do not run code you actively distrust inside Asylum and expect the container to contain it.</strong></p>
+<h3 id="claudes-workspace-trust-dialog">Claude's workspace trust dialog<a class="headerlink" href="#claudes-workspace-trust-dialog" title="Permanent link">&para;</a></h3>
+<p>Asylum sets <code>CLAUDE_CODE_SANDBOXED=1</code> for Claude, so Claude Code never asks whether you trust the project folder. Without the dialog, a repository's own Claude config takes effect at session start without a prompt. That covers hooks, MCP servers, and <code>apiKeyHelper</code>. They run inside the container, but they can reach everything the container can, including a <code>shared</code> <code>~/.claude</code>. Claude already runs with <code>--dangerously-skip-permissions</code> in Asylum, so the dialog was the last prompt, not a real barrier. To restore it, set the variable to an empty string. <code>"0"</code> still counts as on.</p>
+<div class="highlight"><pre><span></span><code><span class="nt">env</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">CLAUDE_CODE_SANDBOXED</span><span class="p">:</span><span class="w"> </span><span class="s">""</span>
+</code></pre></div>
 <h3 id="opt-in-bypass-modes">Opt-in bypass modes<a class="headerlink" href="#opt-in-bypass-modes" title="Permanent link">&para;</a></h3>
 <p>Several options deliberately reduce isolation. If you enable them, you accept the trade-off:</p>
 <ul>
