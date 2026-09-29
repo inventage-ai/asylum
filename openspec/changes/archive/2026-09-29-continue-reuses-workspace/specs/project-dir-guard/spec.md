@@ -1,30 +1,6 @@
-# project-dir-guard Specification
+# Spec Delta
 
-## Purpose
-
-Stops a container from being opened directly on the user's home directory or the filesystem root, where a sandboxed agent would have the run of everything. Such invocations are redirected into a dated workspace under `~/asylum-workspace/`, fresh on a plain launch and the newest existing one when resuming, with a visible warning naming the path so the user knows where their work landed.
-
-## Requirements
-
-### Requirement: Unsafe project directory detection
-
-On the container-run path, asylum SHALL classify the resolved project directory as unsafe to sandbox when it is exactly the user's home directory or the filesystem root `/`. All other directories SHALL be treated as safe and used unchanged.
-
-#### Scenario: Home directory is unsafe
-- **WHEN** asylum is launched and the resolved project directory equals the user's home directory
-- **THEN** the directory is classified as unsafe and the redirect to a fresh workspace is triggered
-
-#### Scenario: Filesystem root is unsafe
-- **WHEN** asylum is launched and the resolved project directory equals the filesystem root `/`
-- **THEN** the directory is classified as unsafe and the redirect to a fresh workspace is triggered
-
-#### Scenario: A normal project directory is safe
-- **WHEN** asylum is launched in a directory that is neither the home directory nor the filesystem root
-- **THEN** the directory is used as-is and no workspace is created
-
-#### Scenario: A subdirectory of home is safe
-- **WHEN** asylum is launched in a subdirectory of the home directory (e.g. `~/projects/foo`)
-- **THEN** the directory is used as-is and no workspace is created
+## MODIFIED Requirements
 
 ### Requirement: Redirect to a fresh dated workspace
 
@@ -46,14 +22,6 @@ When the project directory is unsafe and no resume flag is given, asylum SHALL c
 - **WHEN** a generated workspace path already exists
 - **THEN** asylum generates a different name so an existing directory is never reused for a fresh workspace
 
-### Requirement: Workspace name generation
-
-The three words in a workspace name SHALL be drawn from a wordlist embedded in the binary via `go:embed`, and the date prefix SHALL be the current date formatted as `YYYY-MM-DD`.
-
-#### Scenario: Name format
-- **WHEN** a workspace name is generated
-- **THEN** it has the form `<YYYY-MM-DD>-<word>-<word>-<word>` using words from the embedded wordlist
-
 ### Requirement: Announce the redirect
 
 When asylum redirects to a workspace, it SHALL print a clearly visible warning that names the workspace path, so the user knows their work is located there rather than in the original directory. The warning SHALL say whether the workspace is fresh or reused.
@@ -66,13 +34,7 @@ When asylum redirects to a workspace, it SHALL print a clearly visible warning t
 - **WHEN** asylum redirects an unsafe directory to an existing workspace because of a resume flag
 - **THEN** it emits a warning that says the workspace is being continued and includes its absolute path
 
-### Requirement: Guard is scoped to the run path
-
-The unsafe-directory guard SHALL run only on the container-run path. Other subcommands, in particular `cleanup`, SHALL NOT create a workspace or redirect the project directory.
-
-#### Scenario: Cleanup does not redirect
-- **WHEN** `asylum cleanup` is run from the home directory or filesystem root
-- **THEN** no workspace is created and the project directory is not redirected
+## ADDED Requirements
 
 ### Requirement: Resume flags reuse the newest workspace
 

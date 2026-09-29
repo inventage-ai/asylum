@@ -32,6 +32,10 @@ The flag is layered like every other config value — set it globally, override 
 
 `-n` / `--new` is a deprecated no-op kept so existing scripts continue to parse. Starting a new session is now the default.
 
+### From the Home Directory
+
+Asylum never sandboxes your home directory or `/`. Launched from either, it moves into a workspace under `~/asylum-workspace/<YYYY-MM-DD>-<three-words>/` and prints the path. A plain launch always creates a fresh workspace. With `--continue` or `--resume`, asylum instead reuses the newest existing workspace, meaning the one modified most recently, so the agent finds the session to resume. Directories you create yourself under `~/asylum-workspace/` are never picked. If no workspace exists yet, asylum creates a fresh one.
+
 ### Upgrade Dialog
 
 On the first `asylum` invocation after upgrading from an earlier release, asylum shows a one-time dialog explaining this change and offering to set `default-resume: true` for you. The dialog is shown once per installation and is skipped entirely for fresh installs.

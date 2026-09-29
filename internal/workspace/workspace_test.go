@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 )
 
 func TestUnsafe(t *testing.T) {
@@ -41,12 +42,12 @@ func TestNameFormat(t *testing.T) {
 }
 
 func TestResolveSafe(t *testing.T) {
-	dir, redirected, err := Resolve("/home/alice/projects/foo", "/home/alice")
+	dir, outcome, err := Resolve("/home/alice/projects/foo", "/home/alice", false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if redirected {
-		t.Error("safe dir should not be redirected")
+	if outcome != Unchanged {
+		t.Errorf("outcome = %v, want Unchanged", outcome)
 	}
 	if dir != "/home/alice/projects/foo" {
 		t.Errorf("safe dir changed to %q", dir)
@@ -55,12 +56,12 @@ func TestResolveSafe(t *testing.T) {
 
 func TestResolveRedirectsHome(t *testing.T) {
 	home := t.TempDir()
-	dir, redirected, err := Resolve(home, home)
+	dir, outcome, err := Resolve(home, home, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !redirected {
-		t.Fatal("home should be redirected")
+	if outcome != Fresh {
+		t.Fatalf("outcome = %v, want Fresh", outcome)
 	}
 	if got := filepath.Dir(dir); got != filepath.Join(home, "asylum-workspace") {
 		t.Errorf("workspace parent = %q, want under asylum-workspace", got)
@@ -75,12 +76,12 @@ func TestResolveRedirectsHome(t *testing.T) {
 
 func TestResolveRedirectsRoot(t *testing.T) {
 	home := t.TempDir()
-	_, redirected, err := Resolve("/", home)
+	_, outcome, err := Resolve("/", home, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !redirected {
-		t.Error("filesystem root should be redirected")
+	if outcome != Fresh {
+		t.Errorf("outcome = %v, want Fresh", outcome)
 	}
 }
 
@@ -89,20 +90,72 @@ func TestResolveCollisionReroll(t *testing.T) {
 	date := "2026-06-23"
 
 	// Predict the first name the rng will produce, then pre-create it so
-	// resolveAt must re-roll past the collision.
+	// create must re-roll past the collision.
 	taken := name(date, rand.New(rand.NewSource(42)))
 	if err := os.MkdirAll(filepath.Join(base, taken), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
-	dir, redirected, err := resolveAt(base, date, rand.New(rand.NewSource(42)))
+	dir, err := create(base, date, rand.New(rand.NewSource(42)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !redirected {
-		t.Fatal("expected redirect")
-	}
 	if filepath.Base(dir) == taken {
 		t.Errorf("collision not avoided: reused %q", taken)
+	}
+}
+
+func TestResolveReuse(t *testing.T) {
+	const older, newer = "2026-09-01-red-fox-jumps", "2026-09-02-blue-owl-sings"
+	tests := []struct {
+		name    string
+		entries map[string]time.Duration // directory → age
+		want    string                   // expected base name; "" means a fresh workspace
+	}{
+		{"newest by mtime wins", map[string]time.Duration{older: 2 * time.Hour, newer: time.Hour}, newer},
+		{"mtime beats name date", map[string]time.Duration{older: time.Hour, newer: 2 * time.Hour}, older},
+		{"non-matching name ignored", map[string]time.Duration{older: 2 * time.Hour, "notes": 0}, older},
+		{"no workspace falls back to fresh", map[string]time.Duration{"notes": 0}, ""},
+		{"missing base falls back to fresh", nil, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			base := filepath.Join(home, "asylum-workspace")
+			for n, age := range tt.entries {
+				dir := filepath.Join(base, n)
+				if err := os.MkdirAll(dir, 0o755); err != nil {
+					t.Fatal(err)
+				}
+				mtime := time.Now().Add(-age)
+				if err := os.Chtimes(dir, mtime, mtime); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			dir, outcome, err := Resolve(home, home, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if tt.want == "" {
+				if outcome != Fresh || !namePattern.MatchString(filepath.Base(dir)) {
+					t.Errorf("got %q (outcome %v), want a fresh workspace", dir, outcome)
+				}
+				return
+			}
+			if outcome != Reused || dir != filepath.Join(base, tt.want) {
+				t.Errorf("got %q (outcome %v), want reused %q", dir, outcome, tt.want)
+			}
+		})
+	}
+}
+
+func TestResolveReuseSafeDirUnchanged(t *testing.T) {
+	dir, outcome, err := Resolve("/home/alice/projects/foo", "/home/alice", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if outcome != Unchanged || dir != "/home/alice/projects/foo" {
+		t.Errorf("got %q (outcome %v), want unchanged", dir, outcome)
 	}
 }

@@ -81,12 +81,17 @@ func main() {
 		die("resolve project dir: %v", err)
 	}
 
+	reuse := slices.Contains(extraArgs, "--continue") || slices.Contains(extraArgs, "--resume")
 	if home, err := os.UserHomeDir(); err != nil {
 		die("home dir: %v", err)
-	} else if dir, redirected, err := workspace.Resolve(projectDir, home); err != nil {
+	} else if dir, outcome, err := workspace.Resolve(projectDir, home, reuse); err != nil {
 		die("create workspace: %v", err)
-	} else if redirected {
-		log.Warn("Your home directory can't be sandboxed. Started a fresh workspace:")
+	} else if outcome != workspace.Unchanged {
+		if outcome == workspace.Reused {
+			log.Warn("Your home directory can't be sandboxed. Continuing in the newest workspace:")
+		} else {
+			log.Warn("Your home directory can't be sandboxed. Started a fresh workspace:")
+		}
 		log.Warn("  %s", dir)
 		projectDir = dir
 	}
