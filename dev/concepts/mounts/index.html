@@ -1949,6 +1949,12 @@
 <td>Read-write</td>
 </tr>
 <tr>
+<td>Claude temp root (Claude sessions only)</td>
+<td><code>~/.asylum/projects/&lt;id&gt;/tmp/</code></td>
+<td>Same path</td>
+<td>Read-write</td>
+</tr>
+<tr>
 <td>Direnv approvals</td>
 <td><code>~/.local/share/direnv/allow</code></td>
 <td>Same path</td>
@@ -1962,6 +1968,7 @@
 </tr>
 </tbody>
 </table>
+<p>Claude Code keeps its scratchpad and background task output under <code>CLAUDE_CODE_TMPDIR</code>, which Asylum points at the temp root. The files survive container restarts, and any path Claude prints opens unchanged on the host. Asylum never prunes the directory. <code>asylum cleanup</code> removes it with the rest of the project data. Other tools keep using the container's local <code>/tmp</code>.</p>
 <h2 id="cache-volumes">Cache Volumes<a class="headerlink" href="#cache-volumes" title="Permanent link">&para;</a></h2>
 <p>Package caches are stored in named Docker volumes (not host bind mounts), scoped per project:</p>
 <table>
