@@ -1381,6 +1381,30 @@ func TestRunArgsReservedAgentEnv(t *testing.T) {
 	}
 }
 
+func TestRunArgsUserEnvDisablesSandboxed(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	opts := RunOpts{
+		Config:     config.Config{Env: map[string]string{"CLAUDE_CODE_SANDBOXED": ""}},
+		Agent:      claudeStubAgent{stubAgent{envVars: map[string]string{"CLAUDE_CODE_SANDBOXED": "1"}}},
+		ImageTag:   "asylum:test",
+		ProjectDir: t.TempDir(),
+		Version:    "1.0.0",
+	}
+
+	args, _, _, err := RunArgs(opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.Contains(args, "CLAUDE_CODE_SANDBOXED=1") {
+		t.Errorf("agent value survived user override: %v", args)
+	}
+	if !slices.Contains(args, "CLAUDE_CODE_SANDBOXED=") {
+		t.Errorf("expected CLAUDE_CODE_SANDBOXED= from user config, got: %v", args)
+	}
+}
+
 func TestRunArgsSandboxRulesMount(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

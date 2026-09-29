@@ -45,6 +45,15 @@ Containers have unrestricted outbound network. An agent can call any API, upload
 
 Docker is a convenience boundary, not a security boundary against untrusted code. Container escapes exist, privileged mode removes most remaining isolation, and the attack surface (mounted sockets, the agent's network access, your SSH key) is large. **Do not run code you actively distrust inside Asylum and expect the container to contain it.**
 
+### Claude's workspace trust dialog
+
+Asylum sets `CLAUDE_CODE_SANDBOXED=1` for Claude, so Claude Code never asks whether you trust the project folder. Without the dialog, a repository's own Claude config takes effect at session start without a prompt. That covers hooks, MCP servers, and `apiKeyHelper`. They run inside the container, but they can reach everything the container can, including a `shared` `~/.claude`. Claude already runs with `--dangerously-skip-permissions` in Asylum, so the dialog was the last prompt, not a real barrier. To restore it, set the variable to an empty string. `"0"` still counts as on.
+
+```yaml
+env:
+  CLAUDE_CODE_SANDBOXED: ""
+```
+
 ### Opt-in bypass modes
 
 Several options deliberately reduce isolation. If you enable them, you accept the trade-off:

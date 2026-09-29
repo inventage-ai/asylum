@@ -288,6 +288,15 @@ Then paste it into your Git host's SSH keys settings (GitHub: *Settings → SSH 
 
 You may also replace the generated key with your own — drop your private/public pair into `~/.asylum/ssh/` (isolated) or the project-specific directory (project mode), and asylum will mount them as-is without regenerating.
 
+## Workspace Trust
+
+Claude Code starts without the "do you trust this folder" dialog, because Asylum sets `CLAUDE_CODE_SANDBOXED=1` in Claude sessions. The container is the trust boundary. Repo-supplied hooks and MCP servers therefore start without a prompt. To restore the dialog, set the variable to an empty string. `"0"` still counts as on.
+
+```yaml
+env:
+  CLAUDE_CODE_SANDBOXED: ""
+```
+
 ## IDE Integration
 
 Claude Code's `/ide` connects to an IDE (VS Code, IntelliJ) running on the **host**, giving the sandboxed session selection context, diagnostics and the diff view. The connection is manual: run `/ide` in the session. Claude's own `autoConnectIde` setting makes it automatic, and it persists because it lives in the mounted config directory.

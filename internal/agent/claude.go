@@ -36,6 +36,9 @@ func (Claude) EnvVars() map[string]string {
 		// /ide dials the IDE's port on the container's own loopback by default,
 		// where nothing listens; the host IDE is reachable via the host gateway.
 		"CLAUDE_CODE_IDE_HOST_OVERRIDE": "host.docker.internal",
+		// Skips the workspace trust dialog. The container is the trust boundary,
+		// and Claude never persists trust for the home directory.
+		"CLAUDE_CODE_SANDBOXED": "1",
 	}
 }
 
