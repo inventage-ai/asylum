@@ -2,22 +2,26 @@
 
 ## Unreleased
 
+## 0.8.1 — 2026-09-29
+
+Claude Code works better inside the sandbox. Its scratchpad now survives container restarts and opens on the host, `/ide` reaches an IDE running on the host, and the folder-trust prompt is gone. `asylum update` refreshes the agent CLIs on demand, `--continue` from the home directory finds the workspace you were working in, and project images now pick up base-image rebuilds triggered by other projects.
+
 ### Added
 - Claude Code's scratchpad and background task output now persist across container restarts, and the paths Claude prints open unchanged on the host. Claude sessions get `CLAUDE_CODE_TMPDIR` pointed at `~/.asylum/projects/<container>/tmp`, mounted at its real path. `TMPDIR` is untouched, so other tools keep the fast container `/tmp`. Nothing is pruned automatically, and `asylum cleanup` removes the directory.
+- Claude Code's `/ide` now connects to an IDE running on the host (VS Code, IntelliJ), so a sandboxed session gets selection context, diagnostics and the diff view. Requires Docker Desktop and `shared` agent config isolation (the default). The in-container reference names both preconditions, and a new [IDE Integration](https://asylum.inventage.ai/concepts/ide-integration/) docs page details the full set of limitations.
+- `asylum update` — on-demand refresh of the cached agent versions followed by an image rebuild if any version changed. Unlike `self-update` (which updates the asylum binary), this updates the agent CLIs baked into the container image, and exits without starting a container.
 - `dropshare` kit (opt-in, macOS) — `asylum-dropshare <file>` uploads a file from the container through Dropshare on the host and prints the share URL, so agents can link screenshots and artifacts in GitHub issues without you pasting the link back. Ships a `dropshare` skill. A single callback applet in `~/.asylum/dropshare/` returns the link; the clipboard is never read. Only offered on macOS hosts.
 - `iterm` kit (opt-in, macOS) — reports session state to the iTerm2 status bar from inside the container: a working/idle dot and the running tool's name, driven by the hooks iTerm2 already configures. Also silences those hooks, which otherwise fail on every tool call inside a container because they name a macOS binary. The container drives only iTerm2's own `cc-status`, never `it2`, and addresses only the terminal session it was started from. Only offered on macOS hosts.
-- Claude Code's `/ide` now connects to an IDE running on the host (VS Code, IntelliJ), so a sandboxed session gets selection context, diagnostics and the diff view. Requires Docker Desktop and `shared` agent config isolation (the default). The in-container reference names both preconditions, and a new [IDE Integration](https://asylum.inventage.ai/concepts/ide-integration/) docs page details the full set of limitations.
 - `kits.browser-open.schemes` — allowlist extra URL schemes the container may open on the host (e.g. `dropshare5` for [Dropshare](https://dropshare.app)). `http`/`https` remain the only schemes allowed by default; the list accumulates across config layers.
-- `asylum update` — on-demand refresh of the cached agent versions followed by an image rebuild if any version changed. Unlike `self-update` (which updates the asylum binary), this updates the agent CLIs baked into the container image, and exits without starting a container.
 
 ### Changed
-- From the home directory, `asylum --continue` and `asylum --resume` now reuse the newest workspace under `~/asylum-workspace/` where the agent has a session, instead of creating a fresh, empty one with nothing to resume. `asylum shell` and `asylum run` attach to the newest workspace whose container is running. Plain launches still start a fresh workspace, and `self-update` and `update` no longer create one.
 - Claude Code no longer asks whether you trust the project folder. Before, this happened on every start in the home directory, because Claude never remembers trust there. Asylum sets `CLAUDE_CODE_SANDBOXED=1`, because Claude already runs with `--dangerously-skip-permissions` there and the dialog added little. Repo-supplied hooks and MCP servers now start without a prompt. Set `env: {CLAUDE_CODE_SANDBOXED: ""}` to restore the dialog.
+- From the home directory, `asylum --continue` and `asylum --resume` now reuse the newest workspace under `~/asylum-workspace/` where the agent has a session, instead of creating a fresh, empty one with nothing to resume. `asylum shell` and `asylum run` attach to the newest workspace whose container is running. Plain launches still start a fresh workspace, and `self-update` and `update` no longer create one.
 - The background agent-version refresh now runs at most once every 24 hours (previously hourly), and the interval is configurable via `version-check-interval` (a Go duration, e.g. `24h`) in the config.
 
 ### Fixed
-- `asylum cleanup` now removes read-only directories, such as a Go module cache, instead of stopping with "permission denied" and leaving the project data half-deleted.
 - Project images now rebuild when the shared base image changed during another project's run. Before, only the project that triggered the base rebuild picked it up, so kit changes, agent updates, and Asylum upgrades never reached the other projects' containers.
+- `asylum cleanup` now removes read-only directories, such as a Go module cache, instead of stopping with "permission denied" and leaving the project data half-deleted.
 - Accepting a newly-offered opt-in kit at the kit-sync prompt now actually enables it. The snippet written to the config was copied verbatim from the kit's authored (commented-out) form, so the kit stayed off and the prompt appeared to do nothing. Affects `rtk`, `cx`, and `iterm`.
 
 ## 0.8.0 — 2026-07-22
