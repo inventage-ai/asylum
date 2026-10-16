@@ -2006,3 +2006,114 @@ func TestClaudeTempArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestEnvFromHostArgs(t *testing.T) {
+	t.Setenv("HOST_TOKEN", "abc")
+	t.Setenv("HOST_EMPTY", "")
+	t.Setenv("HOST_MULTILINE", "a\nb")
+
+	tests := []struct {
+		name    string
+		cfg     config.Config
+		want    []string
+		wantErr bool
+	}{
+		{
+			name: "set host variable is passed by name only",
+			cfg:  config.Config{EnvFromHost: map[string]string{"GH_TOKEN": "HOST_TOKEN"}},
+			want: []string{"GH_TOKEN"},
+		},
+		{
+			name: "variable read by the docker CLI is passed inline",
+			cfg:  config.Config{EnvFromHost: map[string]string{"DOCKER_HOST": "HOST_TOKEN"}},
+			want: []string{"DOCKER_HOST=abc"},
+		},
+		{
+			name: "unset and empty host variables are skipped",
+			cfg:  config.Config{EnvFromHost: map[string]string{"A": "HOST_UNSET_XYZ", "B": "HOST_EMPTY"}},
+		},
+		{
+			name: "literal env wins",
+			cfg: config.Config{
+				Env:         map[string]string{"GH_TOKEN": "other"},
+				EnvFromHost: map[string]string{"GH_TOKEN": "HOST_TOKEN"},
+			},
+		},
+		{
+			name: "reserved agent variable is skipped",
+			cfg:  config.Config{EnvFromHost: map[string]string{reservedAgentEnv: "HOST_TOKEN"}},
+		},
+		{
+			name:    "newline in value is an error",
+			cfg:     config.Config{EnvFromHost: map[string]string{"X": "HOST_MULTILINE"}},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args, err := envFromHostArgs(tt.cfg)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error")
+				}
+				if strings.Contains(err.Error(), "a\nb") {
+					t.Errorf("error leaks the value: %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			var got []string
+			for _, a := range args {
+				if a.Flag != "-e" || a.Source != "user config (env-from-host)" {
+					t.Errorf("unexpected arg %+v", a)
+				}
+				got = append(got, a.Value)
+			}
+			if !slices.Equal(got, tt.want) {
+				t.Errorf("got %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestRunArgsEnvFromHost(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("ASYLUM_TEST_GH_TOKEN", "s3cr3t-token-value")
+
+	args, _, _, err := RunArgs(RunOpts{
+		Config:     config.Config{EnvFromHost: map[string]string{"GH_TOKEN": "ASYLUM_TEST_GH_TOKEN"}},
+		Agent:      claudeStubAgent{},
+		ImageTag:   "asylum:test",
+		ProjectDir: t.TempDir(),
+		Version:    "1.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(args, "GH_TOKEN") {
+		t.Errorf("expected bare GH_TOKEN in args: %v", args)
+	}
+	for _, a := range args {
+		if strings.Contains(a, "s3cr3t-token-value") {
+			t.Errorf("value leaked onto the command line: %v", args)
+		}
+	}
+}
+
+func TestHostEnv(t *testing.T) {
+	t.Setenv("HOST_TOKEN", "abc")
+	t.Setenv("HOST_EMPTY", "")
+	cfg := config.Config{EnvFromHost: map[string]string{
+		"GH_TOKEN":    "HOST_TOKEN",
+		"EMPTY":       "HOST_EMPTY",
+		"UNSET":       "HOST_UNSET_XYZ",
+		"DOCKER_HOST": "HOST_TOKEN",
+	}}
+	want := []string{"GH_TOKEN=abc"}
+	if got := HostEnv(cfg); !slices.Equal(got, want) {
+		t.Errorf("HostEnv = %v, want %v", got, want)
+	}
+}

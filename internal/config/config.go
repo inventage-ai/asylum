@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/inventage-ai/asylum/internal/kit"
+	"github.com/inventage-ai/asylum/internal/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -124,6 +125,7 @@ type Config struct {
 	Ports                []string                `yaml:"ports,omitempty"`
 	Volumes              []string                `yaml:"volumes,omitempty"`
 	Env                  map[string]string       `yaml:"env,omitempty"`
+	EnvFromHost          map[string]string       `yaml:"env-from-host,omitempty"` // container name → host name
 }
 
 // VersionCheckStaleness returns the interval after which cached agent versions
@@ -376,6 +378,12 @@ func Load(projectDir string, flags CLIFlags, kitSnippets string) (Config, error)
 		if err != nil {
 			return Config{}, fmt.Errorf("%s: %w", path, err)
 		}
+		// The project layer is typically committed; honoring env-from-host there
+		// would let a cloned repo pull arbitrary host secrets into the container.
+		if layer.canonical == ".asylum" && loaded.EnvFromHost != nil {
+			log.Warn("%s: env-from-host is ignored here; move it to .asylum.local or ~/.asylum/config.yaml", path)
+			loaded.EnvFromHost = nil
+		}
 		cfg = Merge(cfg, loaded)
 	}
 
@@ -480,6 +488,12 @@ func Merge(base, overlay Config) Config {
 		maps.Copy(merged, base.Env)
 		maps.Copy(merged, overlay.Env)
 		result.Env = merged
+	}
+	if overlay.EnvFromHost != nil {
+		merged := make(map[string]string, len(base.EnvFromHost)+len(overlay.EnvFromHost))
+		maps.Copy(merged, base.EnvFromHost)
+		maps.Copy(merged, overlay.EnvFromHost)
+		result.EnvFromHost = merged
 	}
 
 	return result

@@ -30,6 +30,17 @@ func TestMerge(t *testing.T) {
 			},
 		},
 		{
+			name: "env-from-host merged per key",
+			base: Config{EnvFromHost: map[string]string{"A": "HOST_A", "B": "HOST_B"}},
+			over: Config{EnvFromHost: map[string]string{"B": "HOST_B2"}},
+			check: func(t *testing.T, c Config) {
+				want := map[string]string{"A": "HOST_A", "B": "HOST_B2"}
+				if !reflect.DeepEqual(c.EnvFromHost, want) {
+					t.Errorf("EnvFromHost = %v, want %v", c.EnvFromHost, want)
+				}
+			},
+		},
+		{
 			name: "scalar empty overlay keeps base",
 			base: Config{Agent: "claude"},
 			over: Config{},
@@ -1136,5 +1147,39 @@ func TestVersionCheckStaleness(t *testing.T) {
 				t.Errorf("VersionCheckStaleness(%q) = %v, want %v", tt.value, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestLoadEnvFromHostLayers(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(homeDir, ".asylum"), 0755)
+	os.WriteFile(filepath.Join(homeDir, ".asylum", "config.yaml"), []byte("version: \"0.2\"\nenv-from-host:\n  GH_TOKEN: GH_TOKEN_WORK\n  NPM_TOKEN: NPM_TOKEN_HOST\n"), 0644)
+	os.WriteFile(filepath.Join(dir, ".asylum"), []byte("env-from-host:\n  AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY\n  NPM_TOKEN: OTHER\n"), 0644)
+	os.WriteFile(filepath.Join(dir, ".asylum.local"), []byte("env-from-host:\n  GH_TOKEN: GH_TOKEN_PRIVATE\n"), 0644)
+
+	cfg, err := Load(dir, CLIFlags{}, "")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	want := map[string]string{"GH_TOKEN": "GH_TOKEN_PRIVATE", "NPM_TOKEN": "NPM_TOKEN_HOST"}
+	if !reflect.DeepEqual(cfg.EnvFromHost, want) {
+		t.Errorf("EnvFromHost = %v, want %v (project layer must be ignored)", cfg.EnvFromHost, want)
+	}
+}
+
+func TestLoadEnvFromHostIgnoredInProjectAlias(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	dir := t.TempDir()
+	os.WriteFile(filepath.Join(dir, ".asylum.yaml"), []byte("env-from-host:\n  SECRET: SECRET\n"), 0644)
+
+	cfg, err := Load(dir, CLIFlags{}, "")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.EnvFromHost != nil {
+		t.Errorf("EnvFromHost = %v, want nil", cfg.EnvFromHost)
 	}
 }

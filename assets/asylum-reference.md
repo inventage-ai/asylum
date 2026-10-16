@@ -102,6 +102,11 @@ kits:
 # env:
 #   GITHUB_TOKEN: ghp_xxx
 #   NODE_ENV: development
+
+# Host environment variables passed in under another name (container: host).
+# Only honored in ~/.asylum/config.yaml and .asylum.local, not in .asylum.
+# env-from-host:
+#   GH_TOKEN: ASYLUM_GH_TOKEN
 ```
 
 ## Kits
