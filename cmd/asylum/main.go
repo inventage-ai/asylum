@@ -373,7 +373,7 @@ func main() {
 		// Unset/empty defaults to "shared".
 		switch cfg.AgentIsolation(a.Name()) {
 		case "isolated":
-			seeded, err := container.EnsureAgentConfig(home, a)
+			seeded, err := container.EnsureAgentConfig(home, a, cfg.AgentSeed(a.Name()))
 			if err != nil {
 				die("%v", err)
 			}
@@ -382,7 +382,7 @@ func main() {
 			}
 		case "project":
 			projConfigDir := filepath.Join(home, ".asylum", "projects", cname, a.Name()+"-config")
-			seeded, err := container.EnsureAgentConfigAt(home, a, projConfigDir)
+			seeded, err := container.EnsureAgentConfigAt(home, a, projConfigDir, cfg.AgentSeed(a.Name()))
 			if err != nil {
 				die("%v", err)
 			}
