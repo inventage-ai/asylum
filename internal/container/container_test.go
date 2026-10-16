@@ -26,6 +26,7 @@ type stubAgent struct {
 	command         []string
 	asylumConfigDir string
 	nativeConfigDir string
+	seedSettings    []string
 }
 
 func (s stubAgent) Name() string   { return "stub" }
@@ -36,6 +37,7 @@ func (s stubAgent) NativeConfigDir() string {
 	}
 	return "~/.stub"
 }
+func (s stubAgent) SeedSettings() []string     { return s.seedSettings }
 func (s stubAgent) ContainerConfigDir() string { return "/home/stub/.stub" }
 func (s stubAgent) AsylumConfigDir() string {
 	if s.asylumConfigDir != "" {
@@ -1195,7 +1197,7 @@ func TestEnsureAgentConfig(t *testing.T) {
 	}
 
 	// First call: creates directory, returns true (seeded)
-	seeded, err := EnsureAgentConfig(home, a)
+	seeded, err := EnsureAgentConfig(home, a, "full")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1204,7 +1206,7 @@ func TestEnsureAgentConfig(t *testing.T) {
 	}
 
 	// Second call: directory exists, returns false
-	seeded, err = EnsureAgentConfig(home, a)
+	seeded, err = EnsureAgentConfig(home, a, "full")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1226,7 +1228,7 @@ func TestEnsureAgentConfigSeedsFromNative(t *testing.T) {
 		nativeConfigDir: nativeDir,
 	}
 
-	seeded, err := EnsureAgentConfig(home, a)
+	seeded, err := EnsureAgentConfig(home, a, "full")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1241,6 +1243,113 @@ func TestEnsureAgentConfigSeedsFromNative(t *testing.T) {
 	}
 	if string(data) != `{"key":"val"}` {
 		t.Errorf("copied content = %q", string(data))
+	}
+}
+
+func TestEnsureAgentConfigAtSeedModes(t *testing.T) {
+	home := t.TempDir()
+	nativeDir := filepath.Join(home, ".test-agent")
+	for _, f := range []string{"settings.json", "agents/reviewer.md", "projects/p1/session.jsonl", "history.jsonl"} {
+		path := filepath.Join(nativeDir, f)
+		os.MkdirAll(filepath.Dir(path), 0755)
+		os.WriteFile(path, []byte("x"), 0644)
+	}
+	a := stubAgent{nativeConfigDir: nativeDir, seedSettings: []string{"settings.json", "agents", "missing.md"}}
+
+	tests := []struct {
+		seed     string
+		want     []string
+		wantNone []string
+	}{
+		{seed: "full", want: []string{"settings.json", "agents/reviewer.md", "projects/p1/session.jsonl", "history.jsonl"}},
+		{seed: "settings", want: []string{"settings.json", "agents/reviewer.md"}, wantNone: []string{"projects", "history.jsonl", "missing.md"}},
+		{seed: "none", wantNone: []string{"settings.json", "agents", "projects", "history.jsonl"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.seed, func(t *testing.T) {
+			target := filepath.Join(home, "target-"+tt.seed)
+			seeded, err := EnsureAgentConfigAt(home, a, target, tt.seed)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !seeded || !dirExists(target) {
+				t.Fatalf("expected freshly created %s", target)
+			}
+			for _, f := range tt.want {
+				if _, err := os.Stat(filepath.Join(target, f)); err != nil {
+					t.Errorf("%s missing: %v", f, err)
+				}
+			}
+			for _, f := range tt.wantNone {
+				if _, err := os.Stat(filepath.Join(target, f)); err == nil {
+					t.Errorf("%s should not be copied", f)
+				}
+			}
+		})
+	}
+}
+
+func TestEnsureAgentConfigAtSettingsNestedAndSymlinked(t *testing.T) {
+	home := t.TempDir()
+	nativeDir := filepath.Join(home, ".pi")
+	os.MkdirAll(filepath.Join(nativeDir, "agent"), 0700)
+	os.WriteFile(filepath.Join(nativeDir, "agent", "auth.json"), []byte("secret"), 0600)
+	dotfiles := filepath.Join(home, "dotfiles", "skills")
+	os.MkdirAll(dotfiles, 0755)
+	os.WriteFile(filepath.Join(dotfiles, "s.md"), []byte("x"), 0644)
+	os.Symlink(dotfiles, filepath.Join(nativeDir, "agent", "skills"))
+
+	a := stubAgent{nativeConfigDir: nativeDir, seedSettings: []string{"agent/auth.json", "agent/skills"}}
+	target := filepath.Join(home, "target")
+	if _, err := EnsureAgentConfigAt(home, a, target, "settings"); err != nil {
+		t.Fatal(err)
+	}
+
+	info, err := os.Stat(filepath.Join(target, "agent", "auth.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm() != 0600 {
+		t.Errorf("auth.json mode = %v, want 0600", info.Mode().Perm())
+	}
+	if info, _ := os.Stat(filepath.Join(target, "agent")); info.Mode().Perm() != 0700 {
+		t.Errorf("agent dir mode = %v, want 0700 like the source", info.Mode().Perm())
+	}
+	if _, err := os.Stat(filepath.Join(target, "agent", "skills", "s.md")); err != nil {
+		t.Errorf("symlinked skills dir not copied: %v", err)
+	}
+}
+
+func TestCopyDirSymlinkedRoot(t *testing.T) {
+	dir := t.TempDir()
+	real := filepath.Join(dir, "real")
+	os.MkdirAll(real, 0755)
+	os.WriteFile(filepath.Join(real, "f"), []byte("x"), 0644)
+	link := filepath.Join(dir, "link")
+	os.Symlink(real, link)
+
+	dst := filepath.Join(dir, "dst")
+	if err := copyDir(link, dst); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(filepath.Join(dst, "f")); err != nil {
+		t.Errorf("symlinked root not copied: %v", err)
+	}
+}
+
+func TestEnsureAgentConfigAtUnknownSeed(t *testing.T) {
+	home := t.TempDir()
+	target := filepath.Join(home, "target")
+	if _, err := EnsureAgentConfigAt(home, stubAgent{}, target, "some"); err == nil {
+		t.Fatal("expected error for unknown seed mode")
+	}
+	if dirExists(target) {
+		t.Error("target should not be created on error")
+	}
+	// An existing target is never re-seeded, so the mode is not checked.
+	os.MkdirAll(target, 0755)
+	if _, err := EnsureAgentConfigAt(home, stubAgent{}, target, "some"); err != nil {
+		t.Errorf("existing target: %v", err)
 	}
 }
 

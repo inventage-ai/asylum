@@ -20,6 +20,7 @@ type Agent interface {
 	Name() string
 	Binary() string
 	NativeConfigDir() string
+	SeedSettings() []string // entries of NativeConfigDir copied by seed: settings
 	ContainerConfigDir() string
 	AsylumConfigDir() string
 	EnvVars() map[string]string

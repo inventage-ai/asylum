@@ -1138,3 +1138,35 @@ func TestVersionCheckStaleness(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadSeedIgnoredInProjectLayer(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(homeDir, ".asylum"), 0755)
+	os.WriteFile(filepath.Join(homeDir, ".asylum", "config.yaml"), []byte("version: \"0.2\"\nagents:\n  claude:\n    seed: settings\n"), 0644)
+	os.WriteFile(filepath.Join(dir, ".asylum"), []byte("agents:\n  claude:\n    config: project\n    seed: full\n  codex:\n    seed: full\n"), 0644)
+
+	cfg, err := Load(dir, CLIFlags{}, "")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := cfg.AgentSeed("claude"); got != "settings" {
+		t.Errorf("claude seed = %q, want settings (project layer must be ignored)", got)
+	}
+	if got := cfg.AgentIsolation("claude"); got != "project" {
+		t.Errorf("claude config = %q, other project-layer fields must still apply", got)
+	}
+	if got := cfg.AgentSeed("codex"); got != "full" {
+		t.Errorf("codex seed = %q, want default full", got)
+	}
+
+	os.WriteFile(filepath.Join(dir, ".asylum.local"), []byte("agents:\n  claude:\n    seed: none\n"), 0644)
+	cfg, err = Load(dir, CLIFlags{}, "")
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if got := cfg.AgentSeed("claude"); got != "none" {
+		t.Errorf("claude seed = %q, want none from .asylum.local", got)
+	}
+}

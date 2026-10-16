@@ -29,6 +29,10 @@ func (Gemini) NativeConfigDir() string    { return "~/.gemini" }
 func (Gemini) ContainerConfigDir() string { return "~/.gemini" }
 func (Gemini) AsylumConfigDir() string    { return "~/.asylum/agents/gemini" }
 
+func (Gemini) SeedSettings() []string {
+	return []string{"settings.json", "GEMINI.md", "commands", "agents", "skills", "policies", "extensions", "oauth_creds.json", "google_accounts.json", "mcp-oauth-tokens.json"}
+}
+
 func (Gemini) EnvVars() map[string]string { return nil }
 
 func (Gemini) HasSession(configDir, projectPath string) bool {
