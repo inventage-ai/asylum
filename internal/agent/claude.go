@@ -29,6 +29,11 @@ func (Claude) NativeConfigDir() string    { return "~/.claude" }
 func (Claude) ContainerConfigDir() string { return "~/.claude" }
 func (Claude) AsylumConfigDir() string    { return "~/.asylum/agents/claude" }
 
+// SeedSettings omits plugins/: its JSON files hold absolute host paths.
+func (Claude) SeedSettings() []string {
+	return []string{"settings.json", "CLAUDE.md", "keybindings.json", "agents", "commands", "skills", "rules", "output-styles", "hooks", ".credentials.json"}
+}
+
 func (Claude) EnvVars() map[string]string {
 	home, _ := os.UserHomeDir()
 	return map[string]string{

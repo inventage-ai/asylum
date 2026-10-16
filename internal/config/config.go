@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/inventage-ai/asylum/internal/kit"
+	"github.com/inventage-ai/asylum/internal/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -73,6 +74,7 @@ type KitConfig struct {
 type AgentConfig struct {
 	Config     string    `yaml:"config,omitempty"`     // shared, isolated, project
 	Companions *[]string `yaml:"companions,omitempty"` // other agents whose configs are also mounted when this agent is primary; last-wins across config layers — set to [] in an overlay to clear an inherited list
+	Seed       string    `yaml:"seed,omitempty"`       // none, settings, full (default): what isolated/project mode copies from the host config
 }
 
 // AgentIsolation returns the config isolation level for the named agent.
@@ -86,6 +88,14 @@ func (c Config) AgentIsolation(agentName string) string {
 		return ""
 	}
 	return ac.Config
+}
+
+// AgentSeed returns the seed mode for the named agent, "full" if unset.
+func (c Config) AgentSeed(agentName string) string {
+	if ac := c.Agents[agentName]; ac != nil && ac.Seed != "" {
+		return ac.Seed
+	}
+	return "full"
 }
 
 // AgentCompanions returns the companion list for the named agent, de-duplicated
@@ -375,6 +385,16 @@ func Load(projectDir string, flags CLIFlags, kitSnippets string) (Config, error)
 		loaded, err := LoadFile(path)
 		if err != nil {
 			return Config{}, fmt.Errorf("%s: %w", path, err)
+		}
+		// The project layer is typically committed; honoring seed there would let
+		// a cloned repo override the user's choice and copy the whole host config.
+		if layer.canonical == ".asylum" {
+			for name, ac := range loaded.Agents {
+				if ac != nil && ac.Seed != "" {
+					log.Warn("%s: agents.%s.seed is ignored here; move it to .asylum.local or ~/.asylum/config.yaml", path, name)
+					ac.Seed = ""
+				}
+			}
 		}
 		cfg = Merge(cfg, loaded)
 	}

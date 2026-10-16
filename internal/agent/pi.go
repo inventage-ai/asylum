@@ -29,6 +29,10 @@ func (Pi) NativeConfigDir() string    { return "~/.pi" }
 func (Pi) ContainerConfigDir() string { return "~/.pi" }
 func (Pi) AsylumConfigDir() string    { return "~/.asylum/agents/pi" }
 
+func (Pi) SeedSettings() []string {
+	return []string{"agent/settings.json", "agent/models.json", "agent/mcp.json", "agent/keybindings.json", "agent/AGENTS.md", "agent/AGENTS.override.md", "agent/CLAUDE.md", "agent/SYSTEM.md", "agent/APPEND_SYSTEM.md", "agent/extensions", "agent/skills", "agent/prompts", "agent/themes", "agent/auth.json"}
+}
+
 func (Pi) EnvVars() map[string]string { return nil }
 
 func (Pi) HasSession(configDir, projectPath string) bool {

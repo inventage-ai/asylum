@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- `agents.<agent>.seed` controls what `isolated` and `project` mode copy from the host config on first run: `full` (default, unchanged), `settings` (settings, instructions, customizations and credentials only, no transcripts or history) or `none`. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
+
+### Fixed
+- Seeding an agent config directory that is a symlink (e.g. `~/.claude` managed by a dotfiles tool) copied nothing, so the container started without the host config.
+
 ## 0.8.1 — 2026-09-29
 
 Claude Code works better inside the sandbox. Its scratchpad now survives container restarts and opens on the host, `/ide` reaches an IDE running on the host, and the folder-trust prompt is gone. `asylum update` refreshes the agent CLIs on demand, `--continue` from the home directory finds the workspace you were working in, and project images now pick up base-image rebuilds triggered by other projects.

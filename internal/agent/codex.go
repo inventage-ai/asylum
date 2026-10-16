@@ -30,6 +30,10 @@ func (Codex) NativeConfigDir() string    { return "~/.codex" }
 func (Codex) ContainerConfigDir() string { return "~/.codex" }
 func (Codex) AsylumConfigDir() string    { return "~/.asylum/agents/codex" }
 
+func (Codex) SeedSettings() []string {
+	return []string{"config.toml", "AGENTS.md", "AGENTS.override.md", "prompts", "skills", "rules", "auth.json"}
+}
+
 func (Codex) EnvVars() map[string]string {
 	home, _ := os.UserHomeDir()
 	return map[string]string{
