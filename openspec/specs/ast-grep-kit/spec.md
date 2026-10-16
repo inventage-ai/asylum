@@ -1,7 +1,9 @@
 # ast-grep-kit Specification
 
 ## Purpose
-TBD - created by archiving change add-plugin-kits. Update Purpose after archive.
+
+Installs ast-grep, an AST-based code search, lint and rewrite tool, as an opt-in kit, so an agent can make structural code changes instead of text-based edits. The kit also delivers ast-grep's Claude Code skill and rules telling agents how to use the tool.
+
 ## Requirements
 ### Requirement: ast-grep kit registration
 The system SHALL register an `ast-grep` kit via `init()` in `internal/kit/astgrep.go` with name `"ast-grep"`, TierOptIn, and a dependency on the `node` kit.
