@@ -193,6 +193,11 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 		}
 		all = append(all, kit.RunArg{Flag: "-e", Value: k + "=" + opts.Config.Env[k], Source: "user config (env)", Priority: kit.PriorityConfig})
 	}
+	hostEnvArgs, err := envFromHostArgs(opts.Config)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	all = append(all, hostEnvArgs...)
 
 	// Sandbox rules for Claude
 	if opts.Agent.Name() == "claude" {
@@ -500,6 +505,31 @@ func claudeTempArgs(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 		arg("-e", "CLAUDE_CODE_TMPDIR="+dir),
 		arg("-e", fmt.Sprintf("XDG_RUNTIME_DIR=/run/user/%d", os.Getuid())),
 	}, nil
+}
+
+// envFromHostArgs passes host variables into the container under the names
+// mapped by env-from-host. Unset or empty host variables are skipped, and a
+// name already set via env (config or -e) keeps that literal value.
+func envFromHostArgs(cfg config.Config) ([]kit.RunArg, error) {
+	var args []kit.RunArg
+	for _, k := range slices.Sorted(maps.Keys(cfg.EnvFromHost)) {
+		if _, ok := cfg.Env[k]; ok {
+			continue
+		}
+		if k == reservedAgentEnv {
+			log.Warn("env var %q is reserved for the active agent and cannot be set via config", k)
+			continue
+		}
+		v := os.Getenv(cfg.EnvFromHost[k])
+		if v == "" {
+			continue
+		}
+		if strings.ContainsAny(v, "\n\r") {
+			return nil, fmt.Errorf("env var %q (from host %q) contains newlines, which Docker does not support", k, cfg.EnvFromHost[k])
+		}
+		args = append(args, kit.RunArg{Flag: "-e", Value: k + "=" + v, Source: "user config (env-from-host)", Priority: kit.PriorityConfig})
+	}
+	return args, nil
 }
 
 // kitCredentialArgs produces RunArgs for kit credential mounts.

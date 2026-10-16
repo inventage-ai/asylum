@@ -55,6 +55,7 @@ env:
 | `ports` | list | Port forwarding rules |
 | `volumes` | list | Additional volume mounts |
 | `env` | map | Environment variables |
+| `env-from-host` | map | Host environment variables passed in under another name (not in `.asylum`) |
 
 ## Kits Configuration
 
@@ -106,6 +107,24 @@ env:
 
 Asylum also reads `.env` files from the project root (mounted as `--env-file`).
 
+### Passing Host Variables (`env-from-host`)
+
+`env` only takes literal values. To pass a secret without writing it into a config file, map a container variable to a host variable:
+
+```yaml
+# ~/.asylum/config.yaml or .asylum.local
+env-from-host:
+  GH_TOKEN: ASYLUM_GH_TOKEN   # container name: host name
+```
+
+When the container is created, Asylum reads `ASYLUM_GH_TOKEN` from the environment `asylum` runs in (e.g. set per project by direnv) and sets `GH_TOKEN` in the container. The different host name keeps the host's own `gh` login untouched.
+
+- Unset or empty host variables are skipped.
+- Asylum never writes the value to a file. It is still visible in `docker inspect` and in the `--debug` output.
+- The value is fixed at container creation. A running container keeps the old value; the new one applies once the container is recreated (after the last session exits, or with `--rebuild`).
+- A name also set in `env` or with `-e` keeps that literal value.
+- `env-from-host` is only honored in `~/.asylum/config.yaml` and `.asylum.local` (or `.asylum.local.yaml`). In `.asylum` (or `.asylum.yaml`), which is usually committed, it is ignored with a warning, so a cloned repository cannot map host environment variables into the container.
+
 ## Merge Rules
 
 When multiple config files define the same field:
@@ -114,4 +133,4 @@ When multiple config files define the same field:
 |------|----------|
 | **Scalars** (agent, release-channel, version-check-interval) | Last value wins |
 | **Lists** (ports, volumes) | Concatenated across layers |
-| **Maps** (env, kits, agents) | Merged per key, last value wins |
+| **Maps** (env, env-from-host, kits, agents) | Merged per key, last value wins |
