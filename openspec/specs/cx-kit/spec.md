@@ -1,7 +1,9 @@
 # cx-kit Specification
 
 ## Purpose
-TBD - created by archiving change add-plugin-kits. Update Purpose after archive.
+
+Installs cx, a semantic code navigation tool for AI agents, as an opt-in kit, with the language grammars chosen in the kit's `packages` list. Agents learn how to use it from a rules file generated at image build time.
+
 ## Requirements
 ### Requirement: cx kit registration
 The system SHALL register a `cx` kit via `init()` in `internal/kit/cx.go` with name `"cx"` and TierOptIn. The kit SHALL have no kit dependencies.
