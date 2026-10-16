@@ -2019,9 +2019,14 @@ func TestEnvFromHostArgs(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "set host variable is passed under the mapped name",
+			name: "set host variable is passed by name only",
 			cfg:  config.Config{EnvFromHost: map[string]string{"GH_TOKEN": "HOST_TOKEN"}},
-			want: []string{"GH_TOKEN=abc"},
+			want: []string{"GH_TOKEN"},
+		},
+		{
+			name: "variable read by the docker CLI is passed inline",
+			cfg:  config.Config{EnvFromHost: map[string]string{"DOCKER_HOST": "HOST_TOKEN"}},
+			want: []string{"DOCKER_HOST=abc"},
 		},
 		{
 			name: "unset and empty host variables are skipped",
@@ -2076,7 +2081,7 @@ func TestEnvFromHostArgs(t *testing.T) {
 func TestRunArgsEnvFromHost(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("ASYLUM_TEST_GH_TOKEN", "abc")
+	t.Setenv("ASYLUM_TEST_GH_TOKEN", "s3cr3t-token-value")
 
 	args, _, _, err := RunArgs(RunOpts{
 		Config:     config.Config{EnvFromHost: map[string]string{"GH_TOKEN": "ASYLUM_TEST_GH_TOKEN"}},
@@ -2088,7 +2093,27 @@ func TestRunArgsEnvFromHost(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(args, "GH_TOKEN=abc") {
-		t.Errorf("expected GH_TOKEN=abc in args: %v", args)
+	if !slices.Contains(args, "GH_TOKEN") {
+		t.Errorf("expected bare GH_TOKEN in args: %v", args)
+	}
+	for _, a := range args {
+		if strings.Contains(a, "s3cr3t-token-value") {
+			t.Errorf("value leaked onto the command line: %v", args)
+		}
+	}
+}
+
+func TestHostEnv(t *testing.T) {
+	t.Setenv("HOST_TOKEN", "abc")
+	t.Setenv("HOST_EMPTY", "")
+	cfg := config.Config{EnvFromHost: map[string]string{
+		"GH_TOKEN":    "HOST_TOKEN",
+		"EMPTY":       "HOST_EMPTY",
+		"UNSET":       "HOST_UNSET_XYZ",
+		"DOCKER_HOST": "HOST_TOKEN",
+	}}
+	want := []string{"GH_TOKEN=abc"}
+	if got := HostEnv(cfg); !slices.Equal(got, want) {
+		t.Errorf("HostEnv = %v, want %v", got, want)
 	}
 }

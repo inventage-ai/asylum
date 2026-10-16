@@ -445,7 +445,7 @@ func main() {
 		// Remove any stale stopped container with the same name
 		docker.RemoveContainer(cname)
 
-		if err := docker.RunDetached(runArgs); err != nil {
+		if err := docker.RunDetached(runArgs, container.HostEnv(cfg)); err != nil {
 			die("start container: %v", err)
 		}
 

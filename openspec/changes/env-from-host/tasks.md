@@ -9,6 +9,8 @@
 
 - [x] 2.1 Emit `-e NAME=value` RunArgs (source `user config (env-from-host)`) for set, non-empty host variables, skipping names present in `env`, the reserved agent variable, and failing on newlines; verify with table-driven tests in `internal/container`.
 
+- [x] 2.2 Keep values off the docker command line: bare `-e NAME` RunArgs plus `NAME=value` in the docker process environment (`HostEnv`, `docker.RunDetached`), inline only for `DOCKER_*` names; verify with `TestHostEnv`, `TestRunArgsEnvFromHost`, and a manual `docker run -e NAME` check.
+
 ## 3. Documentation
 
 - [x] 3.1 Document `env-from-host` in `docs/configuration/index.md` and `assets/asylum-reference.md`, including the layer restriction, precedence, and that values are fixed at container creation; add a CHANGELOG entry. Verify by reading the rendered sections.

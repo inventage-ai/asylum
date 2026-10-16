@@ -509,7 +509,9 @@ func claudeTempArgs(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 
 // envFromHostArgs passes host variables into the container under the names
 // mapped by env-from-host. Unset or empty host variables are skipped, and a
-// name already set via env (config or -e) keeps that literal value.
+// name already set via env (config or -e) keeps that literal value. The values
+// stay off the docker command line (visible in ps): the arg is a bare -e NAME
+// and docker reads the value from the environment set up by HostEnv.
 func envFromHostArgs(cfg config.Config) ([]kit.RunArg, error) {
 	var args []kit.RunArg
 	for _, k := range slices.Sorted(maps.Keys(cfg.EnvFromHost)) {
@@ -527,9 +529,32 @@ func envFromHostArgs(cfg config.Config) ([]kit.RunArg, error) {
 		if strings.ContainsAny(v, "\n\r") {
 			return nil, fmt.Errorf("env var %q (from host %q) contains newlines, which Docker does not support", k, cfg.EnvFromHost[k])
 		}
-		args = append(args, kit.RunArg{Flag: "-e", Value: k + "=" + v, Source: "user config (env-from-host)", Priority: kit.PriorityConfig})
+		value := k
+		if readByDockerCLI(k) {
+			value += "=" + v
+		}
+		args = append(args, kit.RunArg{Flag: "-e", Value: value, Source: "user config (env-from-host)", Priority: kit.PriorityConfig})
 	}
 	return args, nil
+}
+
+// HostEnv returns the NAME=value pairs that docker run needs in its own
+// environment to resolve the bare -e NAME args from envFromHostArgs.
+func HostEnv(cfg config.Config) []string {
+	var env []string
+	for _, k := range slices.Sorted(maps.Keys(cfg.EnvFromHost)) {
+		if v := os.Getenv(cfg.EnvFromHost[k]); v != "" && !readByDockerCLI(k) {
+			env = append(env, k+"="+v)
+		}
+	}
+	return env
+}
+
+// readByDockerCLI reports whether the docker CLI itself would act on the
+// variable (DOCKER_HOST, DOCKER_CONFIG, ...). Such values must not be placed in
+// its environment, so they are passed inline instead.
+func readByDockerCLI(name string) bool {
+	return strings.HasPrefix(name, "DOCKER_")
 }
 
 // kitCredentialArgs produces RunArgs for kit credential mounts.

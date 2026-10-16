@@ -3,7 +3,7 @@
 ## Unreleased
 
 ### Added
-- `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
+- `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file or putting it on the `docker run` command line. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
 
 ## 0.8.1 — 2026-09-29
 
