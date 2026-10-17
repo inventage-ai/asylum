@@ -8,7 +8,7 @@ Asylum exposes the values of environment variables passed into the container (Gi
 
 - All `-e NAME=value` args of `docker run` are passed through an env file on stdin (`--env-file /dev/stdin`) instead. It comes after the project's `.env` file, so precedence is unchanged. Values an env file cannot hold (newlines, invalid UTF-8, 64 KiB or more, names with whitespace or a leading `#`) stay inline.
 - `--debug` masks env values as `-e NAME=***`, in both the argument table and the overrides section. So does the conflict error for two args of the same priority.
-- `env-from-host` passes its values like any other env var. Its bare `-e NAME` mechanism and the `DOCKER_*` exception are removed, since the docker CLI does not read env-file values into its own environment.
+- `env-from-host` passes its values like any other env var. Its bare `-e NAME` mechanism and the `DOCKER_*` exception are removed, since the docker CLI does not read env-file values into its own environment. Mapped values the env file cannot hold abort container creation instead of falling back to the command line.
 
 ## Capabilities
 
@@ -17,7 +17,7 @@ Asylum exposes the values of environment variables passed into the container (Gi
 ### Modified Capabilities
 - `container-assembly`: environment values are passed to `docker run` via an env file on stdin.
 - `runarg-pipeline`: debug output and conflict errors mask env values.
-- `env-from-host`: the separate "values stay off the docker command line" requirement is removed, because container-assembly now covers it for all variables.
+- `env-from-host`: the separate "values stay off the docker command line" requirement is removed, because container-assembly now covers it for all variables; values the env file cannot hold are rejected.
 
 ## Impact
 

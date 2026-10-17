@@ -538,8 +538,10 @@ func envFromHostArgs(cfg config.Config) ([]kit.RunArg, error) {
 		if v == "" {
 			continue
 		}
-		if strings.ContainsAny(v, "\n\r") {
-			return nil, fmt.Errorf("env var %q (from host %q) contains newlines, which Docker does not support", k, cfg.EnvFromHost[k])
+		// Values that don't fit the env file would fall back to the docker
+		// command line, which env-from-host exists to avoid.
+		if !fitsEnvFile(k + "=" + v) {
+			return nil, fmt.Errorf("env var %q (from host %q) cannot be passed securely: it contains newlines or invalid UTF-8, is 64 KiB or longer, or has an unsupported name", k, cfg.EnvFromHost[k])
 		}
 		args = append(args, kit.RunArg{Flag: "-e", Value: k + "=" + v, Source: "user config (env-from-host)", Priority: kit.PriorityConfig})
 	}

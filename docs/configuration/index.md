@@ -122,6 +122,7 @@ env-from-host:
 When the container is created, Asylum reads `ASYLUM_GH_TOKEN` from the environment `asylum` runs in (e.g. set per project by direnv) and sets `GH_TOKEN` in the container. The different host name keeps the host's own `gh` login untouched.
 
 - Unset or empty host variables are skipped.
+- A host value with newlines or invalid UTF-8, a `NAME=value` line of 64 KiB or more, or a name the env file cannot hold (e.g. with a space) aborts the start with an error naming the variable.
 - Asylum never writes the value to a file. Like all environment variables, it is kept off the `docker run` command line and masked in `--debug` (see above). It is still visible in `docker inspect`.
 - The value is fixed at container creation. A running container keeps the old value; the new one applies once the container is recreated (after the last session exits, or with `--rebuild`).
 - A name also set in `env` or with `-e` keeps that literal value.

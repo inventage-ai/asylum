@@ -2011,6 +2011,8 @@ func TestEnvFromHostArgs(t *testing.T) {
 	t.Setenv("HOST_TOKEN", "abc")
 	t.Setenv("HOST_EMPTY", "")
 	t.Setenv("HOST_MULTILINE", "a\nb")
+	t.Setenv("HOST_BIG", strings.Repeat("a", 70000))
+	t.Setenv("HOST_BINARY", "s3cr\xffet")
 
 	tests := []struct {
 		name    string
@@ -2043,6 +2045,21 @@ func TestEnvFromHostArgs(t *testing.T) {
 			cfg:     config.Config{EnvFromHost: map[string]string{"X": "HOST_MULTILINE"}},
 			wantErr: true,
 		},
+		{
+			name:    "value of 64 KiB or more is an error",
+			cfg:     config.Config{EnvFromHost: map[string]string{"X": "HOST_BIG"}},
+			wantErr: true,
+		},
+		{
+			name:    "unsupported name is an error",
+			cfg:     config.Config{EnvFromHost: map[string]string{"MY VAR": "HOST_TOKEN"}},
+			wantErr: true,
+		},
+		{
+			name:    "invalid UTF-8 is an error",
+			cfg:     config.Config{EnvFromHost: map[string]string{"X": "HOST_BINARY"}},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2051,7 +2068,7 @@ func TestEnvFromHostArgs(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected error")
 				}
-				if strings.Contains(err.Error(), "a\nb") {
+				if strings.Contains(err.Error(), "a\nb") || strings.Contains(err.Error(), "aaaa") || strings.Contains(err.Error(), "s3cr") {
 					t.Errorf("error leaks the value: %v", err)
 				}
 				return
