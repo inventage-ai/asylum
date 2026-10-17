@@ -113,7 +113,7 @@ func ResolveArgs(args []kit.RunArg) ([]kit.RunArg, []kit.Override, error) {
 			}
 			return nil, nil, fmt.Errorf(
 				"conflicting docker args for %s: %q (from %s) vs %q (from %s)",
-				ck, existing.arg.Value, existing.arg.Source, arg.Value, arg.Source,
+				ck, existing.arg.String(), existing.arg.Source, arg.String(), arg.Source,
 			)
 		} else {
 			overrides = append(overrides, kit.Override{Replaced: arg, Winner: existing.arg})
@@ -145,25 +145,15 @@ func FormatDebug(resolved []kit.RunArg, overrides []kit.Override) string {
 	// Find max width for alignment
 	maxWidth := 0
 	for _, a := range resolved {
-		w := len(a.Flag)
-		if a.Value != "" {
-			w += 1 + len(a.Value)
-		}
-		if w > maxWidth {
-			maxWidth = w
-		}
+		maxWidth = max(maxWidth, len(a.String()))
 	}
 	if maxWidth > 60 {
 		maxWidth = 60
 	}
 
 	for _, a := range resolved {
-		s := a.Flag
-		if a.Value != "" {
-			s += " " + a.Value
-		}
 		// Truncate long values for readability
-		display := s
+		display := a.String()
 		if len(display) > 60 {
 			display = display[:57] + "..."
 		}

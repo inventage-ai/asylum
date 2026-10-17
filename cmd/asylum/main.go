@@ -417,7 +417,7 @@ func main() {
 			}
 		}
 
-		runArgs, resolved, overrides, err := container.RunArgs(container.RunOpts{
+		runArgs, envFile, resolved, overrides, err := container.RunArgs(container.RunOpts{
 			Config:        cfg,
 			Agent:         a,
 			AgentInstalls: agentInstalls,
@@ -445,7 +445,7 @@ func main() {
 		// Remove any stale stopped container with the same name
 		docker.RemoveContainer(cname)
 
-		if err := docker.RunDetached(runArgs, container.HostEnv(cfg)); err != nil {
+		if err := docker.RunDetached(runArgs, envFile); err != nil {
 			die("start container: %v", err)
 		}
 
