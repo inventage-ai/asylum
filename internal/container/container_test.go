@@ -1,6 +1,7 @@
 package container
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"fmt"
 	"io/fs"
@@ -1365,19 +1366,17 @@ func TestRunArgsReservedAgentEnv(t *testing.T) {
 		Version:    "1.0.0",
 	}
 
-	args, _, _, err := RunArgs(opts)
+	_, env, _, _, err := RunArgs(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for _, arg := range args {
-		if arg == "ASYLUM_AGENT=codex" {
-			t.Errorf("user config overrode reserved ASYLUM_AGENT: %v", args)
-		}
+	lines := strings.Split(env, "\n")
+	if slices.Contains(lines, "ASYLUM_AGENT=codex") {
+		t.Errorf("user config overrode reserved ASYLUM_AGENT: %v", lines)
 	}
-	found := slices.Contains(args, "ASYLUM_AGENT=claude")
-	if !found {
-		t.Errorf("expected ASYLUM_AGENT=claude (active agent), got: %v", args)
+	if !slices.Contains(lines, "ASYLUM_AGENT=claude") {
+		t.Errorf("expected ASYLUM_AGENT=claude (active agent), got: %v", lines)
 	}
 }
 
@@ -1393,15 +1392,16 @@ func TestRunArgsUserEnvDisablesSandboxed(t *testing.T) {
 		Version:    "1.0.0",
 	}
 
-	args, _, _, err := RunArgs(opts)
+	_, env, _, _, err := RunArgs(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if slices.Contains(args, "CLAUDE_CODE_SANDBOXED=1") {
-		t.Errorf("agent value survived user override: %v", args)
+	lines := strings.Split(env, "\n")
+	if slices.Contains(lines, "CLAUDE_CODE_SANDBOXED=1") {
+		t.Errorf("agent value survived user override: %v", lines)
 	}
-	if !slices.Contains(args, "CLAUDE_CODE_SANDBOXED=") {
-		t.Errorf("expected CLAUDE_CODE_SANDBOXED= from user config, got: %v", args)
+	if !slices.Contains(lines, "CLAUDE_CODE_SANDBOXED=") {
+		t.Errorf("expected CLAUDE_CODE_SANDBOXED= from user config, got: %v", lines)
 	}
 }
 
@@ -1432,7 +1432,7 @@ func TestRunArgsSandboxRulesMount(t *testing.T) {
 		Version:    "1.0.0",
 	}
 
-	args, _, _, err := RunArgs(opts)
+	args, _, _, _, err := RunArgs(opts)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2019,14 +2019,9 @@ func TestEnvFromHostArgs(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "set host variable is passed by name only",
+			name: "set host variable is passed under the mapped name",
 			cfg:  config.Config{EnvFromHost: map[string]string{"GH_TOKEN": "HOST_TOKEN"}},
-			want: []string{"GH_TOKEN"},
-		},
-		{
-			name: "variable read by the docker CLI is passed inline",
-			cfg:  config.Config{EnvFromHost: map[string]string{"DOCKER_HOST": "HOST_TOKEN"}},
-			want: []string{"DOCKER_HOST=abc"},
+			want: []string{"GH_TOKEN=abc"},
 		},
 		{
 			name: "unset and empty host variables are skipped",
@@ -2078,42 +2073,77 @@ func TestEnvFromHostArgs(t *testing.T) {
 	}
 }
 
-func TestRunArgsEnvFromHost(t *testing.T) {
+func TestRunArgsEnvViaStdin(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("ASYLUM_TEST_GH_TOKEN", "s3cr3t-token-value")
+	projectDir := t.TempDir()
+	os.WriteFile(filepath.Join(projectDir, ".env"), []byte("FOO=bar\n"), 0644)
 
-	args, _, _, err := RunArgs(RunOpts{
-		Config:     config.Config{EnvFromHost: map[string]string{"GH_TOKEN": "ASYLUM_TEST_GH_TOKEN"}},
+	args, env, _, _, err := RunArgs(RunOpts{
+		Config: config.Config{
+			Env:         map[string]string{"API_KEY": "literal-secret"},
+			EnvFromHost: map[string]string{"GH_TOKEN": "ASYLUM_TEST_GH_TOKEN"},
+		},
 		Agent:      claudeStubAgent{},
 		ImageTag:   "asylum:test",
-		ProjectDir: t.TempDir(),
+		ProjectDir: projectDir,
 		Version:    "1.0.0",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !slices.Contains(args, "GH_TOKEN") {
-		t.Errorf("expected bare GH_TOKEN in args: %v", args)
-	}
 	for _, a := range args {
-		if strings.Contains(a, "s3cr3t-token-value") {
+		if strings.Contains(a, "s3cr3t-token-value") || strings.Contains(a, "literal-secret") {
 			t.Errorf("value leaked onto the command line: %v", args)
 		}
 	}
+	if slices.Contains(args, "-e") {
+		t.Errorf("no -e args expected, got: %v", args)
+	}
+	lines := strings.Split(env, "\n")
+	for _, want := range []string{"GH_TOKEN=s3cr3t-token-value", "API_KEY=literal-secret", "ASYLUM_AGENT=claude"} {
+		if !slices.Contains(lines, want) {
+			t.Errorf("env file missing %q: %v", want, lines)
+		}
+	}
+	// The stdin env file must follow the project's .env so asylum's values win.
+	stdinAt := slices.Index(args, "/dev/stdin")
+	dotEnvAt := slices.Index(args, filepath.Join(projectDir, ".env"))
+	if stdinAt < 0 || dotEnvAt < 0 || stdinAt < dotEnvAt || args[stdinAt-1] != "--env-file" {
+		t.Errorf("expected --env-file /dev/stdin after the project .env, got: %v", args)
+	}
+	if args[len(args)-3] != "asylum:test" {
+		t.Errorf("image must follow all options, got: %v", args)
+	}
 }
 
-func TestHostEnv(t *testing.T) {
-	t.Setenv("HOST_TOKEN", "abc")
-	t.Setenv("HOST_EMPTY", "")
-	cfg := config.Config{EnvFromHost: map[string]string{
-		"GH_TOKEN":    "HOST_TOKEN",
-		"EMPTY":       "HOST_EMPTY",
-		"UNSET":       "HOST_UNSET_XYZ",
-		"DOCKER_HOST": "HOST_TOKEN",
-	}}
-	want := []string{"GH_TOKEN=abc"}
-	if got := HostEnv(cfg); !slices.Equal(got, want) {
-		t.Errorf("HostEnv = %v, want %v", got, want)
+func TestSplitEnvArgs(t *testing.T) {
+	inline := []string{
+		"MULTI=a\nb",
+		"BARE",
+		"BIG=" + strings.Repeat("a", 70000),
+		"BIN=s3cr\xffet",
+		"BOUNDARY=" + strings.Repeat("a", bufio.MaxScanTokenSize-len("BOUNDARY=")),
+		"MY VAR=x",
+		"\u00a0NBSP=x",
+		"\uFEFFBOM=x",
+		"#HASH=x",
+	}
+	fits := "FITS=" + strings.Repeat("a", bufio.MaxScanTokenSize-1-len("FITS="))
+	args := []kit.RunArg{{Flag: "-e", Value: "A=1"}, {Flag: "-e", Value: "EMPTY="}, {Flag: "-e", Value: fits}, {Flag: "-p", Value: "3000:3000"}}
+	for _, v := range inline {
+		args = append(args, kit.RunArg{Flag: "-e", Value: v})
+	}
+	env, rest := splitEnvArgs(args)
+	var got []string
+	for _, a := range env {
+		got = append(got, a.Value)
+	}
+	if want := []string{"A=1", "EMPTY=", fits}; !slices.Equal(got, want) {
+		t.Errorf("env = %v, want %v", got, want)
+	}
+	if len(rest) != 1+len(inline) {
+		t.Errorf("rest has %d args, want the port plus %d inline env values", len(rest), len(inline))
 	}
 }

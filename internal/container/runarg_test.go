@@ -75,6 +75,20 @@ func TestResolveArgsSamePriorityConflict(t *testing.T) {
 	}
 }
 
+func TestResolveArgsEnvConflictMasksValues(t *testing.T) {
+	args := []kit.RunArg{
+		{Flag: "-e", Value: "TOKEN=first-secret", Source: "kit A", Priority: kit.PriorityKit},
+		{Flag: "-e", Value: "TOKEN=second-secret", Source: "kit B", Priority: kit.PriorityKit},
+	}
+	_, _, err := ResolveArgs(args)
+	if err == nil {
+		t.Fatal("expected conflict error")
+	}
+	if strings.Contains(err.Error(), "secret") || !strings.Contains(err.Error(), "TOKEN=***") {
+		t.Errorf("error should mask env values: %v", err)
+	}
+}
+
 func TestResolveArgsSamePrioritySameValueOK(t *testing.T) {
 	args := []kit.RunArg{
 		{Flag: "--privileged", Value: "", Source: "kit A", Priority: kit.PriorityKit},
@@ -209,8 +223,11 @@ func TestFormatDebugBasic(t *testing.T) {
 	if !strings.Contains(out, "-p 7001:7001") || !strings.Contains(out, "ports kit") {
 		t.Error("missing port line with source")
 	}
-	if !strings.Contains(out, "-e FOO=bar") || !strings.Contains(out, "core") {
-		t.Error("missing env line with source")
+	if !strings.Contains(out, "-e FOO=***") || !strings.Contains(out, "core") {
+		t.Error("missing masked env line with source")
+	}
+	if strings.Contains(out, "bar") {
+		t.Error("env value should be masked")
 	}
 	// No overrides section when nil
 	if strings.Contains(out, "Overrides") {

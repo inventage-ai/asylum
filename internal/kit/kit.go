@@ -30,12 +30,17 @@ type RunArg struct {
 	Priority int    // higher wins on dedup key collision
 }
 
-// String formats a RunArg as it would appear in docker run args.
+// String formats a RunArg for display. Env values are masked because they may
+// hold secrets (tokens passed via -e or config env).
 func (r RunArg) String() string {
 	if r.Value == "" {
 		return r.Flag
 	}
-	return r.Flag + " " + r.Value
+	value := r.Value
+	if k, _, ok := strings.Cut(value, "="); ok && r.Flag == "-e" {
+		value = k + "=***"
+	}
+	return r.Flag + " " + value
 }
 
 // Priority levels for RunArg sources.

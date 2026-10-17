@@ -138,11 +138,10 @@ func PruneImages(filterLabel string) error {
 	return cmd.Run()
 }
 
-// RunDetached runs docker with env added to its environment, so bare -e NAME
-// args can pass values without exposing them on the command line.
-func RunDetached(args, env []string) error {
+// RunDetached runs docker with stdin as the content of --env-file /dev/stdin.
+func RunDetached(args []string, stdin string) error {
 	cmd := exec.Command("docker", args...)
-	cmd.Env = append(os.Environ(), env...)
+	cmd.Stdin = strings.NewReader(stdin)
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
