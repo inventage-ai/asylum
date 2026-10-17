@@ -107,6 +107,8 @@ env:
 
 Asylum also reads `.env` files from the project root (mounted as `--env-file`).
 
+Asylum hands environment variables to `docker run` through an env file on stdin rather than as `-e NAME=value` arguments, so their values do not show up in `ps` or in process logs. Variables an env file cannot hold (invalid UTF-8, a `NAME=value` line of 64 KiB or more, unusual names) are still passed as `-e`. `--debug` lists them as `-e NAME=***`. Values remain visible to anyone who can run `docker inspect` on the container.
+
 ### Passing Host Variables (`env-from-host`)
 
 `env` only takes literal values. To pass a secret without writing it into a config file, map a container variable to a host variable:
@@ -120,7 +122,7 @@ env-from-host:
 When the container is created, Asylum reads `ASYLUM_GH_TOKEN` from the environment `asylum` runs in (e.g. set per project by direnv) and sets `GH_TOKEN` in the container. The different host name keeps the host's own `gh` login untouched.
 
 - Unset or empty host variables are skipped.
-- Asylum never writes the value to a file and keeps it off the `docker run` command line, so it does not show up in `ps` or the `--debug` output. It is still visible in `docker inspect`. Exception: names starting with `DOCKER_` are passed inline, because the docker CLI itself reads them. Other variables the docker CLI also reads (e.g. `HTTPS_PROXY` with a remote `DOCKER_HOST`) affect the CLI as well while it starts the container.
+- Asylum never writes the value to a file. Like all environment variables, it is kept off the `docker run` command line and masked in `--debug` (see above). It is still visible in `docker inspect`.
 - The value is fixed at container creation. A running container keeps the old value; the new one applies once the container is recreated (after the last session exits, or with `--rebuild`).
 - A name also set in `env` or with `-e` keeps that literal value.
 - `env-from-host` is only honored in `~/.asylum/config.yaml` and `.asylum.local` (or `.asylum.local.yaml`). In `.asylum` (or `.asylum.yaml`), which is usually committed, it is ignored with a warning, so a committed `.asylum` cannot map host environment variables into the container. Keep `.asylum.local` out of version control, because mappings there are honored.
