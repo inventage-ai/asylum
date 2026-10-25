@@ -72,5 +72,6 @@ Several options deliberately reduce isolation. If you enable them, you accept th
 - Keep the project directory under version control and push branches often.
 - Rotate any credential you think an agent may have exfiltrated — this includes the SSH key in `~/.asylum/ssh/` and anything in your agent config.
 - Prefer `isolated` or `project` config modes over `shared`.
+- Keep `.asylum.local` out of version control. `env-from-host` is honored there, so a committed `.asylum.local` would let a clone map host secrets into the container.
 - Only enable the Docker kit on projects that actually need Docker-in-Docker.
 - Do not use Asylum to review or execute code you have specific reason to distrust. Use a disposable VM instead.

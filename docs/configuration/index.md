@@ -123,7 +123,7 @@ When the container is created, Asylum reads `ASYLUM_GH_TOKEN` from the environme
 - Asylum never writes the value to a file and keeps it off the `docker run` command line, so it does not show up in `ps` or the `--debug` output. It is still visible in `docker inspect`. Exception: names starting with `DOCKER_` are passed inline, because the docker CLI itself reads them. Other variables the docker CLI also reads (e.g. `HTTPS_PROXY` with a remote `DOCKER_HOST`) affect the CLI as well while it starts the container.
 - The value is fixed at container creation. A running container keeps the old value; the new one applies once the container is recreated (after the last session exits, or with `--rebuild`).
 - A name also set in `env` or with `-e` keeps that literal value.
-- `env-from-host` is only honored in `~/.asylum/config.yaml` and `.asylum.local` (or `.asylum.local.yaml`). In `.asylum` (or `.asylum.yaml`), which is usually committed, it is ignored with a warning, so a cloned repository cannot map host environment variables into the container.
+- `env-from-host` is only honored in `~/.asylum/config.yaml` and `.asylum.local` (or `.asylum.local.yaml`). In `.asylum` (or `.asylum.yaml`), which is usually committed, it is ignored with a warning, so a committed `.asylum` cannot map host environment variables into the container. Keep `.asylum.local` out of version control, because mappings there are honored.
 
 ## Merge Rules
 

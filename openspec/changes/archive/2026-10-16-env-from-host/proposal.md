@@ -8,7 +8,7 @@ Projects often need a secret inside the container under a fixed name (e.g. a pro
 
 - New top-level config key `env-from-host`: a map from container variable name to host variable name. At container creation, asylum reads each host variable and passes its value into the container under the mapped name.
 - Unset or empty host variables are skipped. Asylum never writes the values to any file.
-- `env-from-host` is honored only in user-maintained configs (`~/.asylum/config.yaml`, `.asylum.local`). In the repo-committed project layer (`.asylum` / `.asylum.yaml`) it is ignored with a warning, so a cloned repository cannot map host environment variables into the container.
+- `env-from-host` is honored only in user-maintained configs (`~/.asylum/config.yaml`, `.asylum.local`). In the repo-committed project layer (`.asylum` / `.asylum.yaml`) it is ignored with a warning, so a committed project config cannot map host environment variables into the container.
 - A name set in `env` (including `-e` on the command line) takes precedence over the same name in `env-from-host`.
 
 ## Capabilities

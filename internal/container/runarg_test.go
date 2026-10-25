@@ -20,6 +20,7 @@ func TestDedupKey(t *testing.T) {
 		{"volume no options", kit.RunArg{Flag: "-v", Value: "/host:/container"}, "-v", "/container"},
 		{"mount", kit.RunArg{Flag: "--mount", Value: "type=volume,src=my-vol,dst=/data"}, "--mount", "/data"},
 		{"env var", kit.RunArg{Flag: "-e", Value: "FOO=bar"}, "-e", "FOO"},
+		{"bare env var", kit.RunArg{Flag: "-e", Value: "FOO"}, "-e", "FOO"},
 		{"boolean flag", kit.RunArg{Flag: "--privileged", Value: ""}, "bool", "--privileged"},
 		{"boolean rm", kit.RunArg{Flag: "--rm", Value: ""}, "bool", "--rm"},
 		{"cap-add", kit.RunArg{Flag: "--cap-add", Value: "SYS_ADMIN"}, "--cap-add", "SYS_ADMIN"},
@@ -58,6 +59,23 @@ func TestResolveArgsHigherPriorityWins(t *testing.T) {
 	}
 	if overrides[0].Replaced.Source != "ports kit" {
 		t.Errorf("expected ports kit to be replaced, got %q", overrides[0].Replaced.Source)
+	}
+}
+
+func TestResolveArgsBareEnvOverridesKitValue(t *testing.T) {
+	args := []kit.RunArg{
+		{Flag: "-e", Value: "GH_TOKEN=kit-value", Source: "github kit", Priority: kit.PriorityKit},
+		{Flag: "-e", Value: "GH_TOKEN", Source: "user config (env-from-host)", Priority: kit.PriorityConfig},
+	}
+	resolved, overrides, err := ResolveArgs(args)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resolved) != 1 || resolved[0].Value != "GH_TOKEN" {
+		t.Errorf("expected bare GH_TOKEN to replace the kit value, got %v", resolved)
+	}
+	if len(overrides) != 1 {
+		t.Errorf("expected 1 override, got %d", len(overrides))
 	}
 }
 
