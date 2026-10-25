@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
     
     
       
@@ -31,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.57a0d79d.min.css">
       
         
-        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/palette.fb2fffe2.min.css">
       
       
 
@@ -790,6 +790,23 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#passing-host-variables-env-from-host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Passing Host Variables (env-from-host)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1916,6 +1933,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Environment Variables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#passing-host-variables-env-from-host" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Passing Host Variables (env-from-host)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -2058,6 +2092,11 @@
 <td>map</td>
 <td>Environment variables</td>
 </tr>
+<tr>
+<td><code>env-from-host</code></td>
+<td>map</td>
+<td>Host environment variables passed in under another name (not in <code>.asylum</code>)</td>
+</tr>
 </tbody>
 </table>
 <h2 id="kits-configuration">Kits Configuration<a class="headerlink" href="#kits-configuration" title="Permanent link">&para;</a></h2>
@@ -2092,6 +2131,20 @@
 <span class="w">  </span><span class="nt">DEBUG</span><span class="p">:</span><span class="w"> </span><span class="s">"true"</span>
 </code></pre></div>
 <p>Asylum also reads <code>.env</code> files from the project root (mounted as <code>--env-file</code>).</p>
+<h3 id="passing-host-variables-env-from-host">Passing Host Variables (<code>env-from-host</code>)<a class="headerlink" href="#passing-host-variables-env-from-host" title="Permanent link">&para;</a></h3>
+<p><code>env</code> only takes literal values. To pass a secret without writing it into a config file, map a container variable to a host variable:</p>
+<div class="highlight"><pre><span></span><code><span class="c1"># ~/.asylum/config.yaml or .asylum.local</span>
+<span class="nt">env-from-host</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">GH_TOKEN</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ASYLUM_GH_TOKEN</span><span class="w">   </span><span class="c1"># container name: host name</span>
+</code></pre></div>
+<p>When the container is created, Asylum reads <code>ASYLUM_GH_TOKEN</code> from the environment <code>asylum</code> runs in (e.g. set per project by direnv) and sets <code>GH_TOKEN</code> in the container. The different host name keeps the host's own <code>gh</code> login untouched.</p>
+<ul>
+<li>Unset or empty host variables are skipped.</li>
+<li>Asylum never writes the value to a file and keeps it off the <code>docker run</code> command line, so it does not show up in <code>ps</code> or the <code>--debug</code> output. It is still visible in <code>docker inspect</code>. Exception: names starting with <code>DOCKER_</code> are passed inline, because the docker CLI itself reads them. Other variables the docker CLI also reads (e.g. <code>HTTPS_PROXY</code> with a remote <code>DOCKER_HOST</code>) affect the CLI as well while it starts the container.</li>
+<li>The value is fixed at container creation. A running container keeps the old value; the new one applies once the container is recreated (after the last session exits, or with <code>--rebuild</code>).</li>
+<li>A name also set in <code>env</code> or with <code>-e</code> keeps that literal value.</li>
+<li><code>env-from-host</code> is only honored in <code>~/.asylum/config.yaml</code> and <code>.asylum.local</code> (or <code>.asylum.local.yaml</code>). In <code>.asylum</code> (or <code>.asylum.yaml</code>), which is usually committed, it is ignored with a warning, so a committed <code>.asylum</code> cannot map host environment variables into the container. Keep <code>.asylum.local</code> out of version control, because mappings there are honored.</li>
+</ul>
 <h2 id="merge-rules">Merge Rules<a class="headerlink" href="#merge-rules" title="Permanent link">&para;</a></h2>
 <p>When multiple config files define the same field:</p>
 <table>
@@ -2111,7 +2164,7 @@
 <td>Concatenated across layers</td>
 </tr>
 <tr>
-<td><strong>Maps</strong> (env, kits, agents)</td>
+<td><strong>Maps</strong> (env, env-from-host, kits, agents)</td>
 <td>Merged per key, last value wins</td>
 </tr>
 </tbody>
@@ -2165,10 +2218,10 @@
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.sections", "navigation.expand", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": {"provider": "mike"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      <script src="../assets/javascripts/bundle.c21346df.min.js"></script>
       
     
   </body>
