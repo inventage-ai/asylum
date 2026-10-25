@@ -21,6 +21,7 @@ Kits are modular bundles that group everything needed for a language or tool: in
 | [cx](cx.md) | Semantic code navigation for AI agents | Opt-in |
 | [dropshare](dropshare.md) | Upload files through Dropshare on the host (macOS) | Opt-in, macOS |
 | [iterm](iterm.md) | Drive the iTerm2 status bar from a containerized session (macOS) | Opt-in, macOS |
+| [host-mcp](host-mcp.md) | Use stdio MCP servers that run on the host | Opt-in |
 | [apt](apt.md) | Extra apt packages in the project image | Opt-in |
 
 ## Activation Tiers

@@ -861,6 +861,11 @@ func agentCommand(opts ExecOpts) []string {
 	if kit.AnyProvidesSkills(opts.Kits) {
 		cmdOpts.KitSkillsDir = "/opt/asylum-skills"
 	}
+	servers, err := kit.HostMCPServers(opts.Kits, opts.ProjectDir)
+	if err != nil {
+		log.Warn("host-mcp: %v (starting without host MCP servers)", err)
+	}
+	cmdOpts.HostMCPServers = servers
 	return opts.Agent.Command(resume, opts.ExtraArgs, cmdOpts)
 }
 

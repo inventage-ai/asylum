@@ -38,6 +38,8 @@ type Endpoint struct {
 type Ctx interface {
 	// Container is the name of the container this broker serves.
 	Container() string
+	// ProjectDir is the host path of the container's project directory.
+	ProjectDir() string
 	// ForwardLoopback best-effort forwards the host loopback port to the same
 	// port on the container's loopback for a short window (see forwarder).
 	ForwardLoopback(port int, ipv6 bool)
@@ -52,11 +54,13 @@ type Route struct {
 
 // brokerCtx is the Ctx implementation supplied to handlers.
 type brokerCtx struct {
-	cname string
-	fwd   *forwarder
+	cname      string
+	projectDir string
+	fwd        *forwarder
 }
 
 func (c *brokerCtx) Container() string                   { return c.cname }
+func (c *brokerCtx) ProjectDir() string                  { return c.projectDir }
 func (c *brokerCtx) ForwardLoopback(port int, ipv6 bool) { c.fwd.ensure(port, ipv6) }
 
 // Token returns a random hex token used to authenticate broker requests.
@@ -83,7 +87,7 @@ func FreePort() (int, error) {
 // stale socket before listening. A bind failure (another broker already owns the
 // endpoint) is returned so the caller can treat it as a clean "already running"
 // exit.
-func Serve(cname string, ep Endpoint, token string, routes []Route) error {
+func Serve(cname, projectDir string, ep Endpoint, token string, routes []Route) error {
 	if ep.Network == "unix" {
 		os.Remove(ep.Addr) // clear a stale socket left by a previous run
 	}
@@ -91,7 +95,7 @@ func Serve(cname string, ep Endpoint, token string, routes []Route) error {
 	if err != nil {
 		return err
 	}
-	bc := &brokerCtx{cname: cname, fwd: newForwarder(cname)}
+	bc := &brokerCtx{cname: cname, projectDir: projectDir, fwd: newForwarder(cname)}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", authWrap(token, func(w http.ResponseWriter, r *http.Request) {}))
 	for _, rt := range routes {
@@ -127,11 +131,11 @@ func authWrap(token string, h http.HandlerFunc) http.HandlerFunc {
 // readable only by the owning user, so this keeps the token off multi-user
 // hosts' ps output. The broker process reads no config of its own, so any
 // kit configuration its handlers need rides along in env as "KEY=value" entries.
-func EnsureBroker(cname, execPath string, ep Endpoint, token string, kitNames, env []string) error {
+func EnsureBroker(cname, projectDir, execPath string, ep Endpoint, token string, kitNames, env []string) error {
 	if alive(ep, token) {
 		return nil
 	}
-	args := []string{"__broker", "--container", cname, "--net", ep.Network, "--addr", ep.Addr}
+	args := []string{"__broker", "--container", cname, "--project", projectDir, "--net", ep.Network, "--addr", ep.Addr}
 	if len(kitNames) > 0 {
 		args = append(args, "--kits", strings.Join(kitNames, ","))
 	}

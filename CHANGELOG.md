@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- `host-mcp` kit (opt-in) — use stdio MCP servers that can only run on the host, such as XcodeBuildMCP. Define them in `~/.asylum/config.yaml`. Claude sessions started by asylum get them registered automatically for that session; other agents register `asylum-mcp <name>`. The host broker starts one server per connection in the project directory, relays its stdio, and stops it when the connection or the container ends. Project config files cannot define servers.
+
 ## 0.8.1 — 2026-09-29
 
 Claude Code works better inside the sandbox. Its scratchpad now survives container restarts and opens on the host, `/ide` reaches an IDE running on the host, and the folder-trust prompt is gone. `asylum update` refreshes the agent CLIs on demand, `--continue` from the home directory finds the workspace you were working in, and project images now pick up base-image rebuilds triggered by other projects.

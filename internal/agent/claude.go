@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,10 +65,29 @@ func (Claude) Command(resume bool, extraArgs []string, opts CmdOpts) []string {
 		parts = append(parts, "--continue")
 	}
 	parts = append(parts, term.ShellQuoteArgs(extraArgs)...)
+	if len(opts.HostMCPServers) > 0 {
+		parts = append(parts, "--mcp-config", term.ShellQuote(hostMCPConfig(opts.HostMCPServers)))
+	}
 	// --add-dir is variadic; keep it last so a positional passthrough prompt
 	// in extraArgs isn't swallowed as a directory argument.
 	if opts.KitSkillsDir != "" {
 		parts = append(parts, "--add-dir", opts.KitSkillsDir)
 	}
 	return wrapZsh(strings.Join(parts, " "))
+}
+
+// hostMCPConfig renders the --mcp-config JSON that registers each host MCP
+// server as a stdio server relayed through asylum-mcp.
+func hostMCPConfig(names []string) string {
+	type server struct {
+		Type    string   `json:"type"`
+		Command string   `json:"command"`
+		Args    []string `json:"args"`
+	}
+	servers := map[string]server{}
+	for _, name := range names {
+		servers[name] = server{Type: "stdio", Command: "asylum-mcp", Args: []string{name}}
+	}
+	data, _ := json.Marshal(map[string]any{"mcpServers": servers})
+	return string(data)
 }

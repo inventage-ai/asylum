@@ -22,6 +22,7 @@ import (
 type stubCtx struct{}
 
 func (stubCtx) Container() string         { return "test-container" }
+func (stubCtx) ProjectDir() string        { return "/project" }
 func (stubCtx) ForwardLoopback(int, bool) {}
 
 // itermHome prepares a HOME containing a fake cc-status that records how it was

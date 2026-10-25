@@ -2006,3 +2006,39 @@ func TestClaudeTempArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestExecArgsHostMCPServers(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	if err := os.MkdirAll(filepath.Join(home, ".asylum"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	global := filepath.Join(home, ".asylum", "config.yaml")
+	opts := ExecOpts{
+		ContainerName: "test",
+		Mode:          ModeAgent,
+		Agent:         agent.Claude{},
+		ProjectDir:    t.TempDir(),
+		Kits:          []*kit.Kit{kit.Get("host-mcp")},
+	}
+	inner := func() string { args := ExecArgs(opts); return args[len(args)-1] }
+
+	if err := os.WriteFile(global, []byte("kits:\n  host-mcp:\n    servers:\n      xcodebuild:\n        command: [/opt/homebrew/bin/xcodebuildmcp, mcp]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := inner(); !strings.Contains(got, `--mcp-config '{"mcpServers":{"xcodebuild":{"type":"stdio","command":"asylum-mcp","args":["xcodebuild"]}}}'`) {
+		t.Errorf("server not registered: %s", got)
+	}
+
+	if err := os.WriteFile(global, []byte("kits: [broken\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := inner(); strings.Contains(got, "--mcp-config") {
+		t.Errorf("unreadable config still registered servers: %s", got)
+	}
+
+	opts.Kits = nil
+	if got := inner(); strings.Contains(got, "--mcp-config") {
+		t.Errorf("inactive kit registered servers: %s", got)
+	}
+}

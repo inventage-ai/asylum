@@ -509,7 +509,7 @@ func main() {
 	// back from the container env (baked at creation), so this covers both the
 	// create path and attaching to an already-running container, and respawns
 	// the broker if it has died.
-	ensureBroker(cname, allKits, cfg)
+	ensureBroker(cname, projectDir, allKits, cfg)
 
 	// Exec session into the running container
 	execArgs := container.ExecArgs(container.ExecOpts{
@@ -804,11 +804,13 @@ func setTabTitle(template, projectDir, agent string, mode container.Mode) {
 // exits the process when `docker wait` returns. A bind conflict means another
 // broker already owns the port, which is a clean exit.
 func runBroker(args []string) {
-	var cname, network, addr, kits string
+	var cname, projectDir, network, addr, kits string
 	for i := 0; i+1 < len(args); i += 2 {
 		switch args[i] {
 		case "--container":
 			cname = args[i+1]
+		case "--project":
+			projectDir = args[i+1]
 		case "--net":
 			network = args[i+1]
 		case "--addr":
@@ -832,19 +834,20 @@ func runBroker(args []string) {
 
 	go func() {
 		docker.Wait(cname)
+		broker.KillGroups()
 		if network == "unix" {
 			os.Remove(addr)
 		}
 		os.Exit(0)
 	}()
 
-	broker.Serve(cname, broker.Endpoint{Network: network, Addr: addr}, token, routes)
+	broker.Serve(cname, projectDir, broker.Endpoint{Network: network, Addr: addr}, token, routes)
 }
 
 // ensureBroker starts (or respawns) the host broker for a running container,
 // using the connection params baked into the container env. It is a no-op when
 // no broker env is present (no route-providing kit, or a pre-broker container).
-func ensureBroker(cname string, kits []*kit.Kit, cfg config.Config) {
+func ensureBroker(cname, projectDir string, kits []*kit.Kit, cfg config.Config) {
 	env, err := docker.InspectEnv(cname)
 	if err != nil {
 		return
@@ -874,7 +877,7 @@ func ensureBroker(cname string, kits []*kit.Kit, cfg config.Config) {
 		log.Warn("host broker: %v", err)
 		return
 	}
-	if err := broker.EnsureBroker(cname, execPath, ep, token, routeKitNames(kits), brokerEnv(cfg)); err != nil {
+	if err := broker.EnsureBroker(cname, projectDir, execPath, ep, token, routeKitNames(kits), brokerEnv(cfg)); err != nil {
 		log.Warn("host broker: %v", err)
 	}
 }
