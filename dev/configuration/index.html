@@ -2131,6 +2131,7 @@
 <span class="w">  </span><span class="nt">DEBUG</span><span class="p">:</span><span class="w"> </span><span class="s">"true"</span>
 </code></pre></div>
 <p>Asylum also reads <code>.env</code> files from the project root (mounted as <code>--env-file</code>).</p>
+<p>Asylum hands environment variables to <code>docker run</code> through an env file on stdin rather than as <code>-e NAME=value</code> arguments, so their values do not show up in <code>ps</code> or in process logs. Variables an env file cannot hold (invalid UTF-8, a <code>NAME=value</code> line of 64 KiB or more, unusual names) are still passed as <code>-e</code>. <code>--debug</code> lists them as <code>-e NAME=***</code>. Values remain visible to anyone who can run <code>docker inspect</code> on the container.</p>
 <h3 id="passing-host-variables-env-from-host">Passing Host Variables (<code>env-from-host</code>)<a class="headerlink" href="#passing-host-variables-env-from-host" title="Permanent link">&para;</a></h3>
 <p><code>env</code> only takes literal values. To pass a secret without writing it into a config file, map a container variable to a host variable:</p>
 <div class="highlight"><pre><span></span><code><span class="c1"># ~/.asylum/config.yaml or .asylum.local</span>
@@ -2140,7 +2141,8 @@
 <p>When the container is created, Asylum reads <code>ASYLUM_GH_TOKEN</code> from the environment <code>asylum</code> runs in (e.g. set per project by direnv) and sets <code>GH_TOKEN</code> in the container. The different host name keeps the host's own <code>gh</code> login untouched.</p>
 <ul>
 <li>Unset or empty host variables are skipped.</li>
-<li>Asylum never writes the value to a file and keeps it off the <code>docker run</code> command line, so it does not show up in <code>ps</code> or the <code>--debug</code> output. It is still visible in <code>docker inspect</code>. Exception: names starting with <code>DOCKER_</code> are passed inline, because the docker CLI itself reads them. Other variables the docker CLI also reads (e.g. <code>HTTPS_PROXY</code> with a remote <code>DOCKER_HOST</code>) affect the CLI as well while it starts the container.</li>
+<li>A host value with newlines or invalid UTF-8, a <code>NAME=value</code> line of 64 KiB or more, or a name the env file cannot hold (e.g. with a space) aborts the start with an error naming the variable.</li>
+<li>Asylum never writes the value to a file. Like all environment variables, it is kept off the <code>docker run</code> command line and masked in <code>--debug</code> (see above). It is still visible in <code>docker inspect</code>.</li>
 <li>The value is fixed at container creation. A running container keeps the old value; the new one applies once the container is recreated (after the last session exits, or with <code>--rebuild</code>).</li>
 <li>A name also set in <code>env</code> or with <code>-e</code> keeps that literal value.</li>
 <li><code>env-from-host</code> is only honored in <code>~/.asylum/config.yaml</code> and <code>.asylum.local</code> (or <code>.asylum.local.yaml</code>). In <code>.asylum</code> (or <code>.asylum.yaml</code>), which is usually committed, it is ignored with a warning, so a committed <code>.asylum</code> cannot map host environment variables into the container. Keep <code>.asylum.local</code> out of version control, because mappings there are honored.</li>
