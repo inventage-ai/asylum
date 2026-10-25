@@ -3,7 +3,13 @@
 ## Unreleased
 
 ### Added
-- `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file or putting it on the `docker run` command line. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
+- `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
+
+### Changed
+- Environment variable values (from `env:`, `-e`, `env-from-host`, kits and asylum itself) reach `docker run` through an env file on stdin instead of `-e NAME=value` where the env file format allows it, so they no longer appear in the process list or in process logs. `env-from-host` values that do not fit abort the start instead.
+
+### Fixed
+- `--debug` and conflicting-argument errors no longer print environment variable values; they show `NAME=***`.
 
 ## 0.8.1 — 2026-09-29
 

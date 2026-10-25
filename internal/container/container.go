@@ -1,6 +1,7 @@
 package container
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"fmt"
 	"io/fs"
@@ -13,6 +14,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/inventage-ai/asylum/assets"
 	"github.com/inventage-ai/asylum/internal/agent"
@@ -65,12 +68,12 @@ const brokerContainerSockDir = "/run/asylum"
 // RunArgs assembles docker run arguments via a unified RunArg pipeline.
 // All sources (core, kits, user config) produce typed RunArgs that are
 // collected, deduplicated, and validated before being flattened to []string.
-// Returns the flat args for docker run, plus the resolved RunArgs and any
-// overrides for debug output.
-func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
+// Returns the flat args for docker run, the env file content docker run reads
+// from stdin, plus the resolved RunArgs and any overrides for debug output.
+func RunArgs(opts RunOpts) ([]string, string, []kit.RunArg, []kit.Override, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return nil, nil, nil, fmt.Errorf("home dir: %w", err)
+		return nil, "", nil, nil, fmt.Errorf("home dir: %w", err)
 	}
 
 	containerName := opts.ContainerName
@@ -109,20 +112,20 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	// Core volume mounts
 	coreVols, err := coreVolumes(home, containerName, opts)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, nil, err
 	}
 	all = append(all, coreVols...)
 
 	// Core env vars
 	coreEnvs, err := coreEnvVars(home, opts)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, nil, err
 	}
 	all = append(all, coreEnvs...)
 
 	claudeTemp, err := claudeTempArgs(home, containerName, opts)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, nil, err
 	}
 	all = append(all, claudeTemp...)
 
@@ -158,7 +161,7 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	// Kit credential mounts
 	credArgs, err := kitCredentialArgs(home, containerName, opts)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, nil, err
 	}
 	all = append(all, credArgs...)
 
@@ -170,7 +173,7 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	if !opts.Secondary {
 		cfgPortArgs, err := configPortArgs(opts.Config.Ports)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, "", nil, nil, err
 		}
 		all = append(all, cfgPortArgs...)
 	}
@@ -178,7 +181,7 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	// User config: volumes
 	cfgVolArgs, err := configVolumeArgs(opts.Config.Volumes, home)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, nil, err
 	}
 	all = append(all, cfgVolArgs...)
 
@@ -189,13 +192,13 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 			continue
 		}
 		if strings.ContainsAny(opts.Config.Env[k], "\n\r") {
-			return nil, nil, nil, fmt.Errorf("env var %q contains newlines, which Docker does not support", k)
+			return nil, "", nil, nil, fmt.Errorf("env var %q contains newlines, which Docker does not support", k)
 		}
 		all = append(all, kit.RunArg{Flag: "-e", Value: k + "=" + opts.Config.Env[k], Source: "user config (env)", Priority: kit.PriorityConfig})
 	}
 	hostEnvArgs, err := envFromHostArgs(opts.Config)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, nil, err
 	}
 	all = append(all, hostEnvArgs...)
 
@@ -208,15 +211,26 @@ func RunArgs(opts RunOpts) ([]string, []kit.RunArg, []kit.Override, error) {
 	// Resolve: dedup, conflict detection
 	resolved, overrides, err := ResolveArgs(all)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, "", nil, nil, err
 	}
 
-	// Flatten to []string: "run -d" prefix, then sorted options, then image + command
-	flat := append([]string{"run", "-d"}, FlattenArgs(resolved)...)
+	// Flatten to []string: "run -d" prefix, then sorted options, then image + command.
+	// Env values go through an env file on stdin instead of -e, keeping secrets
+	// off the docker command line (visible in ps and process logs). It comes
+	// after the project's --env-file, so asylum's values still win.
+	envArgs, nonEnv := splitEnvArgs(resolved)
+	flat := append([]string{"run", "-d"}, FlattenArgs(nonEnv)...)
+	if len(envArgs) > 0 {
+		flat = append(flat, "--env-file", "/dev/stdin")
+	}
 	flat = append(flat, opts.ImageTag)
 	flat = append(flat, "sleep", "infinity")
 
-	return flat, resolved, overrides, nil
+	var envFile strings.Builder
+	for _, a := range envArgs {
+		envFile.WriteString(a.Value + "\n")
+	}
+	return flat, envFile.String(), resolved, overrides, nil
 }
 
 func ContainerName(projectDir string) string {
@@ -509,9 +523,7 @@ func claudeTempArgs(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 
 // envFromHostArgs passes host variables into the container under the names
 // mapped by env-from-host. Unset or empty host variables are skipped, and a
-// name already set via env (config or -e) keeps that literal value. The values
-// stay off the docker command line (visible in ps): the arg is a bare -e NAME
-// and docker reads the value from the environment set up by HostEnv.
+// name already set via env (config or -e) keeps that literal value.
 func envFromHostArgs(cfg config.Config) ([]kit.RunArg, error) {
 	var args []kit.RunArg
 	for _, k := range slices.Sorted(maps.Keys(cfg.EnvFromHost)) {
@@ -526,35 +538,38 @@ func envFromHostArgs(cfg config.Config) ([]kit.RunArg, error) {
 		if v == "" {
 			continue
 		}
-		if strings.ContainsAny(v, "\n\r") {
-			return nil, fmt.Errorf("env var %q (from host %q) contains newlines, which Docker does not support", k, cfg.EnvFromHost[k])
+		// Values that don't fit the env file would fall back to the docker
+		// command line, which env-from-host exists to avoid.
+		if !fitsEnvFile(k + "=" + v) {
+			return nil, fmt.Errorf("env var %q (from host %q) cannot be passed securely: it contains newlines or invalid UTF-8, is 64 KiB or longer, or has an unsupported name", k, cfg.EnvFromHost[k])
 		}
-		value := k
-		if readByDockerCLI(k) {
-			value += "=" + v
-		}
-		args = append(args, kit.RunArg{Flag: "-e", Value: value, Source: "user config (env-from-host)", Priority: kit.PriorityConfig})
+		args = append(args, kit.RunArg{Flag: "-e", Value: k + "=" + v, Source: "user config (env-from-host)", Priority: kit.PriorityConfig})
 	}
 	return args, nil
 }
 
-// HostEnv returns the NAME=value pairs that docker run needs in its own
-// environment to resolve the bare -e NAME args from envFromHostArgs.
-func HostEnv(cfg config.Config) []string {
-	var env []string
-	for _, k := range slices.Sorted(maps.Keys(cfg.EnvFromHost)) {
-		if v := os.Getenv(cfg.EnvFromHost[k]); v != "" && !readByDockerCLI(k) {
-			env = append(env, k+"="+v)
+// splitEnvArgs separates the -e NAME=value args that can go into an env file.
+// The rest stays inline.
+func splitEnvArgs(args []kit.RunArg) (env, rest []kit.RunArg) {
+	for _, a := range args {
+		if a.Flag == "-e" && fitsEnvFile(a.Value) {
+			env = append(env, a)
+		} else {
+			rest = append(rest, a)
 		}
 	}
-	return env
+	return env, rest
 }
 
-// readByDockerCLI reports whether the docker CLI itself would act on the
-// variable (DOCKER_HOST, DOCKER_CONFIG, ...). Such values must not be placed in
-// its environment, so they are passed inline instead.
-func readByDockerCLI(name string) bool {
-	return strings.HasPrefix(name, "DOCKER_")
+// fitsEnvFile reports whether docker's env file parser accepts the NAME=value
+// line unchanged: it reads lines of at most 64 KiB, requires UTF-8, strips
+// leading whitespace and a BOM, rejects names with whitespace and treats a
+// leading # as a comment.
+func fitsEnvFile(kv string) bool {
+	name, _, ok := strings.Cut(kv, "=")
+	return ok && name != "" && !strings.HasPrefix(name, "#") && !strings.HasPrefix(name, "\uFEFF") &&
+		!strings.ContainsFunc(name, unicode.IsSpace) && !strings.ContainsAny(kv, "\n\r") &&
+		utf8.ValidString(kv) && len(kv) < bufio.MaxScanTokenSize
 }
 
 // kitCredentialArgs produces RunArgs for kit credential mounts.
