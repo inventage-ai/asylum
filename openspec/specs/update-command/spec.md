@@ -1,7 +1,9 @@
 # update-command Specification
 
 ## Purpose
-TBD - created by archiving change on-demand-update. Update Purpose after archive.
+
+Provides `asylum update`, which refreshes the agent CLI versions and rebuilds the images on demand, without starting a container. Updating the asylum binary itself remains the job of `asylum self-update`.
+
 ## Requirements
 ### Requirement: On-demand update command
 
