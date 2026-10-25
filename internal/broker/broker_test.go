@@ -13,7 +13,7 @@ import (
 // startTestServer starts a broker on the endpoint and waits until it answers.
 func startTestServer(t *testing.T, ep Endpoint, token string, routes []Route) {
 	t.Helper()
-	go Serve("test-container", ep, token, routes)
+	go Serve("test-container", "/project", ep, token, routes)
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		if alive(ep, token) {
@@ -126,7 +126,7 @@ func TestEnsureBrokerSkipsSpawnWhenAlive(t *testing.T) {
 	startTestServer(t, ep, "live", nil)
 	// A live broker answers, so no process is spawned — the bogus exec path is
 	// never used and EnsureBroker returns nil.
-	if err := EnsureBroker("c", "/nonexistent/asylum", ep, "live", nil, nil); err != nil {
+	if err := EnsureBroker("c", "/project", "/nonexistent/asylum", ep, "live", nil, nil); err != nil {
 		t.Errorf("EnsureBroker with live broker: %v", err)
 	}
 }
@@ -135,7 +135,7 @@ func TestEnsureBrokerSpawnsWhenDead(t *testing.T) {
 	ep := tcpEndpoint(t) // free port, nothing listening
 	// EnsureBroker tries to spawn; the bogus exec path makes the spawn fail,
 	// surfacing that it attempted to start one.
-	if err := EnsureBroker("c", "/nonexistent/asylum", ep, "tok", nil, nil); err == nil {
+	if err := EnsureBroker("c", "/project", "/nonexistent/asylum", ep, "tok", nil, nil); err == nil {
 		t.Error("EnsureBroker with no broker: want spawn error, got nil")
 	}
 }
@@ -147,5 +147,18 @@ func TestFreePortDistinct(t *testing.T) {
 	}
 	if p1 <= 0 {
 		t.Fatalf("FreePort returned %d", p1)
+	}
+}
+
+func TestHandlerSeesProjectDir(t *testing.T) {
+	var got string
+	routes := []Route{{Path: "/dir", Handler: func(c Ctx, w http.ResponseWriter, r *http.Request) {
+		got = c.ProjectDir()
+	}}}
+	ep := tcpEndpoint(t)
+	startTestServer(t, ep, "tok", routes)
+	doGet(t, ep, "/dir", "Bearer tok")
+	if got != "/project" {
+		t.Errorf("ProjectDir() = %q, want /project", got)
 	}
 }
