@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file or putting it on the `docker run` command line. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
+
 ## 0.8.1 — 2026-09-29
 
 Claude Code works better inside the sandbox. Its scratchpad now survives container restarts and opens on the host, `/ide` reaches an IDE running on the host, and the folder-trust prompt is gone. `asylum update` refreshes the agent CLIs on demand, `--continue` from the home directory finds the workspace you were working in, and project images now pick up base-image rebuilds triggered by other projects.
