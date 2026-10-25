@@ -30,5 +30,5 @@ On first run for an agent in `isolated` or `project` mode, when the target confi
 - **THEN** nothing is copied, regardless of the seed mode
 
 #### Scenario: Unknown seed mode
-- **WHEN** the seed mode is a value other than `none`, `settings` or `full`
+- **WHEN** the seed mode is a value other than `none`, `settings` or `full` and the target config directory does not exist yet
 - **THEN** the run aborts with an error naming the valid values
