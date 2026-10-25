@@ -16,17 +16,6 @@ The config key `env-from-host` SHALL map a container variable name to a host var
 - **WHEN** the config contains `env-from-host: {GH_TOKEN: ASYLUM_GH_TOKEN}` and `ASYLUM_GH_TOKEN` is unset or empty on the host
 - **THEN** `GH_TOKEN` is not set in the container and container creation succeeds
 
-### Requirement: Values stay off the docker command line
-The value of a mapped variable SHALL NOT appear in the arguments of the `docker run` process, because process arguments are visible to other processes (e.g. `ps`). Variables whose name starts with `DOCKER_` are exempt and passed inline, because the docker CLI itself acts on them.
-
-#### Scenario: Token is not visible in process arguments
-- **WHEN** the config maps `GH_TOKEN: ASYLUM_GH_TOKEN` and `ASYLUM_GH_TOKEN=abc` is set on the host
-- **THEN** the `docker run` arguments contain `-e GH_TOKEN` but not `abc`, and the container has `GH_TOKEN=abc`
-
-#### Scenario: Variable read by the docker CLI
-- **WHEN** the config maps `DOCKER_HOST: REMOTE_DOCKER_HOST`
-- **THEN** the value is passed inline as `-e DOCKER_HOST=<value>` and the docker CLI's own connection is unaffected
-
 ### Requirement: Only user-maintained configs may map host variables
 `env-from-host` SHALL be honored in `~/.asylum/config.yaml` and in the local layer (`.asylum.local` / `.asylum.local.yaml`). In the project layer (`.asylum` / `.asylum.yaml`) it SHALL be ignored and a warning SHALL be logged.
 
@@ -50,8 +39,12 @@ The value of a mapped variable SHALL NOT appear in the arguments of the `docker 
 - **THEN** the container's `GH_TOKEN` is `other`
 
 ### Requirement: Same restrictions as literal env vars
-Variables from `env-from-host` SHALL be subject to the same restrictions as `env`: the reserved active-agent variable SHALL be skipped with a warning, and a value containing a newline SHALL abort container creation with an error naming the variable.
+Variables from `env-from-host` SHALL be subject to the same restrictions as `env`: the reserved active-agent variable SHALL be skipped with a warning, and a value containing a newline SHALL abort container creation with an error naming the variable. A variable the env file cannot represent unchanged (invalid UTF-8, a line of 64 KiB or more, an unsupported name) SHALL abort the same way instead of falling back to the command line.
 
 #### Scenario: Value with newline
 - **WHEN** the mapped host variable contains a newline
+- **THEN** container creation fails with an error naming the container variable, without printing the value
+
+#### Scenario: Value too large for the env file
+- **WHEN** the mapped host variable is 70000 bytes long
 - **THEN** container creation fails with an error naming the container variable, without printing the value

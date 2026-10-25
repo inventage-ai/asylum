@@ -68,7 +68,7 @@ The system SHALL extract a dedup key from each RunArg based on its flag type. Ar
 - **THEN** the dedup key SHALL be `--name`
 
 ### Requirement: Conflict detection
-When two RunArgs have the same dedup key and the same priority but different values, the system SHALL abort with an error naming both sources and values.
+When two RunArgs have the same dedup key and the same priority but different values, the system SHALL abort with an error naming both sources and values. Values of `-e` args SHALL be masked as `NAME=***` in that error.
 
 #### Scenario: Same-priority conflict aborts
 - **WHEN** kit A produces `-v /a:/workspace:ro` (priority 1) and kit B produces `-v /b:/workspace:rw` (priority 1)
@@ -77,6 +77,10 @@ When two RunArgs have the same dedup key and the same priority but different val
 #### Scenario: Same-priority same-value is fine
 - **WHEN** kit A produces `--privileged` (priority 1) and kit B also produces `--privileged` (priority 1)
 - **THEN** only one `--privileged` SHALL appear in the final args (no conflict)
+
+#### Scenario: Env conflict does not print values
+- **WHEN** two args of the same priority set `-e TOKEN=a` and `-e TOKEN=b`
+- **THEN** the error names both sources and shows `TOKEN=***` for both, without `a` or `b`
 
 ### Requirement: Deterministic output ordering
 The resolved args SHALL be emitted in deterministic order: sorted by priority (ascending), then by source name (alphabetical), then by dedup category key. The docker subcommand `run -d` SHALL be prepended as a fixed prefix before the sorted args during flattening, ensuring they always appear first in the final `[]string`.
@@ -105,7 +109,7 @@ The Kit struct SHALL have an optional `ContainerFunc` field of type `func(Contai
 - **THEN** the container assembly SHALL log a warning and continue without that kit's args
 
 ### Requirement: Debug output
-When the `--debug` flag is passed, the system SHALL print every resolved RunArg to stderr in a table showing the flag+value and source, before launching the container.
+When the `--debug` flag is passed, the system SHALL print every resolved RunArg to stderr in a table showing the flag+value and source, before launching the container. Values of `-e` args SHALL be masked as `NAME=***`, in the table and in the overrides section.
 
 #### Scenario: Debug output format
 - **WHEN** `--debug` is passed and the resolved args include `-p 10000:10000` from "ports kit" and `--privileged` from "docker kit"
@@ -114,3 +118,7 @@ When the `--debug` flag is passed, the system SHALL print every resolved RunArg 
 #### Scenario: Debug shows overrides
 - **WHEN** `--debug` is passed and a config arg overrode a kit arg
 - **THEN** the debug output SHALL include an "Overrides" section showing what was replaced and by what
+
+#### Scenario: Env values masked
+- **WHEN** `--debug` is passed and the resolved args include `-e GH_TOKEN=secret`
+- **THEN** stderr SHALL show `-e GH_TOKEN=***` and SHALL NOT contain `secret`
