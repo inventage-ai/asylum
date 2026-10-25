@@ -2060,12 +2060,44 @@
 <span class="nt">agents</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">claude</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">shared</span><span class="w">   </span><span class="c1"># shared (default) | isolated | project</span>
+<span class="w">    </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">full</span><span class="w">       </span><span class="c1"># full (default) | settings | none — see Config Seeding</span>
 </code></pre></div>
 <h3 id="first-run-wizard">First-Run Wizard<a class="headerlink" href="#first-run-wizard" title="Permanent link">&para;</a></h3>
 <p>The <a href="../first-run/">first-run wizard</a> prompts for Claude's isolation mode if one isn't configured. <code>shared</code> is pre-selected as recommended; the choice is saved to <code>~/.asylum/config.yaml</code>. In non-interactive environments, <code>shared</code> is used as the default.</p>
 <p>Other agents (Gemini, Codex, Copilot, Pi) follow the same <code>shared</code>-by-default behavior unless explicitly configured.</p>
 <h2 id="config-seeding">Config Seeding<a class="headerlink" href="#config-seeding" title="Permanent link">&para;</a></h2>
 <p>In <code>isolated</code> and <code>project</code> modes, Asylum performs a one-time copy of your host agent config into the target directory on first run. This seeds API keys, settings, and other config so you don't have to set them up again.</p>
+<p>By default the whole host directory is copied, including the transcripts, history and todos of every project. <code>seed</code> controls what is copied:</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Copies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>full</code> (default)</td>
+<td>The entire host config directory</td>
+</tr>
+<tr>
+<td><code>settings</code></td>
+<td>Only settings, global instructions, custom agents/commands/skills, and credential files stored in the config directory. Sessions, history, caches and logs stay on the host.</td>
+</tr>
+<tr>
+<td><code>none</code></td>
+<td>Nothing; the directory starts empty</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code><span class="c1"># ~/.asylum/config.yaml or .asylum.local</span>
+<span class="nt">agents</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">claude</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">project</span>
+<span class="w">    </span><span class="nt">seed</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">settings</span>
+</code></pre></div>
+<p>For Claude, <code>settings</code> copies <code>settings.json</code>, <code>CLAUDE.md</code>, <code>keybindings.json</code>, <code>agents/</code>, <code>commands/</code>, <code>skills/</code>, <code>rules/</code>, <code>output-styles/</code>, <code>hooks/</code> and <code>.credentials.json</code>. Other files that <code>settings.json</code> points to, such as a statusline script directly in <code>~/.claude</code>, are not copied; keep them under <code>hooks/</code> or use <code>full</code>. <code>plugins/</code> is left out because its files contain absolute host paths, so plugins enabled in <code>settings.json</code> need to be installed again in the container. On macOS Claude keeps its login in the Keychain rather than in <code>.credentials.json</code>, so you log in once per seeded directory. Claude's <code>.claude.json</code>, which holds user-scope MCP servers and onboarding state, is not seeded either, so those MCP servers must be added again in the container and the first-run prompts appear once. Each agent has its own list; OpenCode's <code>~/.opencode</code> holds no settings, so <code>settings</code> behaves like <code>none</code> there.</p>
+<p><code>seed</code> is only honored in <code>~/.asylum/config.yaml</code> and <code>.asylum.local</code>. In a project's <code>.asylum</code>, which is usually committed, it is ignored with a warning, so a repository cannot override your <code>seed</code> choice.</p>
 <p>After seeding, the copy is independent — changes to the host config don't propagate. To re-seed, delete the asylum copy and restart.</p>
 <p>Seeding is skipped in <code>shared</code> mode since the host directory is used directly.</p>
 <h3 id="first-run-session-behavior">First-Run Session Behavior<a class="headerlink" href="#first-run-session-behavior" title="Permanent link">&para;</a></h3>
