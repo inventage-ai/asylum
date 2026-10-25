@@ -52,6 +52,7 @@ Set the isolation mode in your config:
 agents:
   claude:
     config: shared   # shared (default) | isolated | project
+    seed: full       # full (default) | settings | none — see Config Seeding
 ```
 
 ### First-Run Wizard
@@ -63,6 +64,26 @@ Other agents (Gemini, Codex, Copilot, Pi) follow the same `shared`-by-default be
 ## Config Seeding
 
 In `isolated` and `project` modes, Asylum performs a one-time copy of your host agent config into the target directory on first run. This seeds API keys, settings, and other config so you don't have to set them up again.
+
+By default the whole host directory is copied, including the transcripts, history and todos of every project. `seed` controls what is copied:
+
+| Value | Copies |
+|-------|--------|
+| `full` (default) | The entire host config directory |
+| `settings` | Only settings, global instructions, custom agents/commands/skills, and credential files stored in the config directory. Sessions, history, caches and logs stay on the host. |
+| `none` | Nothing; the directory starts empty |
+
+```yaml
+# ~/.asylum/config.yaml or .asylum.local
+agents:
+  claude:
+    config: project
+    seed: settings
+```
+
+For Claude, `settings` copies `settings.json`, `CLAUDE.md`, `keybindings.json`, `agents/`, `commands/`, `skills/`, `rules/`, `output-styles/`, `hooks/` and `.credentials.json`. Other files that `settings.json` points to, such as a statusline script directly in `~/.claude`, are not copied; keep them under `hooks/` or use `full`. `plugins/` is left out because its files contain absolute host paths, so plugins enabled in `settings.json` need to be installed again in the container. On macOS Claude keeps its login in the Keychain rather than in `.credentials.json`, so you log in once per seeded directory. Claude's `.claude.json`, which holds user-scope MCP servers and onboarding state, is not seeded either, so those MCP servers must be added again in the container and the first-run prompts appear once. Each agent has its own list; OpenCode's `~/.opencode` holds no settings, so `settings` behaves like `none` there.
+
+`seed` is only honored in `~/.asylum/config.yaml` and `.asylum.local`. In a project's `.asylum`, which is usually committed, it is ignored with a warning, so a repository cannot override your `seed` choice.
 
 After seeding, the copy is independent — changes to the host config don't propagate. To re-seed, delete the asylum copy and restart.
 

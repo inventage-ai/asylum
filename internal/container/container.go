@@ -934,49 +934,54 @@ func agentCommand(opts ExecOpts) []string {
 	return opts.Agent.Command(resume, opts.ExtraArgs, cmdOpts)
 }
 
-// EnsureAgentConfig returns true if the config was freshly created (first run).
-// EnsureAgentConfigAt ensures the agent config exists at the given target directory,
-// seeding from the host native config if available.
-func EnsureAgentConfigAt(home string, a agent.Agent, targetDir string) (bool, error) {
+// EnsureAgentConfigAt ensures the agent config exists at the given target
+// directory, seeding it from the host native config according to seed (none,
+// settings, full). Returns true if the directory was freshly created.
+func EnsureAgentConfigAt(home string, a agent.Agent, targetDir, seed string) (bool, error) {
 	if dirExists(targetDir) {
 		return false, nil
 	}
+	if !slices.Contains([]string{"none", "settings", "full"}, seed) {
+		return false, fmt.Errorf("agents.%s.seed: unknown value %q (valid: none, settings, full)", a.Name(), seed)
+	}
 
-	nativeDir := a.NativeConfigDir()
-	if nativeDir == "" {
+	nativeDir := config.ExpandTilde(a.NativeConfigDir(), home)
+	if seed == "none" || a.NativeConfigDir() == "" || !dirExists(nativeDir) {
 		log.Info("creating %s config directory", a.Name())
 		return true, os.MkdirAll(targetDir, 0755)
 	}
-	nativeDir = config.ExpandTilde(nativeDir, home)
-	if dirExists(nativeDir) {
+
+	if seed == "full" {
 		log.Info("seeding %s config from %s", a.Name(), nativeDir)
 		return true, copyDir(nativeDir, targetDir)
 	}
 
-	log.Info("creating %s config directory", a.Name())
-	return true, os.MkdirAll(targetDir, 0755)
+	log.Info("seeding %s settings from %s", a.Name(), nativeDir)
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return true, err
+	}
+	for _, entry := range a.SeedSettings() {
+		src := filepath.Join(nativeDir, entry)
+		if _, err := os.Stat(src); err != nil {
+			continue
+		}
+		dst := filepath.Join(targetDir, entry)
+		if parent, err := os.Stat(filepath.Dir(src)); err != nil {
+			return true, err
+		} else if err := os.MkdirAll(filepath.Dir(dst), parent.Mode().Perm()); err != nil {
+			return true, err
+		}
+		if err := copyDir(src, dst); err != nil {
+			return true, err
+		}
+	}
+	return true, nil
 }
 
-func EnsureAgentConfig(home string, a agent.Agent) (bool, error) {
-	agentDir := config.ExpandTilde(a.AsylumConfigDir(), home)
-
-	if dirExists(agentDir) {
-		return false, nil
-	}
-
-	nativeDir := a.NativeConfigDir()
-	if nativeDir == "" {
-		log.Info("creating %s config directory", a.Name())
-		return true, os.MkdirAll(agentDir, 0755)
-	}
-	nativeDir = config.ExpandTilde(nativeDir, home)
-	if dirExists(nativeDir) {
-		log.Info("seeding %s config from %s", a.Name(), nativeDir)
-		return true, copyDir(nativeDir, agentDir)
-	}
-
-	log.Info("creating %s config directory", a.Name())
-	return true, os.MkdirAll(agentDir, 0755)
+// EnsureAgentConfig ensures the agent's asylum-managed config dir exists
+// (isolated mode). Returns true if it was freshly created.
+func EnsureAgentConfig(home string, a agent.Agent, seed string) (bool, error) {
+	return EnsureAgentConfigAt(home, a, config.ExpandTilde(a.AsylumConfigDir(), home), seed)
 }
 
 func copyDir(src, dst string) error {
@@ -993,11 +998,13 @@ func copyDirVisited(src, dst string, visited map[string]bool) error {
 	}
 	visited[realSrc] = true
 
-	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+	// Walk the resolved path: WalkDir does not follow a symlinked root, which
+	// would otherwise end in the visited check above and copy nothing.
+	return filepath.WalkDir(realSrc, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		rel, _ := filepath.Rel(src, path)
+		rel, _ := filepath.Rel(realSrc, path)
 		target := filepath.Join(dst, rel)
 
 		if d.Type()&fs.ModeSymlink != 0 {

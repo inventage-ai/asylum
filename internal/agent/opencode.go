@@ -27,6 +27,10 @@ func (Opencode) NativeConfigDir() string    { return "~/.opencode" }
 func (Opencode) ContainerConfigDir() string { return "~/.opencode" }
 func (Opencode) AsylumConfigDir() string    { return "~/.asylum/agents/opencode" }
 
+// SeedSettings is empty: ~/.opencode only holds the installed binary, the
+// config lives in ~/.config/opencode.
+func (Opencode) SeedSettings() []string { return nil }
+
 func (Opencode) EnvVars() map[string]string { return nil }
 
 func (Opencode) HasSession(_, _ string) bool { return false }

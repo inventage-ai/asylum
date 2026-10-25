@@ -30,6 +30,10 @@ func (Copilot) NativeConfigDir() string    { return "~/.copilot" }
 func (Copilot) ContainerConfigDir() string { return "~/.copilot" }
 func (Copilot) AsylumConfigDir() string    { return "~/.asylum/agents/copilot" }
 
+func (Copilot) SeedSettings() []string {
+	return []string{"settings.json", "config.json", "copilot-instructions.md", "instructions", "mcp-config.json", "lsp-config.json", "providers.json", "agents", "skills", "hooks", "extensions", "mcp-oauth-config", "mcp-secrets"}
+}
+
 // EnvVars sets COPILOT_HOME so the CLI uses the mounted config dir, which is
 // where session-state/ and mcp-config.json live.
 func (Copilot) EnvVars() map[string]string {
