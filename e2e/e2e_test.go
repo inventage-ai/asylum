@@ -11,7 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/inventage-ai/asylum/internal/config"
 	"github.com/inventage-ai/asylum/internal/docker"
+	"github.com/inventage-ai/asylum/internal/kit"
 )
 
 var (
@@ -54,6 +56,9 @@ agent: echo
 kits: {}
 agents: {}
 `), 0644)
+
+	// Mark every kit as known so kit sync does not try to rewrite the config.
+	config.SaveState(configDir, config.State{KnownKits: kit.All()})
 
 	// Create agent config dir so EnsureAgentConfig doesn't prompt
 	os.MkdirAll(filepath.Join(configDir, "agents", "echo"), 0755)

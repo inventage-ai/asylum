@@ -2,6 +2,7 @@ package agent
 
 func init() {
 	agents["echo"] = Echo{}
+	RegisterInstall(&AgentInstall{Name: "echo"})
 }
 
 // Echo is a minimal testing agent that runs the shell echo command.
