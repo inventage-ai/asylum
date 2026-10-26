@@ -25,6 +25,20 @@ func runConfig() {
 	cfgPath := filepath.Join(home, ".asylum", "config.yaml")
 
 	kitSnippets := kit.AssembleConfigSnippets()
+	if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
+		asylumDir := filepath.Dir(cfgPath)
+		if err := os.MkdirAll(asylumDir, 0755); err != nil {
+			die("create %s: %v", asylumDir, err)
+		}
+		// Without a config file, kit sync records every kit as known. Writing
+		// the defaults first would make the next run offer them all again.
+		if _, err := config.SyncNewKits(asylumDir, false, nil); err != nil {
+			die("sync kits: %v", err)
+		}
+		if err := config.WriteDefaults(cfgPath, kitSnippets); err != nil {
+			die("write default config: %v", err)
+		}
+	}
 	cfg, err := config.Load(".", config.CLIFlags{}, kitSnippets)
 	if err != nil {
 		die("load config: %v", err)
