@@ -1952,7 +1952,7 @@
 <h1 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
 <h2 id="prerequisites">Prerequisites<a class="headerlink" href="#prerequisites" title="Permanent link">&para;</a></h2>
 <ul>
-<li><a href="https://docs.docker.com/get-docker/">Docker</a> installed and running</li>
+<li><a href="https://docs.docker.com/get-docker/">Docker</a> installed and running. Rootless Podman works too if the <code>docker</code> command resolves to it, as with the <code>podman-docker</code> package. By default Podman maps your user to root inside the container, so your project and the seeded agent config show up owned by root. Set <code>userns = "keep-id"</code> in the <code>[containers]</code> section of <code>~/.config/containers/containers.conf</code> so the container keeps your user ID.</li>
 <li>An AI coding agent installed on your host (Claude Code, Gemini CLI, or Codex) — Asylum seeds its config from your host installation</li>
 </ul>
 <h2 id="install-asylum">Install Asylum<a class="headerlink" href="#install-asylum" title="Permanent link">&para;</a></h2>

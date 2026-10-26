@@ -2040,6 +2040,7 @@
 <p>Installs yarn globally.</p>
 <h2 id="shadow-node_modules">Shadow node_modules<a class="headerlink" href="#shadow-node_modules" title="Permanent link">&para;</a></h2>
 <p>On macOS, Node.js native binaries built on the host won't work inside the Linux container. Asylum automatically shadows each <code>node_modules</code> directory with a named Docker volume so each platform has its own binaries. Your source files are shared — only <code>node_modules</code> is isolated.</p>
+<p>Because the volume is mounted at the <code>node_modules</code> path, the directory becomes a mount point, and Linux refuses to rename a mount point. Any script that renames <code>node_modules</code>, such as <code>mv node_modules node_modules_prod</code> to build separate dependency trees, fails with <code>EBUSY</code> while shadowing is on. For such projects, turn shadowing off in the project's <code>.asylum</code>, so every clone gets the setting.</p>
 <p>Disable with:</p>
 <div class="highlight"><pre><span></span><code><span class="nt">kits</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">node</span><span class="p">:</span>

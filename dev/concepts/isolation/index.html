@@ -2010,6 +2010,7 @@
 </table>
 <p><strong>Use when:</strong> you want identical config inside and outside the sandbox, or use the same API keys, MCP servers, and settings everywhere.</p>
 <p><strong>Trade-off:</strong> no isolation. A misbehaving agent can modify your host config.</p>
+<p>On macOS, Claude keeps its login in the Keychain rather than in <code>~/.claude</code>, and the container cannot read the Keychain. So even in <code>shared</code> mode you log in once inside the container. The container stores that login in <code>~/.claude/.credentials.json</code>, and the shared mount keeps that file on the host.</p>
 <h3 id="isolated"><code>isolated</code><a class="headerlink" href="#isolated" title="Permanent link">&para;</a></h3>
 <p>Agent config is stored in Asylum's own directory, separate from the host. On first run, Asylum seeds this by copying from the host config. After that, the two are independent.</p>
 <table>
