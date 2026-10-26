@@ -10,6 +10,7 @@
 - Environment variable values (from `env:`, `-e`, `env-from-host`, kits and asylum itself) reach `docker run` through an env file on stdin instead of `-e NAME=value` where the env file format allows it, so they no longer appear in the process list or in process logs. `env-from-host` values that do not fit abort the start instead.
 
 ### Fixed
+- The host terminal no longer keeps mouse tracking or the alternate screen on after a container is stopped under a running TUI.
 - `--debug` and conflicting-argument errors no longer print environment variable values; they show `NAME=***`.
 - Seeding an agent config directory that is a symlink (e.g. `~/.claude` managed by a dotfiles tool) copied nothing, so the container started without the host config.
 

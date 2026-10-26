@@ -526,6 +526,7 @@ func main() {
 
 	setTabTitle(cfg.TabTitle(), projectDir, agentName, containerMode)
 	exitCode := runDocker(execArgs)
+	term.RestoreModes()
 
 	// Cleanup: remove container if no other sessions are active
 	if !docker.HasOtherSessions(cname) {
