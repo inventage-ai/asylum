@@ -17,6 +17,8 @@ The host config directory is mounted directly into the container. Changes sync b
 
 **Trade-off:** no isolation. A misbehaving agent can modify your host config.
 
+On macOS, Claude keeps its login in the Keychain rather than in `~/.claude`, and the container cannot read the Keychain. So even in `shared` mode you log in once inside the container. The container stores that login in `~/.claude/.credentials.json`, and the shared mount keeps that file on the host.
+
 ### `isolated`
 
 Agent config is stored in Asylum's own directory, separate from the host. On first run, Asylum seeds this by copying from the host config. After that, the two are independent.
