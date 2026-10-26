@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- [Docker](https://docs.docker.com/get-docker/) installed and running
+- [Docker](https://docs.docker.com/get-docker/) installed and running. Rootless Podman works too if the `docker` command resolves to it, as with the `podman-docker` package. By default Podman maps your user to root inside the container, so your project and the seeded agent config show up owned by root. Set `userns = "keep-id"` in the `[containers]` section of `~/.config/containers/containers.conf` so the container keeps your user ID.
 - An AI coding agent installed on your host (Claude Code, Gemini CLI, or Codex) — Asylum seeds its config from your host installation
 
 ## Install Asylum
