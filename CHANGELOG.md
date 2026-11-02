@@ -5,6 +5,7 @@
 ### Added
 - `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
 - `agents.<agent>.seed` controls what `isolated` and `project` mode copy from the host config on first run: `full` (default, unchanged), `settings` (settings, instructions, customizations and credentials only, no transcripts or history) or `none`. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
+- `host-mcp` kit (opt-in) — use stdio MCP servers that can only run on the host, such as XcodeBuildMCP. Define them in `~/.asylum/config.yaml`. Claude sessions started by asylum get them registered automatically for that session; other agents register `asylum-mcp <name>`. The host broker starts one server per connection in the project directory, relays its stdio, and stops it when the connection or the container ends. Project config files cannot define servers.
 
 ### Changed
 - Environment variable values (from `env:`, `-e`, `env-from-host`, kits and asylum itself) reach `docker run` through an env file on stdin instead of `-e NAME=value` where the env file format allows it, so they no longer appear in the process list or in process logs. `env-from-host` values that do not fit abort the start instead.

@@ -3,6 +3,7 @@ package agent
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -70,6 +71,8 @@ func TestClaudeCommand(t *testing.T) {
 		{"skills dir no resume", false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--add-dir", "/opt/asylum-skills"}},
 		{"skills dir with resume", true, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "--add-dir", "/opt/asylum-skills"}},
 		{"skills dir with args keeps add-dir last", true, []string{"fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "'fix'", "--add-dir", "/opt/asylum-skills"}},
+		{"host mcp servers", false, nil, CmdOpts{HostMCPServers: []string{"cupertino", "xcodebuild"}}, []string{"claude", "--dangerously-skip-permissions", "--mcp-config", `'{"mcpServers":{"cupertino":{"type":"stdio","command":"asylum-mcp","args":["cupertino"]},"xcodebuild":{"type":"stdio","command":"asylum-mcp","args":["xcodebuild"]}}}'`}},
+		{"host mcp servers between passthrough args and add-dir", false, []string{"fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills", HostMCPServers: []string{"x"}}, []string{"claude", "--dangerously-skip-permissions", "'fix'", "--mcp-config", `'{"mcpServers":{"x":{"type":"stdio","command":"asylum-mcp","args":["x"]}}}'`, "--add-dir", "/opt/asylum-skills"}},
 	}
 
 	for _, tt := range tests {
@@ -324,6 +327,12 @@ func TestEchoCommand(t *testing.T) {
 			t.Errorf("KitSkillsDir should be ignored, got %v", cmd)
 		}
 	})
+	t.Run("ignores host mcp servers", func(t *testing.T) {
+		cmd := a.Command(false, nil, CmdOpts{HostMCPServers: []string{"x"}})
+		if len(cmd) != 1 || cmd[0] != "echo" {
+			t.Errorf("HostMCPServers should be ignored, got %v", cmd)
+		}
+	})
 }
 
 func TestCodexWriteMarker(t *testing.T) {
@@ -347,5 +356,18 @@ func TestCodexWriteMarker(t *testing.T) {
 	// Writing again should be idempotent
 	if err := a.WriteMarker(configDir, "/some/project"); err != nil {
 		t.Errorf("WriteMarker second call: %v", err)
+	}
+}
+
+func TestOnlyClaudeRegistersHostMCPServers(t *testing.T) {
+	for name, a := range agents {
+		if name == "claude" {
+			continue
+		}
+		with := a.Command(false, nil, CmdOpts{HostMCPServers: []string{"x"}})
+		without := a.Command(false, nil, CmdOpts{})
+		if !slices.Equal(with, without) {
+			t.Errorf("%s: HostMCPServers changed the command: %v", name, with)
+		}
 	}
 }
