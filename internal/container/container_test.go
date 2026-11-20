@@ -2293,7 +2293,7 @@ func TestExecArgsHostMCPServers(t *testing.T) {
 	if err := os.WriteFile(global, []byte("kits:\n  host-mcp:\n    servers:\n      xcodebuild:\n        command: [/opt/homebrew/bin/xcodebuildmcp, mcp]\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got := inner(); !strings.Contains(got, `--mcp-config '{"mcpServers":{"xcodebuild":{"type":"stdio","command":"asylum-mcp","args":["xcodebuild"]}}}'`) {
+	if got := inner(); !strings.Contains(got, `'--mcp-config={"mcpServers":{"xcodebuild":{"type":"stdio","command":"asylum-mcp","args":["xcodebuild"]}}}'`) {
 		t.Errorf("server not registered: %s", got)
 	}
 
