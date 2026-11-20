@@ -68,11 +68,11 @@ func TestClaudeCommand(t *testing.T) {
 		{"new session", false, nil, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions"}},
 		{"with args resume", true, []string{"fix", "the", "bug"}, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions", "--continue", "'fix'", "'the'", "'bug'"}},
 		{"with args no resume", false, []string{"fix", "bug"}, CmdOpts{}, []string{"claude", "--dangerously-skip-permissions", "'fix'", "'bug'"}},
-		{"skills dir no resume", false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--add-dir", "/opt/asylum-skills"}},
-		{"skills dir with resume", true, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "--add-dir", "/opt/asylum-skills"}},
-		{"skills dir with args keeps add-dir last", true, []string{"fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "'fix'", "--add-dir", "/opt/asylum-skills"}},
-		{"host mcp servers", false, nil, CmdOpts{HostMCPServers: []string{"cupertino", "xcodebuild"}}, []string{"claude", "--dangerously-skip-permissions", "--mcp-config", `'{"mcpServers":{"cupertino":{"type":"stdio","command":"asylum-mcp","args":["cupertino"]},"xcodebuild":{"type":"stdio","command":"asylum-mcp","args":["xcodebuild"]}}}'`}},
-		{"host mcp servers between passthrough args and add-dir", false, []string{"fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills", HostMCPServers: []string{"x"}}, []string{"claude", "--dangerously-skip-permissions", "'fix'", "--mcp-config", `'{"mcpServers":{"x":{"type":"stdio","command":"asylum-mcp","args":["x"]}}}'`, "--add-dir", "/opt/asylum-skills"}},
+		{"skills dir no resume", false, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--add-dir=/opt/asylum-skills"}},
+		{"skills dir with resume", true, nil, CmdOpts{KitSkillsDir: "/opt/asylum-skills"}, []string{"claude", "--dangerously-skip-permissions", "--continue", "--add-dir=/opt/asylum-skills"}},
+		{"host mcp servers", false, nil, CmdOpts{HostMCPServers: []string{"cupertino", "xcodebuild"}}, []string{"claude", "--dangerously-skip-permissions", `'--mcp-config={"mcpServers":{"cupertino":{"type":"stdio","command":"asylum-mcp","args":["cupertino"]},"xcodebuild":{"type":"stdio","command":"asylum-mcp","args":["xcodebuild"]}}}'`}},
+		{"injected flags precede positional prompt", false, []string{"fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills", HostMCPServers: []string{"x"}}, []string{"claude", "--dangerously-skip-permissions", `'--mcp-config={"mcpServers":{"x":{"type":"stdio","command":"asylum-mcp","args":["x"]}}}'`, "--add-dir=/opt/asylum-skills", "'fix'"}},
+		{"injected flags precede double dash", false, []string{"-p", "--", "fix"}, CmdOpts{KitSkillsDir: "/opt/asylum-skills", HostMCPServers: []string{"x"}}, []string{"claude", "--dangerously-skip-permissions", `'--mcp-config={"mcpServers":{"x":{"type":"stdio","command":"asylum-mcp","args":["x"]}}}'`, "--add-dir=/opt/asylum-skills", "'-p'", "'--'", "'fix'"}},
 	}
 
 	for _, tt := range tests {

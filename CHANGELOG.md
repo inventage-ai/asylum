@@ -14,6 +14,7 @@
 - The host terminal no longer keeps mouse tracking or the alternate screen on after a container is stopped under a running TUI.
 - `asylum config` works before `~/.asylum/config.yaml` exists; it writes the defaults first.
 - `--debug` and conflicting-argument errors no longer print environment variable values; they show `NAME=***`.
+- Kit skills were missing from Claude sessions whose passthrough arguments contain `--` (e.g. `asylum -- -p -- "fix the build"`), because asylum appended `--add-dir` after them.
 - Seeding an agent config directory that is a symlink (e.g. `~/.claude` managed by a dotfiles tool) copied nothing, so the container started without the host config.
 
 ## 0.8.1 — 2026-09-29

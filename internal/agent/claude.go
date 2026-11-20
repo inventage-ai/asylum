@@ -69,15 +69,15 @@ func (Claude) Command(resume bool, extraArgs []string, opts CmdOpts) []string {
 	if resume {
 		parts = append(parts, "--continue")
 	}
-	parts = append(parts, term.ShellQuoteArgs(extraArgs)...)
+	// Both flags are variadic. The = form takes exactly one value, so neither
+	// swallows a positional prompt nor is lost after a "--" in extraArgs.
 	if len(opts.HostMCPServers) > 0 {
-		parts = append(parts, "--mcp-config", term.ShellQuote(hostMCPConfig(opts.HostMCPServers)))
+		parts = append(parts, term.ShellQuote("--mcp-config="+hostMCPConfig(opts.HostMCPServers)))
 	}
-	// --add-dir is variadic; keep it last so a positional passthrough prompt
-	// in extraArgs isn't swallowed as a directory argument.
 	if opts.KitSkillsDir != "" {
-		parts = append(parts, "--add-dir", opts.KitSkillsDir)
+		parts = append(parts, "--add-dir="+opts.KitSkillsDir)
 	}
+	parts = append(parts, term.ShellQuoteArgs(extraArgs)...)
 	return wrapZsh(strings.Join(parts, " "))
 }
 
