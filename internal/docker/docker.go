@@ -236,6 +236,70 @@ func ListVolumes(prefix string) ([]string, error) {
 	return volumes, nil
 }
 
+// VolumeLabels maps each volume whose name starts with prefix to the value of
+// label (empty when unset).
+func VolumeLabels(prefix, label string) (map[string]string, error) {
+	out, err := exec.Command("docker", "volume", "ls", "--filter", "name="+prefix,
+		"--format", `{{.Name}}\t{{.Label "`+label+`"}}`).Output()
+	if err != nil {
+		return nil, err
+	}
+	return parseVolumeLabels(string(out), prefix), nil
+}
+
+func parseVolumeLabels(out, prefix string) map[string]string {
+	vols := map[string]string{}
+	for line := range strings.Lines(out) {
+		name, value, _ := strings.Cut(strings.TrimRight(line, "\n"), "\t")
+		if strings.HasPrefix(name, prefix) {
+			vols[name] = value
+		}
+	}
+	return vols
+}
+
+type ContainerMounts struct {
+	Name    string
+	Running bool
+	Mounts  []string // volume names and bind mount sources
+}
+
+// ListContainerMounts lists all containers (running or not) whose name starts
+// with prefix, together with what they mount.
+func ListContainerMounts(prefix string) ([]ContainerMounts, error) {
+	out, err := exec.Command("docker", "ps", "-a", "--no-trunc", "--filter", "name="+prefix,
+		"--format", "{{.Names}}\t{{.State}}\t{{.Mounts}}").Output()
+	if err != nil {
+		return nil, err
+	}
+	return parseContainerMounts(string(out), prefix), nil
+}
+
+func parseContainerMounts(out, prefix string) []ContainerMounts {
+	var containers []ContainerMounts
+	for line := range strings.Lines(out) {
+		fields := strings.SplitN(strings.TrimRight(line, "\n"), "\t", 3)
+		if len(fields) < 3 || !strings.HasPrefix(fields[0], prefix) {
+			continue
+		}
+		containers = append(containers, ContainerMounts{
+			Name:    fields[0],
+			Running: fields[1] == "running",
+			Mounts:  strings.Split(fields[2], ","),
+		})
+	}
+	return containers
+}
+
+// RemoveVolume removes a single volume, returning Docker's message on failure.
+func RemoveVolume(name string) error {
+	out, err := exec.Command("docker", "volume", "rm", name).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 func RemoveVolumes(volumes ...string) error {
 	if len(volumes) == 0 {
 		return nil

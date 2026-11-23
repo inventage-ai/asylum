@@ -1,6 +1,7 @@
 package main
 
 import (
+	"cmp"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -23,6 +24,7 @@ import (
 	"github.com/inventage-ai/asylum/internal/kit"
 	"github.com/inventage-ai/asylum/internal/log"
 	"github.com/inventage-ai/asylum/internal/onboarding"
+	"github.com/inventage-ai/asylum/internal/ports"
 	"github.com/inventage-ai/asylum/internal/selfupdate"
 	"github.com/inventage-ai/asylum/internal/term"
 	"github.com/inventage-ai/asylum/internal/tui"
@@ -69,7 +71,7 @@ func main() {
 		fmt.Print(versionString(flags.Short))
 		return
 	case "cleanup":
-		runCleanup(flags.All)
+		runCleanup(flags.All, flags.Orphans)
 		return
 	case "config":
 		runConfig()
@@ -463,6 +465,7 @@ func main() {
 			for _, nm := range container.FindNodeModulesDirs(projectDir) {
 				docker.Exec(cname, "root", "chown", uid, nm)
 			}
+			pruneStaleNodeModulesVolumes(cname, projectDir)
 		}
 		for _, dst := range cacheDirs {
 			docker.Exec(cname, "root", "chown", uid, config.ExpandTilde(dst, home))
@@ -550,6 +553,7 @@ type cliFlags struct {
 	Version        bool
 	Short          bool
 	All            bool
+	Orphans        bool
 	Admin          bool
 	Dev            bool
 	SkipOnboarding bool
@@ -652,6 +656,9 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			if i < len(args) && args[i] == "--all" {
 				flags.All = true
 				i++
+			} else if i < len(args) && args[i] == "--orphans" {
+				flags.Orphans = true
+				i++
 			}
 		case arg == "--debug":
 			flags.Debug = true
@@ -684,12 +691,18 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			subcommand = "cleanup"
 			i++
 			for i < len(args) {
-				if args[i] == "--all" {
+				switch args[i] {
+				case "--all":
 					flags.All = true
-					i++
-				} else {
-					return cliFlags{}, "", nil, fmt.Errorf("unknown flag %q for cleanup (only --all is supported)", args[i])
+				case "--orphans":
+					flags.Orphans = true
+				default:
+					return cliFlags{}, "", nil, fmt.Errorf("unknown flag %q for cleanup (supported: --all, --orphans)", args[i])
 				}
+				i++
+			}
+			if flags.All && flags.Orphans {
+				return cliFlags{}, "", nil, fmt.Errorf("cleanup: --all and --orphans cannot be combined")
 			}
 		case arg == "shell":
 			subcommand = "shell"
@@ -1017,12 +1030,15 @@ func resolveMode(subcommand string, admin bool) container.Mode {
 	}
 }
 
-func runCleanup(all bool) {
-	if all {
+func runCleanup(all, orphans bool) {
+	switch {
+	case all:
 		runCleanupAll()
-		return
+	case orphans:
+		runCleanupOrphans()
+	default:
+		runCleanupProject()
 	}
-	runCleanupProject()
 }
 
 func runCleanupProject() {
@@ -1082,6 +1098,149 @@ func runCleanupProject() {
 		log.Success("project cleaned up")
 	} else {
 		log.Warn("partially cleaned up (see errors above)")
+	}
+}
+
+func pruneStaleNodeModulesVolumes(cname, projectDir string) {
+	existing, err := docker.ListVolumes(cname + "-npm-")
+	if err != nil {
+		log.Warn("list node_modules volumes: %v", err)
+		return
+	}
+	for _, v := range container.StaleNodeModulesVolumes(cname, existing, container.NodeModulesVolumes(cname, projectDir)) {
+		if err := docker.RemoveVolume(v); err != nil {
+			log.Warn("remove stale node_modules volume %s: %v", v, err)
+			continue
+		}
+		log.Info("removed stale node_modules volume %s", v)
+	}
+}
+
+func runCleanupOrphans() {
+	if !term.IsTerminal() {
+		log.Error("cleanup --orphans requires a terminal for confirmation")
+		return
+	}
+
+	volumes, err := docker.VolumeLabels("asylum-", container.VolumeLabelProject)
+	if err != nil {
+		log.Error("list volumes: %v", err)
+		return
+	}
+	containers, err := docker.ListContainerMounts("asylum-")
+	if err != nil {
+		log.Error("list containers: %v", err)
+		return
+	}
+	registry, err := ports.Projects()
+	if err != nil {
+		log.Warn("read port registry: %v (unlabeled volumes cannot be attributed)", err)
+	}
+
+	report := container.ClassifyOrphans(container.OrphanInput{
+		Volumes:    volumes,
+		Registry:   registry,
+		Containers: containers,
+		ProjectExists: func(dir string) bool {
+			_, err := os.Stat(dir)
+			return err == nil
+		},
+		ExpectedNodeModules: container.NodeModulesVolumes,
+	})
+
+	printOrphanReport(report)
+	if len(report.Removable) == 0 {
+		log.Info("no orphaned volumes found")
+		return
+	}
+
+	fmt.Print("Proceed? (y/N) ")
+	var answer string
+	fmt.Scanln(&answer)
+	if strings.ToLower(strings.TrimSpace(answer)) != "y" {
+		log.Info("aborted")
+		return
+	}
+
+	var errs int
+	for _, c := range report.StoppedContainers {
+		if err := docker.RemoveContainer(c); err != nil {
+			log.Error("remove container %s: %v", c, err)
+			errs++
+		}
+	}
+	for _, v := range report.Removable {
+		if err := docker.RemoveVolume(v.Name); err != nil {
+			log.Error("remove volume %s: %v", v.Name, err)
+			errs++
+		}
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Error("home dir: %v", err)
+		return
+	}
+	for cname, project := range report.MissingProjects {
+		if err := removeTree(filepath.Join(home, ".asylum", "projects", cname)); err != nil {
+			log.Error("remove project data of %s: %v", project, err)
+			errs++
+		}
+		if err := ports.Release(project); err != nil {
+			log.Error("release ports of %s: %v", project, err)
+			errs++
+		}
+	}
+
+	if errs == 0 {
+		log.Success("removed %d orphaned volumes", len(report.Removable))
+	} else {
+		log.Warn("partially cleaned up (see errors above)")
+	}
+}
+
+func printOrphanReport(r container.OrphanReport) {
+	printVolumes := func(title string, vols []container.OrphanVolume) {
+		if len(vols) == 0 {
+			return
+		}
+		fmt.Println(title)
+		fmt.Println()
+		var last string
+		for _, v := range vols {
+			if group := v.Project + " (" + v.Reason + ")"; group != last {
+				fmt.Printf("  %s\n", group)
+				last = group
+			}
+			fmt.Printf("    %s\n", v.Name)
+		}
+		fmt.Println()
+	}
+
+	byProject := func(vols []container.OrphanVolume) []container.OrphanVolume {
+		return slices.SortedStableFunc(slices.Values(vols), func(a, b container.OrphanVolume) int {
+			return cmp.Compare(a.Project+a.Reason, b.Project+b.Reason)
+		})
+	}
+
+	printVolumes("The following orphaned volumes will be removed:", byProject(r.Removable))
+	if len(r.StoppedContainers) > 0 {
+		fmt.Println("Stopped containers holding them will be removed too:")
+		for _, c := range r.StoppedContainers {
+			fmt.Printf("  %s\n", c)
+		}
+		fmt.Println()
+	}
+	if len(r.MissingProjects) > 0 {
+		fmt.Println("Project data and port allocations of missing projects will be removed too.")
+		fmt.Println()
+	}
+	printVolumes("Skipped, in use by a running container:", byProject(r.InUse))
+	if len(r.Unknown) > 0 {
+		fmt.Println("Skipped, project unknown (use 'asylum cleanup' in the project or 'cleanup --all'):")
+		for _, v := range r.Unknown {
+			fmt.Printf("  %s\n", v)
+		}
+		fmt.Println()
 	}
 }
 
@@ -1457,6 +1616,7 @@ Usage:
   asylum config                 Configure kits, credentials, and isolation
   asylum cleanup                Remove current project's container, volumes, and data
   asylum cleanup --all          Remove all Asylum images, volumes, and cached data
+  asylum cleanup --orphans      Remove volumes of deleted projects and node_modules
   asylum version [--short]      Show version
   asylum update                 Refresh agent versions and rebuild image if changed
   asylum self-update [version]  Update to latest (or specific) version

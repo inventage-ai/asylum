@@ -30,9 +30,24 @@ Package caches are stored in named Docker volumes (not host bind mounts), scoped
 
 Named volumes persist across container restarts and are shared between sessions on the same project.
 
+Every volume Asylum creates carries two labels, so you can tell which project it belongs to:
+
+| Label | Value |
+|-------|-------|
+| `asylum.project` | Absolute path of the project directory |
+| `asylum.kind` | `cache` or `node_modules` |
+
+```sh
+docker volume ls --filter label=asylum.project --format '{{.Name}}\t{{.Label "asylum.project"}}'
+```
+
+Volumes created by older Asylum versions carry no labels. Docker cannot add labels to existing volumes, so these stay unlabeled until they are removed. `asylum cleanup --orphans` still finds most of them through the port registry. See [cleanup](../commands/cleanup.md).
+
 ## Shadow node_modules
 
 When the Node.js kit is active (with `shadow-node-modules: true`, the default), Asylum creates a named Docker volume for each `node_modules` directory found in the project. This isolates Linux-built native binaries from macOS host binaries.
+
+When a fresh container starts, Asylum removes the project's `node_modules` volumes whose `package.json` no longer exists, for example after a package was removed from a monorepo.
 
 See [Node.js Kit — Shadow node_modules](../kits/node.md#shadow-node_modules) for details.
 

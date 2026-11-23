@@ -182,6 +182,22 @@ func TestParseArgs(t *testing.T) {
 			wantFlags: cliFlags{All: true},
 		},
 		{
+			name:      "cleanup command with orphans flag",
+			args:      []string{"cleanup", "--orphans"},
+			wantSub:   "cleanup",
+			wantFlags: cliFlags{Orphans: true},
+		},
+		{
+			name:    "cleanup command all and orphans errors",
+			args:    []string{"cleanup", "--all", "--orphans"},
+			wantErr: true,
+		},
+		{
+			name:      "cleanup flag alias with orphans",
+			args:      []string{"--cleanup", "--orphans"},
+			wantFlags: cliFlags{Cleanup: true, Orphans: true},
+		},
+		{
 			name:    "cleanup command unknown flag errors",
 			args:    []string{"cleanup", "--unknown"},
 			wantErr: true,

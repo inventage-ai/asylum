@@ -1156,9 +1156,59 @@ func TestCoreVolumesNodeModulesShadowed(t *testing.T) {
 
 	// "node_modules" hashes to a fixed value
 	hash := fmt.Sprintf("%x", sha256.Sum256([]byte("node_modules")))[:11]
-	wantMount := "type=volume,src=" + cname + "-npm-" + hash + ",dst=" + nm
+	wantMount := "type=volume,src=" + cname + "-npm-" + hash + ",dst=" + nm +
+		",volume-label=asylum.project=" + projectDir + ",volume-label=asylum.kind=node_modules"
 	if !hasRunArg(args, "--mount", wantMount) {
 		t.Errorf("expected RunArg{Flag:\"--mount\", Value:%q} in %v", wantMount, args)
+	}
+}
+
+func TestVolumeMount(t *testing.T) {
+	tests := []struct {
+		name, projectDir, kind, want string
+	}{
+		{
+			name:       "plain path",
+			projectDir: "/home/u/app",
+			kind:       VolumeKindCache,
+			want:       "type=volume,src=v,dst=/d,volume-label=asylum.project=/home/u/app,volume-label=asylum.kind=cache",
+		},
+		{
+			name:       "path with comma is CSV-quoted",
+			projectDir: "/home/u/a,b",
+			kind:       VolumeKindNodeModules,
+			want:       `type=volume,src=v,dst=/d,"volume-label=asylum.project=/home/u/a,b",volume-label=asylum.kind=node_modules`,
+		},
+		{
+			name:       "path with quote is CSV-escaped",
+			projectDir: `/home/u/a"b`,
+			kind:       VolumeKindCache,
+			want:       `type=volume,src=v,dst=/d,"volume-label=asylum.project=/home/u/a""b",volume-label=asylum.kind=cache`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := volumeMount("v", "/d", tt.projectDir, tt.kind); got != tt.want {
+				t.Errorf("got  %s\nwant %s", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestStaleNodeModulesVolumes(t *testing.T) {
+	cname := "asylum-abc-app"
+	existing := []string{
+		cname + "-npm-keep",
+		cname + "-npm-gone",
+		cname + "-cache-npm",
+		"asylum-abc-app2-npm-other",
+	}
+	expected := map[string]string{cname + "-npm-keep": "/p/node_modules"}
+
+	got := StaleNodeModulesVolumes(cname, existing, expected)
+	want := []string{cname + "-npm-gone"}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
 	}
 }
 

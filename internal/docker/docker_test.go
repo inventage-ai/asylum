@@ -2,6 +2,7 @@ package docker
 
 import (
 	"maps"
+	"slices"
 	"testing"
 )
 
@@ -60,5 +61,28 @@ func TestParseNames(t *testing.T) {
 	}
 	if got := parseNames(""); len(got) != 0 {
 		t.Errorf("parseNames(\"\") = %v, want empty", got)
+	}
+}
+
+func TestParseVolumeLabels(t *testing.T) {
+	out := "asylum-a-app-cache-npm\t/home/u/app\nasylum-b-old-cache-npm\t\nother-asylum-x\t/x\n"
+	got := parseVolumeLabels(out, "asylum-")
+	want := map[string]string{"asylum-a-app-cache-npm": "/home/u/app", "asylum-b-old-cache-npm": ""}
+	if !maps.Equal(got, want) {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestParseContainerMounts(t *testing.T) {
+	out := "asylum-a-app\trunning\tasylum-a-app-cache-npm,/home/u/app\nasylum-b-old\texited\tasylum-b-old-npm-123\nfoo\trunning\tx\n"
+	got := parseContainerMounts(out, "asylum-")
+	if len(got) != 2 {
+		t.Fatalf("expected 2 containers, got %v", got)
+	}
+	if got[0].Name != "asylum-a-app" || !got[0].Running || !slices.Equal(got[0].Mounts, []string{"asylum-a-app-cache-npm", "/home/u/app"}) {
+		t.Errorf("unexpected first container %+v", got[0])
+	}
+	if got[1].Name != "asylum-b-old" || got[1].Running {
+		t.Errorf("unexpected second container %+v", got[1])
 	}
 }
