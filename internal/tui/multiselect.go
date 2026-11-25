@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -53,12 +54,20 @@ type multiModel struct {
 	cursor    int
 	selected  map[int]bool
 	cancelled bool
+	height    int // terminal height, 0 until known
+	offset    int // first visible option
 }
+
+// multiChrome is the number of lines the box takes besides the options:
+// surrounding newlines, border, padding, title and hint with their margins.
+const multiChrome = 10
 
 func (m multiModel) Init() tea.Cmd { return nil }
 
 func (m multiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.height = msg.Height
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "up", "k":
@@ -78,7 +87,22 @@ func (m multiModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		}
 	}
+	vis := m.visible()
+	m.offset = min(max(m.offset, m.cursor-vis+1), m.cursor)
 	return m, nil
+}
+
+// visible returns how many options fit into the terminal.
+func (m multiModel) visible() int {
+	if m.height == 0 {
+		return len(m.options)
+	}
+	perOption := 2
+	if slices.ContainsFunc(m.options, func(o Option) bool { return o.Description != "" }) {
+		perOption = 3
+	}
+	// The last option has no blank line after it.
+	return min(max((m.height-multiChrome+1)/perOption, 1), len(m.options))
 }
 
 var (
@@ -92,8 +116,10 @@ func (m multiModel) View() string {
 	b.WriteString(titleStyle.Render(m.title))
 	b.WriteByte('\n')
 
-	for i, opt := range m.options {
-		if i > 0 {
+	vis := m.visible()
+	for i := m.offset; i < m.offset+vis; i++ {
+		opt := m.options[i]
+		if i > m.offset {
 			b.WriteByte('\n')
 		}
 
@@ -118,7 +144,11 @@ func (m multiModel) View() string {
 		}
 	}
 
-	b.WriteString(hintStyle.Render("↑/↓ navigate  •  space toggle  •  enter confirm  •  esc cancel"))
+	hint := "↑/↓ navigate  •  space toggle  •  enter confirm  •  esc cancel"
+	if vis < len(m.options) {
+		hint += fmt.Sprintf("  •  %d–%d of %d", m.offset+1, m.offset+vis, len(m.options))
+	}
+	b.WriteString(hintStyle.Render(hint))
 
 	return "\n" + borderStyle.Render(b.String()) + "\n"
 }

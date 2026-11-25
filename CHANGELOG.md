@@ -21,6 +21,7 @@
 - `--debug` and conflicting-argument errors no longer print environment variable values; they show `NAME=***`.
 - Kit skills were missing from Claude sessions whose passthrough arguments contain `--` (e.g. `asylum -- -p -- "fix the build"`), because asylum appended `--add-dir` after them.
 - Seeding an agent config directory that is a symlink (e.g. `~/.claude` managed by a dotfiles tool) copied nothing, so the container started without the host config.
+- Multi-select prompts (e.g. new kits, `cleanup --select`) scroll when the list is taller than the terminal instead of cutting off its top.
 - `asylum cleanup` also removes the project's container when it is stopped (its volumes could not be removed otherwise) and releases the project's port allocation, as documented.
 
 ## 0.8.1 — 2026-09-29
