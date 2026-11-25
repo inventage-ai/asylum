@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/inventage-ai/asylum/internal/kit"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestSyncKitToConfig_InsertsNewKit(t *testing.T) {
@@ -691,5 +693,73 @@ func TestSyncNewKits_KitsForAnotherHost(t *testing.T) {
 	}
 	if !slices.Contains(state.KnownKits, "from-another-host") {
 		t.Error("a kit another host recorded as known was dropped")
+	}
+}
+
+// The host-mcp kit's server definitions are not part of KitConfig: the broker
+// reads them from the global config itself. The text and node based writers
+// must therefore leave them untouched.
+func TestConfigWritersPreserveHostMCPServers(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	initial := `kits:
+  host-mcp:
+    servers:
+      xcodebuild:
+        command: ["/opt/homebrew/bin/xcodebuildmcp", "mcp"]
+        env: { XCODEBUILDMCP_SENTRY_DISABLED: "true" }
+        projects: ["/code/app"]
+  java:
+    credentials: auto
+agents:
+  claude:
+    config: shared
+`
+	if err := os.WriteFile(path, []byte(initial), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	steps := []func() error{
+		func() error { return SyncKitToConfig(path, "python", "  python:\n    versions:\n      - 3.12\n") },
+		func() error {
+			return SyncKitCommentToConfig(path, "rtk:                  # Token-reduction proxy (rtk)")
+		},
+		func() error { return SetKitDisabled(path, "host-mcp") },
+		func() error { return RemoveKitDisabled(path, "host-mcp") },
+		func() error { return SetKitCredentials(path, "java", "off") },
+		func() error { return SetAgentIsolation(path, "claude", "isolated") },
+		func() error { return WriteDefaultResume(dir, true) },
+	}
+	for i, step := range steps {
+		if err := step(); err != nil {
+			t.Fatalf("step %d: %v", i, err)
+		}
+	}
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg struct {
+		Kits struct {
+			HostMCP struct {
+				Servers map[string]struct {
+					Command  []string          `yaml:"command"`
+					Env      map[string]string `yaml:"env"`
+					Projects []string          `yaml:"projects"`
+				} `yaml:"servers"`
+			} `yaml:"host-mcp"`
+		} `yaml:"kits"`
+	}
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		t.Fatalf("parse rewritten config: %v\n%s", err, data)
+	}
+	srv, ok := cfg.Kits.HostMCP.Servers["xcodebuild"]
+	if !ok {
+		t.Fatalf("server definition lost:\n%s", data)
+	}
+	if len(srv.Command) != 2 || srv.Command[0] != "/opt/homebrew/bin/xcodebuildmcp" ||
+		srv.Env["XCODEBUILDMCP_SENTRY_DISABLED"] != "true" || len(srv.Projects) != 1 {
+		t.Errorf("server definition altered: %+v\n%s", srv, data)
 	}
 }

@@ -13,7 +13,8 @@ import (
 // CmdOpts carries context from the container layer into agent command
 // generation. Fields are optional; agents ignore what they don't use.
 type CmdOpts struct {
-	KitSkillsDir string // shared container path holding kit-provided Claude skills; empty means no skill kits active
+	KitSkillsDir   string   // shared container path holding kit-provided Claude skills; empty means no skill kits active
+	HostMCPServers []string // host MCP servers to register for this session only, each run as `asylum-mcp <name>`
 }
 
 type Agent interface {

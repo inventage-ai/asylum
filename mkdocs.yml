@@ -75,6 +75,7 @@ nav:
     - cx: kits/cx.md
     - iTerm2: kits/iterm.md
     - Dropshare: kits/dropshare.md
+    - Host MCP: kits/host-mcp.md
     - APT Packages: kits/apt.md
   - Concepts:
     - Overview: concepts/index.md
