@@ -9,6 +9,8 @@
 - Volumes asylum creates carry the labels `asylum.project` (project path) and `asylum.kind` (`cache` or `node_modules`), so they can be traced back to their project.
 - `asylum cleanup --orphans` lists and removes volumes of projects that no longer exist and of `node_modules` directories whose `package.json` is gone, together with the stopped containers, project data and port allocations of deleted projects.
 - A fresh container start removes the project's `node_modules` volumes whose `package.json` no longer exists.
+- `asylum cleanup` and `cleanup --orphans` remove the project image (`asylum:proj-*`) of a cleaned-up project when no other project and no container uses it. Asylum records the image of each project at start for this.
+- `asylum cleanup --select` lists all projects with status, last use and disk size and removes the ones you pick. Missing projects and projects unused for more than 30 days are preselected.
 
 ### Changed
 - Environment variable values (from `env:`, `-e`, `env-from-host`, kits and asylum itself) reach `docker run` through an env file on stdin instead of `-e NAME=value` where the env file format allows it, so they no longer appear in the process list or in process logs. `env-from-host` values that do not fit abort the start instead.
@@ -19,6 +21,7 @@
 - `--debug` and conflicting-argument errors no longer print environment variable values; they show `NAME=***`.
 - Kit skills were missing from Claude sessions whose passthrough arguments contain `--` (e.g. `asylum -- -p -- "fix the build"`), because asylum appended `--add-dir` after them.
 - Seeding an agent config directory that is a symlink (e.g. `~/.claude` managed by a dotfiles tool) copied nothing, so the container started without the host config.
+- `asylum cleanup` also removes the project's container when it is stopped (its volumes could not be removed otherwise) and releases the project's port allocation, as documented.
 
 ## 0.8.1 — 2026-09-29
 

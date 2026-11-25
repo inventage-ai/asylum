@@ -13,6 +13,8 @@ import (
 	"slices"
 	"strings"
 	"syscall"
+	"text/tabwriter"
+	"time"
 
 	"github.com/inventage-ai/asylum/internal/agent"
 	"github.com/inventage-ai/asylum/internal/broker"
@@ -71,7 +73,7 @@ func main() {
 		fmt.Print(versionString(flags.Short))
 		return
 	case "cleanup":
-		runCleanup(flags.All, flags.Orphans)
+		runCleanup(flags)
 		return
 	case "config":
 		runConfig()
@@ -340,6 +342,10 @@ func main() {
 
 	containerRunning := docker.IsRunning(cname)
 	imageTag, stateChanged := ensureImages(globalKits, projectKits, allKits, agentInstalls, cfg, version, versionsVM, flags.Rebuild, &state, containerRunning)
+	usage := container.Usage{Project: projectDir, LastUsed: time.Now().UTC(), Image: imageTag}
+	if err := container.WriteUsage(filepath.Join(asylumDir, "projects", cname), usage); err != nil {
+		log.Warn("record project usage: %v", err)
+	}
 	if stateChanged || promptStateDirty {
 		if err := config.SaveState(asylumDir, state); err != nil {
 			log.Warn("save state: %v", err)
@@ -554,6 +560,7 @@ type cliFlags struct {
 	Short          bool
 	All            bool
 	Orphans        bool
+	Select         bool
 	Admin          bool
 	Dev            bool
 	SkipOnboarding bool
@@ -659,6 +666,9 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 			} else if i < len(args) && args[i] == "--orphans" {
 				flags.Orphans = true
 				i++
+			} else if i < len(args) && args[i] == "--select" {
+				flags.Select = true
+				i++
 			}
 		case arg == "--debug":
 			flags.Debug = true
@@ -696,13 +706,15 @@ func parseArgs(args []string) (cliFlags, string, []string, error) {
 					flags.All = true
 				case "--orphans":
 					flags.Orphans = true
+				case "--select":
+					flags.Select = true
 				default:
-					return cliFlags{}, "", nil, fmt.Errorf("unknown flag %q for cleanup (supported: --all, --orphans)", args[i])
+					return cliFlags{}, "", nil, fmt.Errorf("unknown flag %q for cleanup (supported: --all, --orphans, --select)", args[i])
 				}
 				i++
 			}
-			if flags.All && flags.Orphans {
-				return cliFlags{}, "", nil, fmt.Errorf("cleanup: --all and --orphans cannot be combined")
+			if flags.All && (flags.Orphans || flags.Select) || flags.Orphans && flags.Select {
+				return cliFlags{}, "", nil, fmt.Errorf("cleanup: --all, --orphans and --select cannot be combined")
 			}
 		case arg == "shell":
 			subcommand = "shell"
@@ -1030,12 +1042,14 @@ func resolveMode(subcommand string, admin bool) container.Mode {
 	}
 }
 
-func runCleanup(all, orphans bool) {
+func runCleanup(flags cliFlags) {
 	switch {
-	case all:
+	case flags.All:
 		runCleanupAll()
-	case orphans:
+	case flags.Orphans:
 		runCleanupOrphans()
+	case flags.Select:
+		runCleanupSelect()
 	default:
 		runCleanupProject()
 	}
@@ -1053,52 +1067,120 @@ func runCleanupProject() {
 	container.MigrateProjectDir(projectDir)
 
 	cname := container.ContainerName(projectDir)
-	oldName := container.OldContainerName(projectDir)
 	log.Info("cleaning up project %s (container %s)...", filepath.Base(projectDir), cname)
 
-	var errs int
-
-	// Remove container (ignore error if not exists)
-	if docker.IsRunning(cname) {
-		if err := docker.RemoveContainer(cname); err != nil {
-			log.Error("remove container: %v", err)
-			errs++
-		}
-	}
-
-	// Remove volumes prefixed with container name (new and old format)
-	for _, prefix := range []string{cname + "-", oldName + "-"} {
-		if vols, err := docker.ListVolumes(prefix); err != nil {
-			log.Error("list volumes: %v", err)
-			errs++
-		} else if len(vols) > 0 {
-			if err := docker.RemoveVolumes(vols...); err != nil {
-				log.Error("remove volumes: %v", err)
-				errs++
-			}
-		}
-	}
-
-	// Remove project data dir
-	home, err := os.UserHomeDir()
+	projectsDir, err := projectsDataDir()
 	if err != nil {
 		log.Error("home dir: %v", err)
-		errs++
-	} else {
-		projDir := filepath.Join(home, ".asylum", "projects", cname)
-		if _, err := os.Stat(projDir); err == nil {
-			if err := removeTree(projDir); err != nil {
-				log.Error("remove project data: %v", err)
-				errs++
-			}
-		}
+		return
 	}
-
-	if errs == 0 {
+	project := projectRef{dir: projectDir, containers: []string{cname, container.OldContainerName(projectDir)}}
+	if cleanupProjects(projectsDir, []projectRef{project}) == 0 {
 		log.Success("project cleaned up")
 	} else {
 		log.Warn("partially cleaned up (see errors above)")
 	}
+}
+
+func projectsDataDir() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".asylum", "projects"), nil
+}
+
+// projectRef names a project by its directory ("" when unknown) and the
+// container names its resources were created under.
+type projectRef struct {
+	dir        string
+	containers []string
+}
+
+// cleanupProjects removes the containers, volumes, project data and port
+// allocations of projects, then their project images that nothing else uses.
+// It returns the number of errors, which have been logged.
+func cleanupProjects(projectsDir string, projects []projectRef) int {
+	var errs int
+	var images []string
+	for _, p := range projects {
+		errs += removeContainersAndVolumes(p.containers)
+		imgs, n := removeProjectData(projectsDir, p)
+		images = append(images, imgs...)
+		errs += n
+	}
+	return errs + removeUnusedImages(projectsDir, images)
+}
+
+func removeContainersAndVolumes(cnames []string) int {
+	var errs int
+	for _, cname := range cnames {
+		if err := docker.RemoveContainer(cname); err != nil {
+			log.Error("remove container %s: %v", cname, err)
+			errs++
+		}
+		vols, err := docker.ListVolumes(cname + "-")
+		if err != nil {
+			log.Error("list volumes: %v", err)
+			errs++
+			continue
+		}
+		if err := docker.RemoveVolumes(vols...); err != nil {
+			log.Error("remove volumes: %v", err)
+			errs++
+		}
+	}
+	return errs
+}
+
+// removeProjectData removes the data directories and port allocation of a
+// project and returns the images its usage records name.
+func removeProjectData(projectsDir string, p projectRef) ([]string, int) {
+	var errs int
+	var images []string
+	for _, cname := range p.containers {
+		dataDir := filepath.Join(projectsDir, cname)
+		if u, ok := container.ReadUsage(dataDir); ok {
+			images = append(images, u.Image)
+		}
+		if err := removeTree(dataDir); err != nil {
+			log.Error("remove project data %s: %v", dataDir, err)
+			errs++
+		}
+	}
+	if p.dir != "" {
+		if err := ports.Release(p.dir); err != nil {
+			log.Error("release ports of %s: %v", p.dir, err)
+			errs++
+		}
+	}
+	return images, errs
+}
+
+func removeUnusedImages(projectsDir string, candidates []string) int {
+	if len(candidates) == 0 {
+		return 0
+	}
+	remaining, err := container.ReadAllUsage(projectsDir)
+	if err != nil {
+		log.Error("read project usage: %v", err)
+		return 1
+	}
+	containers, err := docker.ListContainerMounts("asylum-")
+	if err != nil {
+		log.Error("list containers: %v", err)
+		return 1
+	}
+	var errs int
+	for _, img := range container.UnusedProjectImages(candidates, remaining, containers) {
+		if err := docker.RemoveImage(img); err != nil {
+			log.Error("remove image %s: %v", img, err)
+			errs++
+			continue
+		}
+		log.Info("removed image %s", img)
+	}
+	return errs
 }
 
 func pruneStaleNodeModulesVolumes(cname, projectDir string) {
@@ -1175,27 +1257,197 @@ func runCleanupOrphans() {
 			errs++
 		}
 	}
-	home, err := os.UserHomeDir()
+	projectsDir, err := projectsDataDir()
 	if err != nil {
 		log.Error("home dir: %v", err)
 		return
 	}
+	var images []string
 	for cname, project := range report.MissingProjects {
-		if err := removeTree(filepath.Join(home, ".asylum", "projects", cname)); err != nil {
-			log.Error("remove project data of %s: %v", project, err)
-			errs++
-		}
-		if err := ports.Release(project); err != nil {
-			log.Error("release ports of %s: %v", project, err)
-			errs++
-		}
+		imgs, n := removeProjectData(projectsDir, projectRef{dir: project, containers: []string{cname}})
+		images = append(images, imgs...)
+		errs += n
 	}
+	errs += removeUnusedImages(projectsDir, images)
 
 	if errs == 0 {
 		log.Success("removed %d orphaned volumes", len(report.Removable))
 	} else {
 		log.Warn("partially cleaned up (see errors above)")
 	}
+}
+
+func runCleanupSelect() {
+	if !term.IsTerminal() {
+		log.Error("cleanup --select requires a terminal for selection")
+		return
+	}
+	projectsDir, err := projectsDataDir()
+	if err != nil {
+		log.Error("home dir: %v", err)
+		return
+	}
+	log.Info("collecting projects and their sizes...")
+	in, err := inventoryInput(projectsDir)
+	if err != nil {
+		log.Error("%v", err)
+		return
+	}
+	projects := container.Inventory(in)
+	if len(projects) == 0 {
+		log.Info("no asylum projects found")
+		return
+	}
+	fmt.Println()
+	fmt.Print(formatProjectTable(projects, in.Now))
+	fmt.Println()
+
+	var candidates []container.Project
+	var options []tui.Option
+	var preselected []int
+	for _, p := range projects {
+		if p.Status == container.StatusRunning {
+			continue
+		}
+		if p.Stale(in.Now) {
+			preselected = append(preselected, len(candidates))
+		}
+		candidates = append(candidates, p)
+		options = append(options, tui.Option{
+			Label:       p.Name(),
+			Description: p.Status + " · " + formatAge(p.LastUsed, in.Now) + " · " + formatSize(p.Size),
+		})
+	}
+	if len(candidates) == 0 {
+		log.Info("all projects are running, nothing to clean up")
+		return
+	}
+
+	chosen, err := tui.MultiSelect("Projects to remove (running projects are not listed)", options, preselected)
+	if errors.Is(err, tui.ErrCancelled) || err == nil && len(chosen) == 0 {
+		log.Info("nothing removed")
+		return
+	}
+	if err != nil {
+		log.Error("%v", err)
+		return
+	}
+
+	fmt.Println("The following projects will be removed with their containers, volumes, data, port allocations and unused project images:")
+	fmt.Println()
+	var total int64
+	var refs []projectRef
+	for _, i := range chosen {
+		p := candidates[i]
+		fmt.Printf("  %s (%s)\n", p.Name(), formatSize(p.Size))
+		if total >= 0 && p.Size >= 0 {
+			total += p.Size
+		} else {
+			total = -1
+		}
+		refs = append(refs, projectRef{dir: p.Path, containers: p.Containers})
+	}
+	fmt.Printf("\n  Total: %s\n\n", formatSize(total))
+
+	fmt.Print("Proceed? (y/N) ")
+	var answer string
+	fmt.Scanln(&answer)
+	if strings.ToLower(strings.TrimSpace(answer)) != "y" {
+		log.Info("aborted")
+		return
+	}
+	if cleanupProjects(projectsDir, refs) == 0 {
+		log.Success("removed %d project(s)", len(refs))
+	} else {
+		log.Warn("partially cleaned up (see errors above)")
+	}
+}
+
+func inventoryInput(projectsDir string) (container.InventoryInput, error) {
+	in := container.InventoryInput{
+		Now: time.Now(),
+		ProjectExists: func(dir string) bool {
+			_, err := os.Stat(dir)
+			return err == nil
+		},
+	}
+	var err error
+	if in.Records, err = container.ReadAllUsage(projectsDir); err != nil {
+		return in, fmt.Errorf("read project usage: %w", err)
+	}
+	if in.DataDirs, err = container.ScanDataDirs(projectsDir); err != nil {
+		return in, fmt.Errorf("read project data: %w", err)
+	}
+	if in.Volumes, err = docker.VolumeLabels("asylum-", container.VolumeLabelProject); err != nil {
+		return in, fmt.Errorf("list volumes: %w", err)
+	}
+	if in.Containers, err = docker.ListContainerMounts("asylum-"); err != nil {
+		return in, fmt.Errorf("list containers: %w", err)
+	}
+	if in.Registry, err = ports.Projects(); err != nil {
+		log.Warn("read port registry: %v (some project paths may be unknown)", err)
+	}
+	if in.VolumeSizes, in.ImageSizes, err = docker.DiskUsage(); err != nil {
+		log.Warn("read disk usage: %v (sizes unknown)", err)
+	}
+	return in, nil
+}
+
+func formatProjectTable(projects []container.Project, now time.Time) string {
+	var b strings.Builder
+	w := tabwriter.NewWriter(&b, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(w, "  PROJECT\tSTATUS\tLAST USED\tSIZE")
+	for _, p := range projects {
+		fmt.Fprintf(w, "  %s\t%s\t%s\t%s\n", p.Name(), p.Status, formatAge(p.LastUsed, now), formatSize(p.Size))
+	}
+	w.Flush()
+	return b.String()
+}
+
+func formatAge(t, now time.Time) string {
+	if t.IsZero() {
+		return "unknown"
+	}
+	d := now.Sub(t)
+	day := 24 * time.Hour
+	var n int
+	var unit string
+	switch {
+	case d < time.Minute:
+		return "now"
+	case d < time.Hour:
+		n, unit = int(d/time.Minute), "minute"
+	case d < day:
+		n, unit = int(d/time.Hour), "hour"
+	case d < 60*day:
+		n, unit = int(d/day), "day"
+	case d < 730*day:
+		n, unit = int(d/(30*day)), "month"
+	default:
+		n, unit = int(d/(365*day)), "year"
+	}
+	if n != 1 {
+		unit += "s"
+	}
+	return fmt.Sprintf("%d %s ago", n, unit)
+}
+
+// formatSize uses decimal units like Docker does.
+func formatSize(n int64) string {
+	if n < 0 {
+		return "unknown"
+	}
+	if n < 1000 {
+		return fmt.Sprintf("%d B", n)
+	}
+	f := float64(n)
+	for _, unit := range []string{"kB", "MB", "GB"} {
+		f /= 1000
+		if f < 1000 {
+			return fmt.Sprintf("%.1f %s", f, unit)
+		}
+	}
+	return fmt.Sprintf("%.1f TB", f/1000)
 }
 
 func printOrphanReport(r container.OrphanReport) {
@@ -1617,6 +1869,7 @@ Usage:
   asylum cleanup                Remove current project's container, volumes, and data
   asylum cleanup --all          Remove all Asylum images, volumes, and cached data
   asylum cleanup --orphans      Remove volumes of deleted projects and node_modules
+  asylum cleanup --select       List all projects and pick which to remove
   asylum version [--short]      Show version
   asylum update                 Refresh agent versions and rebuild image if changed
   asylum self-update [version]  Update to latest (or specific) version
