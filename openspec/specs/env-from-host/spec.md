@@ -17,7 +17,7 @@ The config key `env-from-host` SHALL map a container variable name to a host var
 - **THEN** `GH_TOKEN` is not set in the container and container creation succeeds
 
 ### Requirement: Only user-maintained configs may map host variables
-`env-from-host` SHALL be honored in `~/.asylum/config.yaml` and in the local layer (`.asylum.local` / `.asylum.local.yaml`). In the project layer (`.asylum` / `.asylum.yaml`) it SHALL be ignored and a warning SHALL be logged.
+`env-from-host` SHALL have scope `personal` (see `config-layer-scopes`): it SHALL be honored in `~/.asylum/config.yaml` and in the local layer (`.asylum.local` / `.asylum.local.yaml`). In the project layer (`.asylum` / `.asylum.yaml`) it SHALL be ignored and reported as a rejected option.
 
 #### Scenario: Mapping in the local layer
 - **WHEN** `.asylum.local` contains `env-from-host: {GH_TOKEN: ASYLUM_GH_TOKEN}` and the host variable is set
@@ -25,7 +25,7 @@ The config key `env-from-host` SHALL map a container variable name to a host var
 
 #### Scenario: Mapping in the project layer
 - **WHEN** `.asylum` contains `env-from-host: {AWS_SECRET_ACCESS_KEY: AWS_SECRET_ACCESS_KEY}`
-- **THEN** the mapping is ignored, the variable is not set in the container, and a warning names the file and points to `.asylum.local` or `~/.asylum/config.yaml`
+- **THEN** the mapping is ignored, the variable is not set in the container, and the rejected-option report names the file and points to `.asylum.local` or `~/.asylum/config.yaml`
 
 ### Requirement: Layer merge and precedence
 `env-from-host` maps SHALL be merged per key across the global and local layers, last value wins. If a container variable name is also set in `env` (including `-e` on the command line), the `env` value SHALL win.

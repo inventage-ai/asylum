@@ -3,10 +3,12 @@
 ## Unreleased
 
 ### Added
-- `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
-- `agents.<agent>.seed` controls what `isolated` and `project` mode copy from the host config on first run: `full` (default, unchanged), `settings` (settings, instructions, customizations and credentials only, no transcripts or history) or `none`. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
+- `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored in `.asylum`.
+- `agents.<agent>.seed` controls what `isolated` and `project` mode copy from the host config on first run: `full` (default, unchanged), `settings` (settings, instructions, customizations and credentials only, no transcripts or history) or `none`. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored in `.asylum`.
+- Asylum refuses to start when git tracks `.asylum.local` (or `.asylum.local.yaml`), and adds both names to the repository's `.git/info/exclude` unless git already ignores them.
 
 ### Changed
+- **Breaking:** a project's `.asylum` no longer accepts options that reach outside the project directory or add privileges: `volumes`, `default-resume`, `agents.<agent>.config`/`companions`, kit `credentials`/`isolation`/`allow-agent-terminal-title`/`schemes`, and enabling the `docker`, `dropshare`, `iterm`, `cx` and `rtk` kits. Set them in `.asylum.local` or `~/.asylum/config.yaml`. `release-channel` and `version-check-interval` are accepted in `~/.asylum/config.yaml` only. Asylum lists ignored options with the YAML to move and, in a terminal, asks once whether to start without them. See [Where Options Are Accepted](https://asylum.inventage.ai/configuration/#where-options-are-accepted).
 - Environment variable values (from `env:`, `-e`, `env-from-host`, kits and asylum itself) reach `docker run` through an env file on stdin instead of `-e NAME=value` where the env file format allows it, so they no longer appear in the process list or in process logs. `env-from-host` values that do not fit abort the start instead.
 
 ### Fixed

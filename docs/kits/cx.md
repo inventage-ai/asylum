@@ -10,6 +10,9 @@ Semantic code navigation for AI agents via [cx](https://github.com/ind-igo/cx).
 
 ## Configuration
 
+!!! note "Personal config only"
+    Enable this kit in `~/.asylum/config.yaml` or `.asylum.local`. In a project's `.asylum` it is ignored, because it needs the `SYS_ADMIN` capability ([details](../configuration/index.md#where-options-are-accepted)).
+
 ```yaml
 kits:
   cx:

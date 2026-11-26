@@ -6,8 +6,9 @@ func init() {
 		Description:    "Semantic code navigation for AI agents",
 		DockerPriority: 42,
 		Tier:           TierOptIn,
-		Tools:       []string{"cx"},
-		NeedsMount:  true,
+		Tools:          []string{"cx"},
+		NeedsMount:     true,
+		Scope:          ScopePersonal,
 		ConfigSnippet: `  # cx:                 # Semantic code navigation
   #   packages:        # tree-sitter language grammars
   #     - python
@@ -27,7 +28,7 @@ if [ -s /tmp/asylum-kit-rules/cx.md ] && [ -d "$HOME/.claude/rules" ]; then
 fi
 `,
 		RulesSnippet: `### cx (cx kit)
-Semantic code navigation. If cx reports a missing grammar, add it to ` + "`.asylum`" + ` under ` + "`kits.cx.packages`" + ` so it persists across container rebuilds. ` + "`cx lang add <lang>`" + ` only lasts for the current session.
+Semantic code navigation. If cx reports a missing grammar, add it to ` + "`.asylum.local`" + ` under ` + "`kits.cx.packages`" + ` so it persists across container rebuilds. ` + "`cx lang add <lang>`" + ` only lasts for the current session.
 `,
 		BannerLines: `    echo "cx:        $(cx --version 2>/dev/null || echo 'not found')"
 `,

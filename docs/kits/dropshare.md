@@ -33,6 +33,9 @@ gh issue create --title "Login error" --body "![Login error]($url)"
 
 ## How It Works
 
+!!! note "Personal config only"
+    Enable this kit in `~/.asylum/config.yaml` or `.asylum.local`. In a project's `.asylum` it is ignored, because it lets the container publish files through your host ([details](../configuration/index.md#where-options-are-accepted)).
+
 1. The command sends the file's path to the host broker.
 2. The broker copies the file out of the container with `docker cp` into a staging directory on the host. Docker resolves the path and its symlinks inside the container, so only what the container can see is reachable.
 3. The broker hands the staged copy to Dropshare in the background, with a callback URL that carries a random request ID.

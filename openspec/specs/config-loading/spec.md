@@ -7,7 +7,7 @@ Loads and merges asylum's configuration layers — global, project, local, then 
 ## Requirements
 
 ### Requirement: Three-layer config loading
-The config system SHALL load config from `~/.asylum/config.yaml`, the project layer, and the local layer in order, merging each layer on top of the previous. Before loading, each file SHALL be migrated from v1 format if necessary.
+The config system SHALL load config from `~/.asylum/config.yaml`, the project layer, and the local layer in order, merging each layer on top of the previous. Before the local layer file is migrated or read, the loader SHALL check that git does not track it (see `local-config-git-guard`). Before loading, each file SHALL be migrated from v1 format if necessary. After migration and before merging, options outside the scope of the file's layer SHALL be removed from that layer (see `config-layer-scopes`).
 
 For the project layer, the loader SHALL accept either `$project/.asylum` (canonical) or `$project/.asylum.yaml` (alias). For the local layer, the loader SHALL accept either `$project/.asylum.local` (canonical) or `$project/.asylum.local.yaml` (alias). The two filenames within a layer are equivalent — behavior, migration, and merging are identical regardless of which is found.
 
@@ -44,6 +44,10 @@ If both the canonical filename and its `.yaml` alias exist for the same layer, t
 #### Scenario: Project kits supplement global kits
 - **WHEN** global config has `kits: {node: {}, openspec: {}}` and project config has `kits: {shell: {}}`
 - **THEN** the merged result has all three kits active
+
+#### Scenario: Out-of-scope option removed before merging
+- **WHEN** the global config sets `kits: {ssh: {isolation: isolated}}` and `$project/.asylum` sets `kits: {ssh: {isolation: shared}}`
+- **THEN** the merged result has `kits.ssh.isolation` set to `isolated`
 
 ### Requirement: Scalar merge semantics
 Scalar config values (agent, release-channel) SHALL use last-value-wins when merging layers.

@@ -42,10 +42,10 @@ If the project directory is a git worktree, Asylum detects and mounts both the w
 
 ## Custom Volumes
 
-Add extra volumes via config or CLI:
+Add extra volumes via config or CLI. Volumes are accepted in `~/.asylum/config.yaml` and `.asylum.local`, not in `.asylum`, so a repository cannot mount host paths into its own container (see [Where Options Are Accepted](../configuration/index.md#where-options-are-accepted)):
 
 ```yaml
-# .asylum
+# .asylum.local or ~/.asylum/config.yaml
 volumes:
   - ~/shared-data:/data:ro
   - /tmp/exchange:/tmp/exchange

@@ -12,6 +12,9 @@ Full Docker-in-Docker support with buildx and compose.
 
 ## Configuration
 
+!!! note "Personal config only"
+    Enable this kit in `~/.asylum/config.yaml` or `.asylum.local`. In a project's `.asylum` it is ignored, because it runs the container in privileged mode ([details](../configuration/index.md#where-options-are-accepted)).
+
 ```yaml
 kits:
   docker: {}

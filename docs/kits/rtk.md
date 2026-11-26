@@ -11,6 +11,9 @@ Token-reduction proxy via [RTK](https://github.com/rtk-ai/rtk) — intercepts sh
 
 ## Configuration
 
+!!! note "Personal config only"
+    Enable this kit in `~/.asylum/config.yaml` or `.asylum.local`. In a project's `.asylum` it is ignored, because it needs the `SYS_ADMIN` capability ([details](../configuration/index.md#where-options-are-accepted)).
+
 ```yaml
 kits:
   rtk: {}

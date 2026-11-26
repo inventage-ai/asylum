@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1190,7 +1191,7 @@ func TestLoadSeedIgnoredInProjectLayer(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(homeDir, ".asylum"), 0755)
 	os.WriteFile(filepath.Join(homeDir, ".asylum", "config.yaml"), []byte("version: \"0.2\"\nagents:\n  claude:\n    seed: settings\n"), 0644)
-	os.WriteFile(filepath.Join(dir, ".asylum"), []byte("agents:\n  claude:\n    config: project\n    seed: full\n  codex:\n    seed: full\n"), 0644)
+	os.WriteFile(filepath.Join(dir, ".asylum"), []byte("agent: codex\nagents:\n  claude:\n    seed: full\n  codex:\n    seed: full\n"), 0644)
 
 	cfg, err := Load(dir, CLIFlags{}, "")
 	if err != nil {
@@ -1199,8 +1200,11 @@ func TestLoadSeedIgnoredInProjectLayer(t *testing.T) {
 	if got := cfg.AgentSeed("claude"); got != "settings" {
 		t.Errorf("claude seed = %q, want settings (project layer must be ignored)", got)
 	}
-	if got := cfg.AgentIsolation("claude"); got != "project" {
-		t.Errorf("claude config = %q, other project-layer fields must still apply", got)
+	if cfg.Agent != "codex" {
+		t.Errorf("agent = %q, other project-layer fields must still apply", cfg.Agent)
+	}
+	if got := rejectedPaths(cfg.Rejected); !slices.Equal(got, []string{"agents.claude.seed", "agents.codex.seed"}) {
+		t.Errorf("rejected = %v", got)
 	}
 	if got := cfg.AgentSeed("codex"); got != "full" {
 		t.Errorf("codex seed = %q, want default full", got)

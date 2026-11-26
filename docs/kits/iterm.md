@@ -25,6 +25,9 @@ If you have never accepted that onboarding, install it by hand from **iTerm2 →
 
 ## How It Works
 
+!!! note "Personal config only"
+    Enable this kit in `~/.asylum/config.yaml` or `.asylum.local`. In a project's `.asylum` it is ignored, because it mounts host files and talks to your host terminal ([details](../configuration/index.md#where-options-are-accepted)).
+
 The kit bind-mounts a small shim **over** `~/.config/iterm2/cc-status` inside the container. The same path then means two different things — the real binary on the host, the shim in the container — so host sessions are untouched and your `settings.json` is never edited.
 
 The shim forwards the hook payload to the **host broker**, which runs the host's own `cc-status` with that payload on stdin. That binary talks to iTerm2 over its API socket, which a container cannot reach: the socket can be bind-mounted, but `connect()` fails because the listener lives in the host kernel.
