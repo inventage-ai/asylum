@@ -311,6 +311,49 @@ func MigrateProjectDir(projectDir string) error {
 	return nil
 }
 
+// Labels set on every named volume asylum creates. Docker applies them only
+// when it creates the volume, so volumes from older versions stay unlabeled.
+const (
+	VolumeLabelProject    = "asylum.project"
+	VolumeLabelKind       = "asylum.kind"
+	VolumeKindCache       = "cache"
+	VolumeKindNodeModules = "node_modules"
+)
+
+// volumeMount builds a --mount value for a labeled named volume. Docker parses
+// the value as CSV, so the project label is quoted when the path needs it.
+func volumeMount(name, dst, projectDir, kind string) string {
+	projectLabel := "volume-label=" + VolumeLabelProject + "=" + projectDir
+	if strings.ContainsAny(projectLabel, ",\"\n") {
+		projectLabel = `"` + strings.ReplaceAll(projectLabel, `"`, `""`) + `"`
+	}
+	return "type=volume,src=" + name + ",dst=" + dst + "," + projectLabel + ",volume-label=" + VolumeLabelKind + "=" + kind
+}
+
+// NodeModulesVolumes maps the shadow volume names a project should have to the
+// node_modules paths they are mounted at.
+func NodeModulesVolumes(cname, projectDir string) map[string]string {
+	vols := map[string]string{}
+	for _, nm := range FindNodeModulesDirs(projectDir) {
+		rel, _ := filepath.Rel(projectDir, nm)
+		hash := fmt.Sprintf("%x", sha256.Sum256([]byte(rel)))[:11]
+		vols[cname+"-npm-"+hash] = nm
+	}
+	return vols
+}
+
+// StaleNodeModulesVolumes returns the shadow volumes among existing that belong
+// to cname but are no longer in expected.
+func StaleNodeModulesVolumes(cname string, existing []string, expected map[string]string) []string {
+	var stale []string
+	for _, v := range existing {
+		if _, ok := expected[v]; !ok && strings.HasPrefix(v, cname+"-npm-") {
+			stale = append(stale, v)
+		}
+	}
+	return stale
+}
+
 // coreVolumes produces RunArgs for all core volume mounts.
 func coreVolumes(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 	var args []kit.RunArg
@@ -330,11 +373,9 @@ func coreVolumes(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 
 	// Shadow node_modules with named volumes
 	if !opts.Config.ShadowNodeModulesOff() {
-		for _, nm := range FindNodeModulesDirs(opts.ProjectDir) {
-			rel, _ := filepath.Rel(opts.ProjectDir, nm)
-			hash := fmt.Sprintf("%x", sha256.Sum256([]byte(rel)))[:11]
-			volName := cname + "-npm-" + hash
-			mnt("type=volume,src=" + volName + ",dst=" + nm)
+		nmVols := NodeModulesVolumes(cname, opts.ProjectDir)
+		for _, volName := range slices.Sorted(maps.Keys(nmVols)) {
+			mnt(volumeMount(volName, nmVols[volName], opts.ProjectDir, VolumeKindNodeModules))
 		}
 	}
 
@@ -354,9 +395,8 @@ func coreVolumes(home, cname string, opts RunOpts) ([]kit.RunArg, error) {
 
 	// Caches (named volumes for better IO on macOS)
 	for _, name := range slices.Sorted(maps.Keys(opts.CacheDirs)) {
-		volName := cname + "-cache-" + name
 		dst := config.ExpandTilde(opts.CacheDirs[name], home)
-		mnt("type=volume,src=" + volName + ",dst=" + dst)
+		mnt(volumeMount(cname+"-cache-"+name, dst, opts.ProjectDir, VolumeKindCache))
 	}
 
 	// Shell history

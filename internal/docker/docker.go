@@ -1,12 +1,14 @@
 package docker
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"maps"
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -236,6 +238,82 @@ func ListVolumes(prefix string) ([]string, error) {
 	return volumes, nil
 }
 
+// VolumeLabels maps each volume whose name starts with prefix to the value of
+// label (empty when unset).
+func VolumeLabels(prefix, label string) (map[string]string, error) {
+	out, err := exec.Command("docker", "volume", "ls", "--filter", "name="+prefix,
+		"--format", `{{.Name}}\t{{.Label "`+label+`"}}`).Output()
+	if err != nil {
+		return nil, err
+	}
+	return parseVolumeLabels(string(out), prefix), nil
+}
+
+func parseVolumeLabels(out, prefix string) map[string]string {
+	vols := map[string]string{}
+	for line := range strings.Lines(out) {
+		name, value, _ := strings.Cut(strings.TrimRight(line, "\n"), "\t")
+		if strings.HasPrefix(name, prefix) {
+			vols[name] = value
+		}
+	}
+	return vols
+}
+
+type ContainerMounts struct {
+	Name    string
+	Running bool
+	Image   string
+	Mounts  []string // volume names and bind mount sources
+}
+
+// ListContainerMounts lists all containers (running or not) whose name starts
+// with prefix, together with what they mount.
+func ListContainerMounts(prefix string) ([]ContainerMounts, error) {
+	out, err := exec.Command("docker", "ps", "-a", "--no-trunc", "--filter", "name="+prefix,
+		"--format", "{{.Names}}\t{{.State}}\t{{.Image}}\t{{.Mounts}}").Output()
+	if err != nil {
+		return nil, err
+	}
+	return parseContainerMounts(string(out), prefix), nil
+}
+
+func parseContainerMounts(out, prefix string) []ContainerMounts {
+	var containers []ContainerMounts
+	for line := range strings.Lines(out) {
+		fields := strings.SplitN(strings.TrimRight(line, "\n"), "\t", 4)
+		if len(fields) < 4 || !strings.HasPrefix(fields[0], prefix) {
+			continue
+		}
+		containers = append(containers, ContainerMounts{
+			Name:    fields[0],
+			Running: fields[1] == "running",
+			Image:   fields[2],
+			Mounts:  strings.Split(fields[3], ","),
+		})
+	}
+	return containers
+}
+
+// RemoveImage removes an image unless a container still uses it, returning
+// Docker's message on failure.
+func RemoveImage(name string) error {
+	out, err := exec.Command("docker", "rmi", name).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// RemoveVolume removes a single volume, returning Docker's message on failure.
+func RemoveVolume(name string) error {
+	out, err := exec.Command("docker", "volume", "rm", name).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%s", strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
 func RemoveVolumes(volumes ...string) error {
 	if len(volumes) == 0 {
 		return nil
@@ -307,4 +385,52 @@ func ListImages(filter string) ([]string, error) {
 // archive. -L follows symlinks, resolved inside the container's filesystem.
 func CopyOut(container, path string) *exec.Cmd {
 	return exec.Command("docker", "cp", "-L", container+":"+path, "-")
+}
+
+// DiskUsage returns the sizes in bytes of all volumes (by name) and images
+// (by repository:tag). For images it reports the space only that image uses.
+func DiskUsage() (volumes, images map[string]int64, err error) {
+	out, err := exec.Command("docker", "system", "df", "-v", "--format", "{{json .}}").Output()
+	if err != nil {
+		return nil, nil, err
+	}
+	return parseDiskUsage(out)
+}
+
+func parseDiskUsage(data []byte) (volumes, images map[string]int64, err error) {
+	var df struct {
+		Images []struct {
+			Repository, Tag, Size, UniqueSize string
+		}
+		Volumes []struct {
+			Name, Size string
+		}
+	}
+	if err := json.Unmarshal(data, &df); err != nil {
+		return nil, nil, err
+	}
+	volumes = map[string]int64{}
+	for _, v := range df.Volumes {
+		volumes[v.Name] = parseSize(v.Size)
+	}
+	images = map[string]int64{}
+	for _, img := range df.Images {
+		images[img.Repository+":"+img.Tag] = parseSize(cmp.Or(img.UniqueSize, img.Size))
+	}
+	return volumes, images, nil
+}
+
+// parseSize converts Docker's human-readable sizes ("1.2GB", "512kB", "0B")
+// into bytes. Docker uses decimal units. Unparsable values count as 0.
+func parseSize(s string) int64 {
+	i := strings.IndexFunc(s, func(r rune) bool { return (r < '0' || r > '9') && r != '.' })
+	if i <= 0 {
+		return 0
+	}
+	n, err := strconv.ParseFloat(s[:i], 64)
+	if err != nil {
+		return 0
+	}
+	mult := map[string]float64{"B": 1, "kB": 1e3, "KB": 1e3, "MB": 1e6, "GB": 1e9, "TB": 1e12, "PB": 1e15}[s[i:]]
+	return int64(n * mult)
 }

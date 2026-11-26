@@ -235,3 +235,33 @@ func TestRange_Ports(t *testing.T) {
 		}
 	}
 }
+
+func TestProjectsAndRelease(t *testing.T) {
+	setup(t)
+	seedRegistry(t, []Range{
+		{Project: "/a", Container: "asylum-aaa-a", Start: 7001, Count: 5},
+		{Project: "/b", Container: "asylum-bbb-b", Start: 7006, Count: 5},
+	})
+
+	projects, err := Projects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if projects["asylum-aaa-a"] != "/a" || projects["asylum-bbb-b"] != "/b" {
+		t.Fatalf("unexpected projects %v", projects)
+	}
+
+	if err := Release("/a"); err != nil {
+		t.Fatal(err)
+	}
+	if err := Release("/missing"); err != nil {
+		t.Fatal(err)
+	}
+	projects, err = Projects()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := projects["asylum-aaa-a"]; ok || len(projects) != 1 {
+		t.Errorf("expected only /b after release, got %v", projects)
+	}
+}

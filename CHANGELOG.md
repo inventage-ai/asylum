@@ -6,6 +6,11 @@
 - `env-from-host` passes host environment variables into the container under another name, e.g. a per-project token loaded by direnv as `ASYLUM_GH_TOKEN` becomes `GH_TOKEN`, without writing the value to a config file. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
 - `agents.<agent>.seed` controls what `isolated` and `project` mode copy from the host config on first run: `full` (default, unchanged), `settings` (settings, instructions, customizations and credentials only, no transcripts or history) or `none`. Honored only in `~/.asylum/config.yaml` and `.asylum.local`; ignored with a warning in `.asylum`.
 - `host-mcp` kit (opt-in) — use stdio MCP servers that can only run on the host, such as XcodeBuildMCP. Define them in `~/.asylum/config.yaml`. Claude sessions started by asylum get them registered automatically for that session; other agents register `asylum-mcp <name>`. The host broker starts one server per connection in the project directory, relays its stdio, and stops it when the connection or the container ends. Project config files cannot define servers.
+- Volumes asylum creates carry the labels `asylum.project` (project path) and `asylum.kind` (`cache` or `node_modules`), so they can be traced back to their project.
+- `asylum cleanup --orphans` lists and removes volumes of projects that no longer exist and of `node_modules` directories whose `package.json` is gone, together with the stopped containers, project data and port allocations of deleted projects.
+- A fresh container start removes the project's `node_modules` volumes whose `package.json` no longer exists.
+- `asylum cleanup` and `cleanup --orphans` remove the project image (`asylum:proj-*`) of a cleaned-up project when no other project and no container uses it. Asylum records the image of each project at start for this.
+- `asylum cleanup --select` lists all projects with status, last use and disk size and removes the ones you pick. Missing projects and projects unused for more than 30 days are preselected.
 
 ### Changed
 - Environment variable values (from `env:`, `-e`, `env-from-host`, kits and asylum itself) reach `docker run` through an env file on stdin instead of `-e NAME=value` where the env file format allows it, so they no longer appear in the process list or in process logs. `env-from-host` values that do not fit abort the start instead.
@@ -16,6 +21,8 @@
 - `--debug` and conflicting-argument errors no longer print environment variable values; they show `NAME=***`.
 - Kit skills were missing from Claude sessions whose passthrough arguments contain `--` (e.g. `asylum -- -p -- "fix the build"`), because asylum appended `--add-dir` after them.
 - Seeding an agent config directory that is a symlink (e.g. `~/.claude` managed by a dotfiles tool) copied nothing, so the container started without the host config.
+- Multi-select prompts (e.g. new kits, `cleanup --select`) scroll when the list is taller than the terminal instead of cutting off its top.
+- `asylum cleanup` also removes the project's container when it is stopped (its volumes could not be removed otherwise) and releases the project's port allocation, as documented.
 
 ## 0.8.1 — 2026-09-29
 

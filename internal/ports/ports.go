@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"syscall"
 )
 
@@ -122,6 +123,53 @@ func RenameContainer(oldName, newName string) error {
 		}
 	}
 	return nil
+}
+
+// Projects maps each registered container name to its project directory.
+func Projects() (map[string]string, error) {
+	path, err := registryPath()
+	if err != nil {
+		return nil, err
+	}
+	f, err := openLocked(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	reg, err := readRegistry(f)
+	if err != nil {
+		return nil, err
+	}
+	projects := map[string]string{}
+	for _, r := range reg.Ranges {
+		projects[r.Container] = r.Project
+	}
+	return projects, nil
+}
+
+// Release removes the port allocation of projectDir, if any.
+func Release(projectDir string) error {
+	path, err := registryPath()
+	if err != nil {
+		return err
+	}
+	f, err := openLocked(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	reg, err := readRegistry(f)
+	if err != nil {
+		return err
+	}
+	n := len(reg.Ranges)
+	reg.Ranges = slices.DeleteFunc(reg.Ranges, func(r Range) bool { return r.Project == projectDir })
+	if len(reg.Ranges) == n {
+		return nil
+	}
+	return writeRegistry(f, reg)
 }
 
 func nextStart(ranges []Range) int {

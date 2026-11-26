@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/inventage-ai/asylum/internal/config"
 	"github.com/inventage-ai/asylum/internal/container"
@@ -180,6 +181,43 @@ func TestParseArgs(t *testing.T) {
 			args:      []string{"cleanup", "--all"},
 			wantSub:   "cleanup",
 			wantFlags: cliFlags{All: true},
+		},
+		{
+			name:      "cleanup command with orphans flag",
+			args:      []string{"cleanup", "--orphans"},
+			wantSub:   "cleanup",
+			wantFlags: cliFlags{Orphans: true},
+		},
+		{
+			name:    "cleanup command all and orphans errors",
+			args:    []string{"cleanup", "--all", "--orphans"},
+			wantErr: true,
+		},
+		{
+			name:      "cleanup command with select flag",
+			args:      []string{"cleanup", "--select"},
+			wantSub:   "cleanup",
+			wantFlags: cliFlags{Select: true},
+		},
+		{
+			name:    "cleanup command select and all errors",
+			args:    []string{"cleanup", "--select", "--all"},
+			wantErr: true,
+		},
+		{
+			name:    "cleanup command select and orphans errors",
+			args:    []string{"cleanup", "--orphans", "--select"},
+			wantErr: true,
+		},
+		{
+			name:      "cleanup flag alias with select",
+			args:      []string{"--cleanup", "--select"},
+			wantFlags: cliFlags{Cleanup: true, Select: true},
+		},
+		{
+			name:      "cleanup flag alias with orphans",
+			args:      []string{"--cleanup", "--orphans"},
+			wantFlags: cliFlags{Cleanup: true, Orphans: true},
 		},
 		{
 			name:    "cleanup command unknown flag errors",
@@ -588,5 +626,52 @@ func TestRemoveTreeReadOnly(t *testing.T) {
 	}
 	if _, err := os.Stat(root); !os.IsNotExist(err) {
 		t.Errorf("expected %s to be gone, stat err = %v", root, err)
+	}
+}
+
+func TestFormatAge(t *testing.T) {
+	now := time.Date(2026, 11, 25, 12, 0, 0, 0, time.UTC)
+	day := 24 * time.Hour
+	tests := []struct {
+		t    time.Time
+		want string
+	}{
+		{time.Time{}, "unknown"},
+		{now.Add(-10 * time.Second), "now"},
+		{now.Add(-time.Minute), "1 minute ago"},
+		{now.Add(-5 * time.Hour), "5 hours ago"},
+		{now.Add(-day), "1 day ago"},
+		{now.Add(-45 * day), "45 days ago"},
+		{now.Add(-150 * day), "5 months ago"},
+		{now.Add(-800 * day), "2 years ago"},
+	}
+	for _, tt := range tests {
+		if got := formatAge(tt.t, now); got != tt.want {
+			t.Errorf("formatAge(%v) = %q, want %q", now.Sub(tt.t), got, tt.want)
+		}
+	}
+}
+
+func TestFormatSize(t *testing.T) {
+	tests := map[int64]string{-1: "unknown", 0: "0 B", 999: "999 B", 1500: "1.5 kB", 2_300_000_000: "2.3 GB", 4_000_000_000_000: "4.0 TB"}
+	for in, want := range tests {
+		if got := formatSize(in); got != want {
+			t.Errorf("formatSize(%d) = %q, want %q", in, got, want)
+		}
+	}
+}
+
+func TestFormatProjectTable(t *testing.T) {
+	now := time.Date(2026, 11, 25, 12, 0, 0, 0, time.UTC)
+	got := formatProjectTable([]container.Project{
+		{Path: "/p/old-poc", Containers: []string{"asylum-a-old-poc"}, Status: container.StatusIdle, LastUsed: now.Add(-150 * 24 * time.Hour), Size: 1_800_000_000},
+		{Containers: []string{"asylum-b-mystery"}, Status: container.StatusIdle, Size: -1},
+	}, now)
+	want := "" +
+		"  PROJECT            STATUS   LAST USED      SIZE\n" +
+		"  /p/old-poc         idle     5 months ago   1.8 GB\n" +
+		"  asylum-b-mystery   idle     unknown        unknown\n"
+	if got != want {
+		t.Errorf("got\n%s\nwant\n%s", got, want)
 	}
 }

@@ -11,6 +11,8 @@ asylum [flags] run <cmd>      Run command in container
 asylum config                 Configure kits, credentials, and isolation
 asylum cleanup                Remove current project's container, volumes, and data
 asylum cleanup --all          Remove all Asylum images, volumes, and cached data
+asylum cleanup --orphans      Remove volumes of deleted projects and node_modules
+asylum cleanup --select       List all projects and pick which to remove
 asylum version [--short]      Show version
 asylum update                 Refresh agent versions and rebuild image if changed
 asylum self-update [version]  Update to latest (or specific) version
@@ -38,7 +40,7 @@ See [CLI Flags](../configuration/flags.md) for all available flags.
 | [`shell`](shell.md) | Interactive zsh shell in the container |
 | [`run`](run.md) | Run a command in the container |
 | [`config`](config.md) | Configure kits, credentials, and isolation |
-| [`cleanup`](cleanup.md) | Clean up current project (or `--all` for everything) |
+| [`cleanup`](cleanup.md) | Clean up current project (`--select` to pick projects from a list, `--orphans` for leftovers of deleted projects, `--all` for everything) |
 | [`version`](version.md) | Show version information |
 | [`update`](update.md) | Refresh agent versions and rebuild the image if they changed |
 | [`self-update`](self-update.md) | Update Asylum to a new version |
