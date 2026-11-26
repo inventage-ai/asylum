@@ -77,11 +77,11 @@ The AgentConfig struct SHALL include a `seed` field accepting `none`, `settings`
 - **THEN** the host `~/.claude` is mounted unchanged
 
 ### Requirement: Seed honored only in user-maintained configs
-`seed` SHALL be honored in `~/.asylum/config.yaml` and the local layer (`.asylum.local` / `.asylum.local.yaml`). In the project layer (`.asylum` / `.asylum.yaml`) it SHALL be ignored and a warning SHALL be logged.
+`seed` SHALL have scope `personal` (see `config-layer-scopes`): it SHALL be honored in `~/.asylum/config.yaml` and the local layer (`.asylum.local` / `.asylum.local.yaml`). In the project layer (`.asylum` / `.asylum.yaml`) it SHALL be ignored and reported as a rejected option.
 
 #### Scenario: Seed in the project layer
 - **WHEN** the global config sets `seed: settings` for Claude and `.asylum` sets `seed: full`
-- **THEN** the effective seed mode is `settings` and a warning names the `.asylum` file
+- **THEN** the effective seed mode is `settings` and the rejected-option report names the `.asylum` file
 
 ### Requirement: Agent settings allowlist
 Each agent with a native config directory SHALL define the allowlist used by `seed: settings`. It SHALL contain user settings, global instructions, user-defined customizations (e.g. agents, commands, skills) and credential files stored in the config directory, and SHALL NOT contain transcripts, history, sessions, todos, caches or logs.

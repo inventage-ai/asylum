@@ -7,6 +7,7 @@ func init() {
 		Tier:        TierOptIn,
 		Tools:       []string{"rtk"},
 		NeedsMount:  true,
+		Scope:       ScopePersonal,
 		ConfigSnippet: `  # rtk:                # Token-reduction proxy (rtk)
 `,
 		ConfigNodes:   configNodes("rtk", "Token-reduction proxy (rtk)", nil),

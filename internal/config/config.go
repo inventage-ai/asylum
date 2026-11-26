@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/inventage-ai/asylum/internal/kit"
-	"github.com/inventage-ai/asylum/internal/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -52,19 +51,19 @@ func (c *Credentials) UnmarshalYAML(value *yaml.Node) error {
 // merge. All other fields use last-wins semantics (overlay replaces base when
 // non-zero). Adding a new field requires no merge code changes.
 type KitConfig struct {
-	Disabled            *bool        `yaml:"disabled,omitempty"`
-	Versions            []string     `yaml:"versions,omitempty"`
-	DefaultVersion      string       `yaml:"default-version,omitempty"`
-	Packages            []string     `yaml:"packages,omitempty" merge:"concat"`
-	ShadowNodeModules   *bool        `yaml:"shadow-node-modules,omitempty"`
-	Onboarding          *bool        `yaml:"onboarding,omitempty"`
-	TabTitle            string       `yaml:"tab-title,omitempty"`
-	AllowAgentTermTitle *bool        `yaml:"allow-agent-terminal-title,omitempty"`
-	Build               []string     `yaml:"build,omitempty" merge:"concat"`
-	Count               int          `yaml:"count,omitempty"`
-	Credentials         *Credentials `yaml:"credentials,omitempty"`
-	Isolation           string       `yaml:"isolation,omitempty"`
-	Schemes             []string     `yaml:"schemes,omitempty" merge:"concat"`
+	Disabled            *bool        `yaml:"disabled,omitempty" scope:"any"`
+	Versions            []string     `yaml:"versions,omitempty" scope:"any"`
+	DefaultVersion      string       `yaml:"default-version,omitempty" scope:"any"`
+	Packages            []string     `yaml:"packages,omitempty" merge:"concat" scope:"any"`
+	ShadowNodeModules   *bool        `yaml:"shadow-node-modules,omitempty" scope:"any"`
+	Onboarding          *bool        `yaml:"onboarding,omitempty" scope:"any"`
+	TabTitle            string       `yaml:"tab-title,omitempty" scope:"any"`
+	AllowAgentTermTitle *bool        `yaml:"allow-agent-terminal-title,omitempty" scope:"personal"`
+	Build               []string     `yaml:"build,omitempty" merge:"concat" scope:"any"`
+	Count               int          `yaml:"count,omitempty" scope:"any"`
+	Credentials         *Credentials `yaml:"credentials,omitempty" scope:"personal"`
+	Isolation           string       `yaml:"isolation,omitempty" scope:"personal"`
+	Schemes             []string     `yaml:"schemes,omitempty" merge:"concat" scope:"personal"`
 }
 
 // AgentConfig holds per-agent configuration.
@@ -72,9 +71,9 @@ type KitConfig struct {
 // merge. All other fields use last-wins semantics (overlay replaces base when
 // non-zero).
 type AgentConfig struct {
-	Config     string    `yaml:"config,omitempty"`     // shared, isolated, project
-	Companions *[]string `yaml:"companions,omitempty"` // other agents whose configs are also mounted when this agent is primary; last-wins across config layers — set to [] in an overlay to clear an inherited list
-	Seed       string    `yaml:"seed,omitempty"`       // none, settings, full (default): what isolated/project mode copies from the host config
+	Config     string    `yaml:"config,omitempty" scope:"personal"`     // shared, isolated, project
+	Companions *[]string `yaml:"companions,omitempty" scope:"personal"` // other agents whose configs are also mounted when this agent is primary; last-wins across config layers — set to [] in an overlay to clear an inherited list
+	Seed       string    `yaml:"seed,omitempty" scope:"personal"`       // none, settings, full (default): what isolated/project mode copies from the host config
 }
 
 // AgentIsolation returns the config isolation level for the named agent.
@@ -124,17 +123,18 @@ func (c Config) AgentCompanions(agentName string) []string {
 }
 
 type Config struct {
-	Version              string                  `yaml:"version,omitempty"`
-	Agent                string                  `yaml:"agent,omitempty"`
-	ReleaseChannel       string                  `yaml:"release-channel,omitempty"`
-	VersionCheckInterval string                  `yaml:"version-check-interval,omitempty"`
-	DefaultResume        *bool                   `yaml:"default-resume,omitempty"`
-	Kits                 map[string]*KitConfig   `yaml:"kits,omitempty"`
-	Agents               map[string]*AgentConfig `yaml:"agents,omitempty"`
-	Ports                []string                `yaml:"ports,omitempty"`
-	Volumes              []string                `yaml:"volumes,omitempty"`
-	Env                  map[string]string       `yaml:"env,omitempty"`
-	EnvFromHost          map[string]string       `yaml:"env-from-host,omitempty"` // container name → host name
+	Version              string                  `yaml:"version,omitempty" scope:"any"`
+	Agent                string                  `yaml:"agent,omitempty" scope:"any"`
+	ReleaseChannel       string                  `yaml:"release-channel,omitempty" scope:"global"`
+	VersionCheckInterval string                  `yaml:"version-check-interval,omitempty" scope:"global"`
+	DefaultResume        *bool                   `yaml:"default-resume,omitempty" scope:"personal"`
+	Kits                 map[string]*KitConfig   `yaml:"kits,omitempty" scope:"any"`
+	Agents               map[string]*AgentConfig `yaml:"agents,omitempty" scope:"any"`
+	Ports                []string                `yaml:"ports,omitempty" scope:"any"`
+	Volumes              []string                `yaml:"volumes,omitempty" scope:"personal"`
+	Env                  map[string]string       `yaml:"env,omitempty" scope:"any"`
+	EnvFromHost          map[string]string       `yaml:"env-from-host,omitempty" scope:"personal"` // container name → host name
+	Rejected             []Rejection             `yaml:"-"`                                        // entries removed because their file does not accept them
 }
 
 // VersionCheckStaleness returns the interval after which cached agent versions
@@ -367,9 +367,12 @@ func Load(projectDir string, flags CLIFlags, kitSnippets string) (Config, error)
 	// Load project configs (override .tool-versions). Each layer accepts either
 	// a canonical filename or its `.yaml`-suffixed alias — the alias exists so
 	// editors recognize the file as YAML for syntax highlighting.
-	for _, layer := range []struct{ canonical, alias string }{
-		{".asylum", ".asylum.yaml"},
-		{".asylum.local", ".asylum.local.yaml"},
+	for _, layer := range []struct {
+		canonical, alias string
+		layer            layer
+	}{
+		{".asylum", ".asylum.yaml", layerProject},
+		{".asylum.local", ".asylum.local.yaml", layerLocal},
 	} {
 		path, err := resolveProjectConfigPath(projectDir, layer.canonical, layer.alias)
 		if err != nil {
@@ -378,30 +381,20 @@ func Load(projectDir string, flags CLIFlags, kitSnippets string) (Config, error)
 		if path == "" {
 			continue
 		}
+		// Checked before migration, which rewrites the file.
+		if layer.layer == layerLocal {
+			if err := checkUntracked(path); err != nil {
+				return Config{}, err
+			}
+		}
 		if NeedsMigration(path) {
 			if err := MigrateV1ToV2(path, kitSnippets); err != nil {
 				return Config{}, fmt.Errorf("migrate %s: %w", path, err)
 			}
 		}
-		loaded, err := LoadFile(path)
+		loaded, err := loadLayer(path, layer.layer)
 		if err != nil {
 			return Config{}, fmt.Errorf("%s: %w", path, err)
-		}
-		// The project layer is typically committed; honoring env-from-host there
-		// would let a cloned repo pull arbitrary host secrets into the container.
-		if layer.canonical == ".asylum" && loaded.EnvFromHost != nil {
-			log.Warn("%s: env-from-host is ignored here; move it to .asylum.local or ~/.asylum/config.yaml", path)
-			loaded.EnvFromHost = nil
-		}
-		// The project layer is typically committed; honoring seed there would let
-		// a cloned repo override the user's choice and copy the whole host config.
-		if layer.canonical == ".asylum" {
-			for name, ac := range loaded.Agents {
-				if ac != nil && ac.Seed != "" {
-					log.Warn("%s: agents.%s.seed is ignored here; move it to .asylum.local or ~/.asylum/config.yaml", path, name)
-					ac.Seed = ""
-				}
-			}
 		}
 		cfg = Merge(cfg, loaded)
 	}
@@ -439,6 +432,12 @@ func fileExists(path string) bool {
 // LoadFile reads a single config file and returns its parsed Config.
 // Returns a zero Config if the file doesn't exist or is a directory.
 func LoadFile(path string) (Config, error) {
+	return loadLayer(path, layerGlobal)
+}
+
+// loadLayer reads a config file, removing the entries its layer does not
+// accept and recording them in Rejected.
+func loadLayer(path string, l layer) (Config, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -453,10 +452,22 @@ func LoadFile(path string) (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
-	var cfg Config
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return Config{}, err
 	}
+	if doc.Kind == 0 {
+		return Config{}, nil
+	}
+	rejected, err := filterScopes(&doc, l, filepath.Base(path))
+	if err != nil {
+		return Config{}, err
+	}
+	var cfg Config
+	if err := doc.Decode(&cfg); err != nil {
+		return Config{}, err
+	}
+	cfg.Rejected = rejected
 	return cfg, nil
 }
 
@@ -500,6 +511,7 @@ func Merge(base, overlay Config) Config {
 	}
 
 	result.Ports = slices.Concat(base.Ports, overlay.Ports)
+	result.Rejected = slices.Concat(base.Rejected, overlay.Rejected)
 	result.Volumes = slices.Concat(base.Volumes, overlay.Volumes)
 
 	if overlay.Env != nil {

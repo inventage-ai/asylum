@@ -103,6 +103,17 @@ const (
 	TierOptIn                // only active if user explicitly enables in config
 )
 
+// Scope says which config files accept an option. Project files (.asylum) are
+// usually committed, so options that reach outside the project directory or add
+// container privileges must not be accepted there.
+type Scope string
+
+const (
+	ScopeAny      Scope = "any"      // global config, .asylum.local, .asylum
+	ScopePersonal Scope = "personal" // global config, .asylum.local
+	ScopeGlobal   Scope = "global"   // global config only
+)
+
 // Kit groups all concerns for a tool or language: installation,
 // environment setup, caching, onboarding, and config defaults.
 type Kit struct {
@@ -135,6 +146,8 @@ type Kit struct {
 	ConfigNodes        []*yaml.Node                                    // structured key+value nodes for kits mapping (len 2: key, value)
 	ConfigComment      string                                          // comment text for opt-in/always-on kits shown in config
 	Routes             []broker.Route                                  // host-broker endpoints this kit contributes
+	Scope              Scope                                           // where enabling the kit is accepted; empty means ScopeAny
+	OptionScopes       map[string]Scope                                // scopes of kit-specific options, overriding the general scope of the option
 }
 
 var registry = map[string]*Kit{}
@@ -152,6 +165,14 @@ func Register(k *Kit) {
 
 // Get returns a registered kit by name, or nil if not found.
 func Get(name string) *Kit {
+	return registry[name]
+}
+
+// Lookup returns the registered kit for a config key, following renames.
+func Lookup(name string) *Kit {
+	if actual, ok := aliases[name]; ok {
+		name = actual
+	}
 	return registry[name]
 }
 

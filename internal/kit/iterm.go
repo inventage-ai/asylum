@@ -59,6 +59,7 @@ func init() {
 Session state is reported to the iTerm2 status bar of the terminal this session runs in — a colored dot for working or idle, and the name of the running tool. It is driven by the hooks iTerm2 already configured; nothing needs to be run by hand.
 `,
 		Routes: []broker.Route{{Path: itermRoute, Handler: itermStatusHandler}},
+		Scope:  ScopePersonal,
 	})
 }
 

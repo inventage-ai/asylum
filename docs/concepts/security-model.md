@@ -63,6 +63,16 @@ Several options deliberately reduce isolation. If you enable them, you accept th
 - `kits.docker` enables privileged mode (see above).
 - Custom `volumes:` entries mount whatever you tell them to mount, with whatever permissions you specify.
 
+These options are only accepted in `~/.asylum/config.yaml` and `.asylum.local`, never in a project's `.asylum` (see below).
+
+### Config shipped with a repository
+
+A repository's `.asylum` is written by whoever can push to it. Asylum therefore ignores options in `.asylum` that would reach outside the project directory or add privileges: `volumes`, `env-from-host`, agent config modes, kit credentials and isolation, browser-open `schemes`, and enabling the `docker`, `dropshare`, `iterm`, `cx` and `rtk` kits. It shows you what it ignored before the session starts. The full list is in [Where Options Are Accepted](../configuration/index.md#where-options-are-accepted).
+
+`.asylum.local` accepts these options, so asylum refuses to start when git tracks it and adds it to `.git/info/exclude`.
+
+This protects you from what a repository ships. It does not protect the config files from the agent: the project directory is writable from inside the container, so an agent can edit `.asylum.local` and change the next container it runs in.
+
 ### The Asylum binary itself
 
 `asylum` runs as your user on the host and talks to the Docker daemon. Docker daemon access is generally equivalent to root on the host. Asylum does not sandbox itself, and the host must be trusted.
@@ -72,6 +82,6 @@ Several options deliberately reduce isolation. If you enable them, you accept th
 - Keep the project directory under version control and push branches often.
 - Rotate any credential you think an agent may have exfiltrated — this includes the SSH key in `~/.asylum/ssh/` and anything in your agent config.
 - Prefer `isolated` or `project` config modes over `shared`.
-- Keep `.asylum.local` out of version control. `env-from-host` is honored there, so a committed `.asylum.local` would let a clone map host secrets into the container.
+- Review the warnings asylum shows about ignored `.asylum` options before starting without them, and move only the entries you want into `.asylum.local`.
 - Only enable the Docker kit on projects that actually need Docker-in-Docker.
 - Do not use Asylum to review or execute code you have specific reason to distrust. Use a disposable VM instead.

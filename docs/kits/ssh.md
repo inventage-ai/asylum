@@ -23,6 +23,9 @@ kits:
 
 ## Isolation Modes
 
+!!! note "Personal config only"
+    Set `isolation` in `~/.asylum/config.yaml` or `.asylum.local`. In a project's `.asylum` it is ignored, because `shared` mounts your host `~/.ssh` ([details](../configuration/index.md#where-options-are-accepted)).
+
 | Mode | Key Storage | Behavior |
 |------|------------|----------|
 | `isolated` (default) | `~/.asylum/ssh/` | Shared across all projects, separate from host |

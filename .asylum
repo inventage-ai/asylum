@@ -2,5 +2,3 @@ kits:
     apt:
         packages:
             - golang
-volumes:
-    - ~/.asylum/bin:/home/claude/.asylum/bin

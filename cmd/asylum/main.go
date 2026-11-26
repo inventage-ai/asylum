@@ -128,6 +128,7 @@ func main() {
 		if err != nil {
 			die("load config: %v", err)
 		}
+		warnRejected(cfg.Rejected)
 		channel := selfupdate.ResolveChannel(flags.Dev, cfg.ReleaseChannel)
 		if err := selfupdate.Run(version, commit, channel, flags.TargetVersion, execPath); err != nil {
 			die("%v", err)
@@ -181,6 +182,12 @@ func main() {
 	cfg, err := config.Load(projectDir, cliFlags, kitSnippets)
 	if err != nil {
 		die("load config: %v", err)
+	}
+	confirmRejected(cfg.Rejected, filepath.Join(home, ".asylum", "projects", container.ContainerName(projectDir), "rejected-config"))
+	if added, err := config.ExcludeLocalConfig(projectDir); err != nil {
+		log.Warn("add .asylum.local to git excludes: %v", err)
+	} else if added != nil {
+		log.Info("added %s to the git excludes of this repository, so personal config is never committed", strings.Join(added, " and "))
 	}
 
 	// Pre-resolve kits for credentials gating; wizard inspects this.

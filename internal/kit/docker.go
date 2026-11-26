@@ -44,6 +44,7 @@ if [ "${ASYLUM_DOCKER:-}" = "1" ]; then
 fi
 `,
 		ContainerFunc: dockerContainerFunc,
+		Scope:         ScopePersonal,
 	})
 }
 

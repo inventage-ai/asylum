@@ -69,6 +69,7 @@ func init() {
 Run ` + "`asylum-dropshare <file>`" + ` to publish a file through Dropshare on the user's Mac; it prints the share URL. Read the ` + "`dropshare`" + ` skill before the first upload.
 `,
 		Routes: []broker.Route{{Path: dropshareRoute, Handler: dropshareHandler}},
+		Scope:  ScopePersonal,
 	})
 }
 

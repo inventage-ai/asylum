@@ -43,6 +43,7 @@ func runConfig() {
 	if err != nil {
 		die("load config: %v", err)
 	}
+	warnRejected(cfg.Rejected)
 
 	// Build kits tab: all non-always-on registered kits
 	activeKits := map[string]bool{}

@@ -37,7 +37,7 @@ With that in place, `open "dropshare5:///upload?path=/tmp/report.pdf"` inside th
 
 Entries are matched case-insensitively and may be written in whichever form the tool's documentation uses — `dropshare5`, `dropshare5:`, `dropshare5://`, and `dropshare5:///` all mean the same scheme. An entry that is not a valid URL scheme is reported as a warning at session start and ignored; the rest stay in effect. `http` and `https` never need listing.
 
-The list **accumulates across config layers**: a scheme allowed in `~/.asylum/config.yaml` stays allowed when a project `.asylum` adds one of its own. The agent's sandbox rules name the configured schemes, so it knows they are available.
+Set `schemes` in `~/.asylum/config.yaml` or `.asylum.local`. In a project's `.asylum` it is ignored, because a repository must not choose which host apps its container can launch ([details](../configuration/index.md#where-options-are-accepted)). The list **accumulates across those two files**: a scheme allowed in `~/.asylum/config.yaml` stays allowed when `.asylum.local` adds one of its own. The agent's sandbox rules name the configured schemes, so it knows they are available.
 
 The allowlist is read when the container's host broker starts, so a change to `schemes` takes effect the next time the container starts, not mid-session.
 
