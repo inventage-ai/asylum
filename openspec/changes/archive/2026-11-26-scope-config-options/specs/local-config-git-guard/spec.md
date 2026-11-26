@@ -21,6 +21,10 @@ When the local layer file (`.asylum.local` or `.asylum.local.yaml`) exists and g
 - **WHEN** the project directory is a subdirectory of a repository and its `.asylum.local` is tracked
 - **THEN** asylum exits with the error
 
+#### Scenario: Committed under another case
+- **WHEN** the repository commits `.ASYLUM.LOCAL` and the case-insensitive filesystem makes asylum read it as `.asylum.local`
+- **THEN** asylum exits with the error, naming `.ASYLUM.LOCAL` in the `git rm --cached` command
+
 #### Scenario: Untracked local config
 - **WHEN** `.asylum.local` exists and is not tracked
 - **THEN** config loads normally

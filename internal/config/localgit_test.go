@@ -68,6 +68,25 @@ func TestCheckUntracked(t *testing.T) {
 	}
 }
 
+// On a case-insensitive filesystem a committed .ASYLUM.LOCAL is read as
+// .asylum.local. A hard link reproduces that on a case-sensitive one.
+func TestCheckUntrackedOtherName(t *testing.T) {
+	repo := gitRepo(t)
+	tracked := filepath.Join(repo, ".ASYLUM.LOCAL")
+	os.WriteFile(tracked, []byte("volumes: [~/.ssh:/x]\n"), 0644)
+	runGit(t, repo, "add", "-f", ".")
+	path := filepath.Join(repo, ".asylum.local")
+	if !fileExists(path) {
+		if err := os.Link(tracked, path); err != nil {
+			t.Fatal(err)
+		}
+	}
+	err := checkUntracked(path)
+	if err == nil || !strings.Contains(err.Error(), "git rm --cached .ASYLUM.LOCAL") {
+		t.Errorf("err = %v, want refusal naming .ASYLUM.LOCAL", err)
+	}
+}
+
 func TestCheckUntrackedOutsideRepo(t *testing.T) {
 	path := filepath.Join(t.TempDir(), ".asylum.local")
 	os.WriteFile(path, []byte("agent: codex\n"), 0644)

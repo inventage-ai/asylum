@@ -69,10 +69,12 @@ Why this order:
 The global file goes through the same filter. Every scope accepts the global layer, so nothing is rejected there.
 
 ### Git: check in Load, exclude at session start
-- **Tracking check:** `git -C <project> ls-files -z -- .asylum.local .asylum.local.yaml`.
+- **Tracking check:** `git ls-files -z -- ':(glob)*'` lists the tracked files in the project directory, and asylum refuses when one of them is the same file (`os.SameFile`) as the local config.
+  - Comparing names would miss a committed `.ASYLUM.LOCAL`, which a case-insensitive filesystem (the macOS default) reads as `.asylum.local`. Git's `:(icase)` is not enough either: APFS also folds `ſ` to `s`.
   - Only runs when the local file exists, so most projects never call git.
   - Lives in `Load`, so every command that would honour the file refuses it.
   - Any failure to run git (not a repo, git missing) counts as "not tracked".
+- **Every git call passes `-c core.fsmonitor=false`.** fsmonitor runs a command from the repository's config, which the agent can edit, and these calls run on the host.
 - **Exclude step:** `git check-ignore` on both filenames, then append the ones not ignored yet to the path from `git rev-parse --git-path info/exclude`.
   - Relative output is resolved against the project directory. `--git-path` handles linked worktrees and submodules.
   - Runs once, in the main run path only, not inside `Load`. `sessionFilter` loads `$HOME` as the project dir, and self-update or `asylum config` should not write into repositories.
